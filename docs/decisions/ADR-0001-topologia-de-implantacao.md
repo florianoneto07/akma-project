@@ -1,8 +1,10 @@
 # ADR-0001 — Topologia de implantação do AAnF em relação ao free5GC
 
-**Estado:** Proposto
+**Estado:** Revisto pelo [ADR-0001-R2](ADR-0001-R2-aanf-na-vm-do-free5gc.md) em 16/10/2026 — seções 3, 5, 6 e 8 substituídas; seções 2 e 4.3 mantidas
 **Data:** 02 de setembro de 2026
 **Contexto:** decisão anterior ao início da fase F3 (AAnF autônomo)
+
+*Nota (16/10/2026):* as fases citadas neste ADR correspondem ao plano de desenvolvimento aprovado (`docs/plano/plano-de-desenvolvimento.md`): F2 = MVP-0, F3 = MVP-1, F4 = MVP-2, F5 = MVP-3, F6 = MVP-4, F7 = MVP-5. F11 (validação de segurança, TLS), F12 (avaliação de desempenho) e F15 (contribuição *upstream*) não constam do README; estão no MVP-6+.
 
 ---
 

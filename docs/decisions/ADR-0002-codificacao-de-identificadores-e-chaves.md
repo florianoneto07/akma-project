@@ -1,6 +1,6 @@
 # ADR-0002 — Codificação de identificadores e material de chave
 
-**Estado:** Proposto
+**Estado:** Aceito — com a aprovação do plano de desenvolvimento, em 16/10/2026
 **Data:** 02 de setembro de 2026
 **Substitui:** as recomendações preliminares registradas no baseline v2.0 §§3.4 e 4.3
 
@@ -47,6 +47,8 @@ A convenção da série 29 é discriminante: **chave de comprimento fixo → hex
 Argumento adicional por ausência: `TS29522_AKMA.yaml` já importa `TS29122_CommonData.yaml`, de onde obtém `Uri` e `DateTime`. O tipo `Bytes` estava disponível e não foi referenciado por `kaf`.
 
 Ver defeito D-D no registro de defeitos.
+
+*Acrescentado em 16/10/2026.* `[3GPP]` O precedente mais próximo está em TS 29.503: `TS29503_Nudm_UEAU.yaml` define `Kausf` como `type: string`, `pattern: '^[A-Fa-f0-9]{64}$'` — chave de 256 bits transportada do UDM ao AUSF, com padrão ancorado, e é a chave da qual K_AKMA deriva. Os padrões de TS 29.509 não são ancorados. A decisão não muda.
 
 ### 3.2 Valor do A-TID — base64
 
