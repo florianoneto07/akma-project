@@ -7,21 +7,22 @@ def enc_str(s: str) -> bytes:
 def L(p: bytes) -> bytes:
     return len(p).to_bytes(2, "big")   # TS 33.220 B.2.0 item 1
 
-def kdf(key: bytes, fc: int, params: list) -> bytes:
+def kdf(key: bytes, fc: int, params: list) -> tuple[bytes, bytes]:
+    """Return (derived key, S)."""
     S = bytes([fc])
     for p in params:
         S += p + L(p)
     return hmac.new(key, S, hashlib.sha256).digest(), S
 
-# Entradas de exemplo (valores escolhidos pelo projeto, NAO oriundos do 3GPP)
+# Example inputs chosen by the project; NOT 3GPP test vectors
 K_AUSF = bytes.fromhex("5c7c9be7bf6a1a1a2c0b0f6d4c9c2f81"
                        "9c1a3b4d5e6f708192a3b4c5d6e7f809")
-SUPI_IMSI = "208930000000003"          # TS 33.501 A.7.0 -> IMSI TS 23.003 cl.2.2 (sem prefixo)
+SUPI_IMSI = "208930000000003"          # TS 33.501 A.7.0 -> IMSI per TS 23.003 cl. 2.2 (no "imsi-" prefix)
 
 k_akma, s1 = kdf(K_AUSF, 0x80, [enc_str("AKMA"),  enc_str(SUPI_IMSI)])
 a_tid,  s2 = kdf(K_AUSF, 0x81, [enc_str("A-TID"), enc_str(SUPI_IMSI)])
 
-# AF_ID = FQDN || Ua* security protocol id (5 octetos).  Ua* id na faixa privada 0xFF (TS 33.220 H.2)
+# AF_ID = FQDN || Ua* security protocol id (5 octets); private-range id 0xFF (TS 33.220 H.2)
 FQDN = "af.akma.free5gc.org"
 UA_STAR_ID = bytes.fromhex("FF00000001")
 AF_ID = enc_str(FQDN) + UA_STAR_ID
