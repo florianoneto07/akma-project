@@ -25,6 +25,7 @@ Todas as decisões de implementação deste projeto referem-se às versões abai
 | TS 29.500 | Technical Realization of Service Based Architecture | V19.7.0 | HTTP/2, códigos de estado, cabeçalhos customizados |
 | TS 29.501 | Principles and Guidelines for Services Definition | V19.5.0 | Estrutura de URI, operações customizadas |
 | TS 29.122 | T8 reference point for Northbound APIs | V19.7.0 | `Uri`, `DateTime` |
+| TS 29.505 | Usage of the Unified Data Repository services for Subscription Data; Stage 3 | **a fixar** — norma a obter antes do MVP-2 (plano, D8) | Semântica de `akmaAllowed` e `routingId` no `AuthenticationSubscription` |
 
 **Nota (16/10/2026):** o baseline de TS 23.502 permanece V19.8.0; a cópia no acervo é a V19.9.0, usada para consulta. Ver [Adendo E](../05-adendo-E-ts23502-v19-9-0.md).
 
@@ -52,10 +53,11 @@ Os arquivos OpenAPI declaram, em `externalDocs`, a versão da TS em que foram al
 
 | Item | Valor | Estado |
 |---|---|---|
-| free5GC — versão | a fixar | Pendente |
-| free5GC — *commit hash* | a fixar | Pendente |
-| Submódulos das NFs — *commit hash* | a fixar | Pendente |
-| Versão de Go do ambiente | a fixar | Pendente |
-| Versão de kernel da máquina do free5GC | a fixar | Pendente; relevante apenas para o UPF |
+| free5GC — versão | v4.2.3 | Fixado em 15/10/2026 (plano, D4) |
+| free5GC — *commit hash* | `3b34a08e93a9b334f0f4005d3a3a9f79b66d59b9` | Fixado |
+| Submódulos das NFs — *commit hash* | tabela em `ambiente-verificado.md` §2.1 | Fixado |
+| `free5gc/openapi` / `free5gc/util` | v1.2.4 / v1.3.2 (AMF: `openapi` v1.2.5-0.20260527003827-02dc71b4d94f) | Fixado |
+| Versão de Go do ambiente | `go1.26.2` | Fixado |
+| Versão de kernel da máquina do free5GC | `5.4.0-150-generic` | Fixado; relevante apenas para o UPF |
 
-Preencher antes do início da fase F2, conforme ADR-0001 §7.
+Preenchido em 15/10/2026 a partir da inspeção registrada em [`ambiente-verificado.md`](ambiente-verificado.md).
