@@ -1,0 +1,486 @@
+# Plano de desenvolvimento por MVPs
+
+**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Nenhum código escrito ainda.
+**Data:** 15 de outubro de 2026; revisão 3 em 16 de outubro de 2026; aprovação em 16 de outubro de 2026
+**Base:** documentos `00` a `04`, Adendo E, ADR-0001-R2, ADR-0002, ADR-0003, `docs/baseline/ambiente-verificado.md`, `docs/baseline/conferencia-normativa.md`, `docs/literatura/analise-dos-artigos.md`, `docs/conformidade/desvios.md`
+**Revisão 2 (15/10/2026):** conferido contra as normas do acervo (hoje em `specs/`).
+**Revisão 3 (16/10/2026):** conferido contra TS 33.535, TS 29.535 (com o YAML), TS 23.502 V19.9.0 e TR 121 917; incorporada a análise dos artigos. Fica fora do acervo apenas TS 29.505 (D8).
+
+Convenção: as marcações `[3GPP]`, `[FREE5GC]`, `[MVP]`, `[INTERPRETAÇÃO]`, `[LACUNA]` e `[DIVERGÊNCIA]` têm o significado do README. Cada MVP começa pela conferência, no texto da norma, das cláusulas que usa.
+
+---
+
+## 1. Decisões
+
+Estado em 16/10/2026. "Aprovada" = recomendação aprovada com o plano; "decidida" = escolha explícita do responsável pelo projeto.
+
+| Nº | Decisão | Resultado | Estado | Afeta |
+|---|---|---|---|---|
+| D1 | Onde ficam normas e artigos | Normas em `specs/` (`.docx` e PDF) e `specs/openapi/` (YAML e ABNF); artigos em `papers/`; `.gitignore` exclui `/specs/` e `/papers/`; `reference/` fica só com o oráculo da KDF. Os artigos são cópias licenciadas de editoras e não podem ir para um repositório | **executada** em 16/10/2026 (71 arquivos movidos, SHA-256 idênticos antes e depois) | primeiro commit |
+| D2 | Raiz e unicidade do repositório | Um único repositório em `~/akma/akma-free5gc/`, com documentação e código. O README, que hoje diz que o código vive em outro repositório, será atualizado | aprovada | MVP-0 |
+| D3 | Ferramentas na VM do AF | git (pelo usuário, via `apt`); Go 1.26.2 em diretório do usuário, sem `sudo`, mesma versão da VM do free5GC | aprovada | MVP-0 |
+| D4 | Versão-alvo do free5GC | **v4.2.3** (instalada e testada) para MVP-0 a MVP-5; *rebase* para a versão corrente no início do trabalho *upstream* | aprovada | MVP-1 |
+| D5 | Localização do lado UE | UERANSIM permanece na VM do free5GC. O ME (*patch* no `nr-ue`) deriva as chaves; o cliente Ua\* roda no *namespace* do UE e alcança o AF pelo plano de usuário (`uesimtun0` → UPF → N6 → `192.168.16.129`). O código-fonte fica no repositório da VM do AF e é documentado em `docs/af-side/` | aprovada | MVP-4 |
+| D6 | Onde ficam os modelos do Naanf_AKMA | *Patch* no `free5gc/openapi` v1.2.4 com `AkmaKeyInfo`, `CtxRemove`, `AkmaAfKeyRequest`, `AkmaAfKeyData`, `ServiceDisableNotif` e um cliente `aanf/AKMA`, consumido por `replace` no AUSF, no AAnF e no AF | aprovada | MVP-1 |
+| D7 | Onde fica o código comum (KDF, SUPI, A-KID, AF_ID, codecs) | Módulo Go `shared/akma` no repositório, consumido por `replace` pelo AUSF, pelo AAnF e pelo cliente Ua\*; migra para `free5gc/util` no *upstream* | aprovada | MVP-0 |
+| D8 | TS 29.505 no baseline | Acrescentar. `[FREE5GC]` O `AuthenticationSubscription` do UDR já tem `akmaAllowed` e `routingId`. `[3GPP]` TS 33.535 §3.1 define *"AKMA subscription data"* como o dado que indica se o assinante pode usar AKMA, e §4.2.5 o põe no UDM; a semântica Stage 3 do campo está em TS 29.505 | aprovada; **a norma precisa ser obtida antes do MVP-2** | MVP-2 |
+| D9 | Momento do registro no AAnF e efeito de falha | `[3GPP]` TS 33.535 §6.1 passo 3: K_AKMA e A-TID são gerados *"after the primary authentication procedure is successfully completed"*; a norma não condiciona a autenticação primária ao registro. `[INTERPRETAÇÃO]` O AUSF responde ao AMF normalmente e faz `AnchorKey_Register` em seguida, sem bloquear; falha no AAnF é registrada em log e não altera o resultado da autenticação | **decidida** em 16/10/2026 | MVP-2 |
+| D12 | Versão de TS 23.502 | O baseline permanece **V19.8.0**; a cópia do acervo é a V19.9.0 e o projeto segue com ela para consulta. Registrado no Adendo E e em `especificacoes.md` | **decidida** em 16/10/2026 | registro do baseline |
+
+Decisão que depende de norma ainda fora do acervo:
+
+| Nº | Questão | MVP |
+|---|---|---|
+| D10 | De onde vem o RID quando o UDM recebe SUPI, e não SUCI (por exemplo, registro por GUTI com reautenticação). `[3GPP]` TS 29.503 Tab. 6.3.6.2.3-1: `routingId` contém o RID *"contained in the SUCI"*; TS 33.535 §6.1: *"The AUSF shall use the RID received from the UDM"* — o RID que o AMF pode mandar ao AUSF (TS 29.509) não serve. Fonte candidata: `routingId` guardado no UDR (semântica em TS 29.505, D8) | MVP-2 |
+
+D11 (Digest do Ua\*) foi resolvida pela leitura de TS 24.109, TS 33.222 e TS 33.535 Anexo B; as escolhas entre textos divergentes estão na seção 6 (DV-5 e DV-6).
+
+---
+
+## 2. Crítica da sequência sugerida
+
+A sequência MVP-0 → MVP-5 está essencialmente correta. Os ajustes:
+
+1. **MVP-1, "três erros".** `ROAMING_AKMA_SERVICE_DENIED` só se aplica com a *feature* `RoamingRestriction`, fora do MVP. O MVP-1 implementa `K_AKMA_NOT_PRESENT` e `AKMA_CONTEXT_NOT_FOUND`, e testa que o terceiro **nunca** é emitido sem a *feature* negociada.
+2. **Os modelos do Naanf_AKMA não existem no `free5gc/openapi`** (ambiente-verificado §3). Sem eles não há produtor (AAnF) nem consumidor (AUSF, AF). Entram no MVP-1, não no MVP-2.
+3. **O `openapi` não precisa de `AkmaInd`, `RoutingId`, `AANF` nem `naanf-akma`** — já estão lá. O MVP-2 fica restrito à lógica do UDM e do AUSF; a linha "Adicionar `AkmaInd` e `RoutingId` ao modelo" do baseline §6.2 cai.
+4. **O MVP-2 precisa de um UE para ser verificado, e o MVP-4 ainda não existe.** O banco de testes Go do free5GC (`test/ranUe.go`) já deriva K_AUSF em Go, no 5G-AKA e no EAP-AKA'. Com um *patch* pequeno nesse banco, o MVP-2 se verifica sozinho, nos dois métodos de autenticação primária, comparando a K_AF devolvida pelo AAnF com a derivada independentemente a partir da K_AUSF do UE de teste. O UERANSIM, por padrão, só exercita 5G-AKA.
+5. **O MVP-3 não depende do MVP-2.** O AF pode ser testado contra um contexto semeado no AAnF por uma ferramenta que faz o papel do AUSF. MVP-2 e MVP-3 podem andar em qualquer ordem; se o MVP-2 parar em D8, D9 ou D10, o MVP-3 segue.
+6. **A K_AF do lado UE é derivada pelo ME, não pela aplicação.** `[3GPP]` TS 33.535 §6.1 e §6.2.1 atribuem ao ME a derivação de K_AKMA, A-KID e K_AF. O MVP-4 coloca as três no `nr-ue` e entrega à aplicação (cliente Ua\*) apenas o A-KID e a K_AF do AF pedido. K_AKMA não sai do ME.
+7. **Três implementações independentes da derivação.** Python (oráculo do projeto), Go (MVP-0) e C++ (MVP-4, no UERANSIM, sobre a KDF que o UERANSIM já tem). A comparação contra `ueauth.GetKDFValue` do free5GC acrescenta uma quarta implementação da KDF genérica, escrita por terceiros. Isso reduz o risco de o oráculo e o Go concordarem num erro comum de leitura.
+8. **O "primeiro MVP funcional" é o MVP-5.** É nele que a pergunta-guia é respondida com evidência (seção 9). Os anteriores são incrementos verificáveis.
+9. **O que a literatura muda no plano** (`docs/literatura/analise-dos-artigos.md`): nenhuma modificação de protocolo entra, mas duas verificações de implementação passam a critério de aceitação — o AAnF associa cada AF_ID autorizado à identidade do AF que o pede (contra o ataque de falsificação de AF de Akman et al., 2023), e o Ua\* confirma a posse de K_AF nos dois sentidos (sem isso a autenticação UE↔AF falha nas análises formais de Yang et al., 2022). Nenhum trabalho do acervo implementa AKMA sobre o free5GC; o mais próximo é a implementação sobre o Open5GCore (Boureanu et al., ASIA CCS '25), de código fechado.
+10. **O conteúdo do MVP é do Release 17.** `[3GPP]` TR 121 917 situa AKMA e AKMA_TLS como itens de trabalho do Release 17, e TS 33.535 V19.0.0 é a 18.8.0 republicada. Os acréscimos do Release 18 (controle de *roaming*, notificação de desabilitação, DTLS, OSCORE, `AuthTrigger`) ficam no MVP-6+. A assimetria com o free5GC, que declara Release 17, não atinge o fluxo do MVP — argumento útil para a proposta *upstream*.
+
+Sequência ajustada e dependências:
+
+```
+MVP-0  biblioteca comum: KDF, SUPI, A-KID, AF_ID, codecs
+  │
+  ├── MVP-1  AAnF autônomo + modelos Naanf_AKMA no openapi
+  │     ├── MVP-2  UDM + AUSF → AnchorKey_Register     (verificado pelo banco de testes Go)
+  │     └── MVP-3  AF + Ua* simplificado              (verificado com contexto semeado)
+  │
+  └── MVP-4  lado UE: ME no UERANSIM + cliente Ua*     (requer D5 e MVP-3)
+                │
+MVP-2 + MVP-3 + MVP-4 ──► MVP-5  ponta a ponta + testes negativos  = primeiro MVP funcional
+```
+
+Correspondência com as fases do README: F2 = MVP-0, F3 = MVP-1, F4 = MVP-2, F5 = MVP-3, F6 = MVP-4, F7 = MVP-5, F8+ = MVP-6+.
+
+---
+
+## 3. Estrutura do repositório proposta
+
+Raiz conforme D2. Código e documentação separados pelos mesmos lados.
+
+```
+akma-free5gc/
+├── specs/  specs/openapi/  papers/    normas e artigos, fora do controle de versão (D1, executada)
+├── reference/kdf/                      oráculo Python (existente) + gerador de vetores
+├── shared/akma/                        módulo Go comum (D7): kdf, supi, akid, afid, codec
+├── free5gc/                            LADO free5GC
+│   ├── aanf/                           NF nova, estrutura de NF do free5GC
+│   ├── patches/openapi/                modelos e cliente do Naanf_AKMA (D6)
+│   ├── patches/udm/
+│   ├── patches/ausf/
+│   ├── patches/test/                   banco de testes Go do free5GC
+│   ├── config/aanfcfg.yaml
+│   └── scripts/                        aplicar patches, compilar, provisionar assinante
+├── af/                                 LADO AF / Ua*
+│   ├── af/                             AF de teste
+│   ├── ue/ueransim/patches/            ME: K_AKMA, A-TID, A-KID, K_AF
+│   ├── ue/uaclient/                    cliente Ua*
+│   └── scripts/                        ponta a ponta, testes negativos
+└── docs/
+    ├── 00–04, baseline/, decisions/, defects/, traceability/   (existentes)
+    ├── plano/                          este documento
+    ├── conformidade/desvios.md         criado no primeiro desvio aprovado
+    ├── shared/                         KDF, identificadores, codificação, vetores
+    ├── free5gc-side/                   AAnF, openapi, UDM, AUSF, assinatura, verificação
+    ├── af-side/                        AF, Ua*, UE, cliente, scripts
+    └── tutorial/                       incremental, atualizado ao fim de cada MVP
+```
+
+O código do lado free5GC é editado e versionado aqui e implantado na VM do free5GC por `rsync` e `git apply`. Toda alteração na VM do free5GC é anunciada antes; as destrutivas são confirmadas.
+
+---
+
+## 4. MVPs
+
+### MVP-0 — Biblioteca AKMA comum e validação cruzada
+
+**Objetivo.** Implementar em Go as três derivações, a conversão de SUPI, a construção e a análise do A-KID e do AF_ID, e as codificações por camada, concordando octeto a octeto com o oráculo Python e com a KDF do free5GC.
+
+**Pré-requisitos.** D1, D2, D3, D7. Estrutura `docs/` por lado criada. Oráculo Python estendido para emitir vetores em JSON.
+
+**Cláusulas.** TS 33.220 B.1, B.2.0, B.2.1.2, B.2.1.3, B.2.2, H.1–H.3 · TS 33.535 A.1–A.4 (A.4 não diz como codificar o FQDN: a leitura por analogia com o `NAF_Id` continua `[INTERPRETAÇÃO]`), §6.1 (A-KID em NAI; RID vindo do UDM), D.3.5 (no CBOR, A-TID como `bstr`) · TS 33.501 A.7.0 · TS 23.003 §2.2 (MNC de 2 ou 3 dígitos conforme o MCC), §2.2B item 3 (RID), §28.2 · TS 29.522 Tab. 5.14.5.4.2-1 (`AKId`, `AfId`) · TS 29.571 (`Supi`) · TS 24.109 K.2 c)2) (codec base64 da K_AF) · RFC 4648, RFC 7542 §2.2.
+
+**Pontos de leitura que o MVP-0 resolve** (seção 7): P9 — `AfId` é definido como `"<FQDN>.<Ua* security protocol id>"` com o identificador descrito como *"a string of 5 octet"*; a forma de dez caracteres hexadecimais vem do exemplo (`0100BC0001`, em maiúsculas). P10 — resolvido: TS 33.220 B.2.0 restringe P0 a *"static ASCII-encoded string"* apenas *"in this specification"*, e TS 33.535 A.4 não adota a restrição; o P0 de K_AF é o AF_ID completo.
+
+**Arquivos.**
+
+| Lado | Caminho | Conteúdo |
+|---|---|---|
+| shared | `shared/akma/go.mod` | módulo, Go 1.26.2; dependência `golang.org/x/text` (NFKC) |
+| shared | `shared/akma/kdf/kdf.go`, `kdf/akma.go` | KDF genérica; `KAkma`, `ATid`, `KAf` |
+| shared | `shared/akma/supi/supi.go` | `imsi-<dígitos>` (SBI) → dígitos (P0/P1); recusa NAI/GCI/GLI no MVP |
+| shared | `shared/akma/akid/{rid,realm,akid}.go` | RID como cadeia; domínio `5gc.mnc<MNC>.mcc<MCC>.3gppnetwork.org`; montagem e análise do A-KID |
+| shared | `shared/akma/afid/{uastar,afid}.go` | identificador Ua\* de 5 octetos; forma de transporte ↔ P0 |
+| shared | `shared/akma/codec/key.go` | hex ancorado de 64 caracteres; base64 |
+| shared | `shared/akma/testdata/vectors.json` | vetores **gerados pelo projeto**, rotulados |
+| shared | `reference/kdf/akma_kdf.py`, `reference/kdf/gen_vectors.py` | oráculo e gerador |
+| docs | `docs/shared/{kdf,identificadores,codificacao,vetores}.md` | |
+| free5GC | — | nada é tocado |
+| AF | — | nada é tocado |
+
+**Estruturas de dados.**
+
+```go
+type Key [32]byte                       // K_AKMA, K_AF, A-TID: sempre 32 octetos internamente
+type UaStarID [5]byte
+type AfID struct { FQDN string; Proto UaStarID }
+func (AfID) Transport() string           // "<FQDN>.<10 hex>"
+func (AfID) KDFParam() []byte            // NFKC(FQDN) ‖ 5 octetos
+func ParseAfID(s string) (AfID, error)
+type HomeNetwork struct { MCC, MNC string } // MNC com 2 ou 3 dígitos, nunca inferido do IMSI
+type AKID struct { RID string; ATID Key; Realm string }
+type Options struct { ATIDEncoding, ATIDLabel string; AcceptLabels []string }  // ADR-0002 §4
+func (AKID) Format(Options) string
+func ParseAKID(s string, o Options) (AKID, error)
+```
+
+**Como testar.** `go test -race ./...` na VM do AF. O teste lê `vectors.json` e compara a cadeia `S` e a saída de cada derivação. Um teste à parte compara a KDF genérica com `ueauth.GetKDFValue` (`free5gc/util` v1.3.2) para os FC `0x80`, `0x81` e `0x82`.
+
+**Critério de aceitação.**
+1. `go test -race ./...` sem falhas.
+2. Todos os vetores do oráculo reproduzidos octeto a octeto (cadeia `S` e saída), incluindo os três do baseline §2.5.
+3. KDF genérica idêntica a `ueauth.GetKDFValue` em todos os vetores.
+4. RID `"0"`, `"012"` e `"0000"` sobrevivem a montagem → análise sem alteração; `"012"` ≠ `"12"`.
+5. Testes negativos: SUPI com prefixo `imsi-` recusado na camada da KDF; forma de transporte do AF_ID recusada como P0; rótulo `akid` aceito na leitura e nunca emitido; `kAkma` com 63 ou 65 caracteres, ou não hexadecimal, recusado; FQDN com caracteres de compatibilidade Unicode normalizado por NFKC.
+6. Todo vetor no repositório rotulado "gerado pelo projeto; não é vetor 3GPP".
+
+**Riscos.** Oráculo e Go escritos a partir das mesmas leituras — mitigado por `ueauth` agora e pelo C++ do UERANSIM no MVP-4. Versão de `golang.org/x/text` precisa ser compatível com o grafo do free5GC. Comprimento do MNC (2 ou 3 dígitos) não pode ser inferido do IMSI.
+
+**O tutorial ganha.** `docs/tutorial/README.md` com pré-requisitos (free5GC v4.2.3, Go 1.26.2) e a seção "Conferir as derivações": como rodar o oráculo e os testes, e como ler um vetor.
+
+---
+
+### MVP-1 — AAnF autônomo na VM do free5GC
+
+**Objetivo.** Uma NF AAnF, com a estrutura das NFs do free5GC, que se registra no NRF como `AANF`/`naanf-akma`, expõe as três operações do Naanf_AKMA com contexto em memória e responde aos erros de TS 29.535 e TS 29.500 — testada sem AUSF.
+
+**Pré-requisitos.** MVP-0; D4, D6; decisões DV-1 e DV-7 (seção 6).
+
+**Cláusulas.** TS 33.535 §3.1 (contexto AKMA), §4.1, §4.2.2 (AF autenticado e autorizado), §4.4.0, §5.2, §6.1 passos 4–5 e NOTA 1a, §6.2.1 passos 2, 7 e 8, §6.6, §6.7, §7.1 · TS 29.535 §§4.2.2.2–4.2.2.4, §4.2.1.3.2, §5.1.2.2.2 (`application/json`, `application/problem+json`), 5.1.3, 5.1.4, 5.1.6, §5.1.7.1 (erros de TS 29.500 Tab. 5.2.7.2-1; TS 29.501 §4.8), 5.1.7.3, 5.1.8, 5.1.9, Anexo A (YAML v1.2.0) · TS 29.522 §5.14.5.3–5.14.5.4, §5.14.7.3, Anexo A.12 · TS 29.510 (`NFProfile`, `NFService`, Tab. 6.1.6.2.73-1 `AanfInfo`: sem RIDs, o AAnF atende qualquer RID; chave do `aanfInfoList` com até 32 caracteres) · TS 29.500 §5.2.7.1 (Tab. 5.2.7.1-1), §5.2.7.2 (método não suportado → 501), §5.2.3.2.1 (cabeçalhos obrigatórios) · TS 29.501 §4.4.2, §6.2 (corpo JSON até 16 milhões de octetos) · TS 33.501 §13.1.0 (suporte a TLS), §13.4.1.0 (OAuth2 obrigatório de suportar; escopo em nível de serviço, escopos adicionais opcionais).
+
+**Arquivos.**
+
+| Lado | Caminho | Conteúdo |
+|---|---|---|
+| free5GC | `free5gc/patches/openapi/0001-naanf-akma-models.patch` | modelos do Naanf_AKMA sobre `openapi` v1.2.4 |
+| free5GC | `free5gc/patches/openapi/0002-naanf-akma-client.patch` | cliente `aanf/AKMA` (usado pelo AUSF e pelo AF) |
+| free5GC | `free5gc/aanf/cmd/main.go` | |
+| free5GC | `free5gc/aanf/pkg/factory/{config,factory}.go` | leitura de `aanfcfg.yaml` |
+| free5GC | `free5gc/aanf/pkg/service/init.go` | ciclo de vida |
+| free5GC | `free5gc/aanf/internal/context/{context,akma_context}.go` | contexto da NF; armazenamento AKMA |
+| free5GC | `free5gc/aanf/internal/sbi/{server,api_akma}.go` | rotas, validação, ProblemDetails, OAuth2 |
+| free5GC | `free5gc/aanf/internal/sbi/processor/{register_anchorkey,retrieve_applicationkey,remove_context}.go` | |
+| free5GC | `free5gc/aanf/internal/sbi/consumer/nrf_service.go` | registro, *heartbeat*, cancelamento |
+| free5GC | `free5gc/aanf/tools/seed/` | ferramenta que faz o papel do AUSF, para testes |
+| free5GC | `free5gc/config/aanfcfg.yaml` | |
+| free5GC | `free5gc/scripts/{deploy,build-aanf,run-aanf}.sh` | |
+| docs | `docs/free5gc-side/{aanf,openapi,registro-nrf}.md`, `docs/conformidade/desvios.md` | |
+| VM free5GC | `~/free5gc/` | **nenhum arquivo do free5GC é alterado**; o binário vai para `~/free5gc/bin/aanf` e a configuração para `~/free5gc/config/aanfcfg.yaml` (arquivos novos) |
+
+**Estruturas de dados.**
+
+```go
+type UeAkmaContext struct {
+    Supi   string               // forma SBI, "imsi-..."; chave primária
+    AKID   string               // A-KID corrente
+    KAkma  akma.Key
+    Gpsi   string               // vazio no MVP
+    AfKeys map[string]*AfKeyRecord   // por AF_ID de transporte
+}
+type AfKeyRecord struct {
+    AfID      afid.AfID
+    KAf       akma.Key
+    Expiry    time.Time          // instante absoluto; serializado em UTC
+    AKIDSent  string             // §6.8.1 NOTA 1
+    NotifURI  string             // RoamingRestriction; não usado no MVP
+    NotifExp  time.Time
+}
+type Store struct {             // protegido por mutex
+    bySupi map[string]*UeAkmaContext
+    byAKID map[string]string     // A-KID → SUPI
+}
+```
+
+Novo par (A-KID, K_AKMA) para um SUPI apaga o par anterior e o índice do A-KID antigo; os `AfKeyRecord` permanecem até `Expiry` (§6.1 NOTA 1a, §5.2).
+
+Configuração (`aanfcfg.yaml`), além dos campos comuns às NFs do free5GC: `routingIndicators` (`AanfInfo`, cadeias), `akma.kafLifetime` (política do operador, §6.2.1 passo 7), `akma.authorizedAfs` (política local, §6.2.1 passo 2: cada AF_ID autorizado associado à identidade do AF que pode pedi-lo — no MVP, o endereço de origem; com TLS, a identidade do certificado), `akma.codec` (ADR-0002 §4), `akma.roamingStatusSubscription: false` (questão 1).
+
+**Como testar.** Unitários do `Store` (substituição, expiração, índices). Testes de API com servidor h2c em memória para cada operação e cada código. Integração na VM do free5GC: NRF + AAnF, consulta do perfil, descoberta `target-nf-type=AANF&requester-nf-type=AUSF`, token OAuth2 de escopo `naanf-akma`. Da VM do AF: requisição à porta do AAnF.
+
+**Critério de aceitação.**
+1. Perfil no NRF com `nfType: AANF`, serviço `naanf-akma` versão `v1`, `ipEndPoints` em `192.168.16.130`, `aanfInfoList` com os RIDs configurados como cadeias (`"0000"` preservado).
+2. `register-anchorkey` aceita `AkmaKeyInfo` válido e responde 200 com `AkmaKeyInfo` no corpo (TS 29.535 §4.2.2.2.2); recusa com 400 `supi` e `gpsi` juntos, nenhum dos dois, `gpsi` sem a *feature*, `kAkma` fora do padrão.
+3. Novo registro para o mesmo SUPI torna o A-KID antigo desconhecido e mantém as K_AF já emitidas até a expiração.
+4. `retrieve-applicationkey` devolve K_AF idêntica ao vetor do oráculo para (K_AKMA, AF_ID), `expiry` em RFC 3339 UTC no futuro, `supi` presente, `gpsi` ausente.
+5. A-KID sem K_AKMA → 403 com `cause` `K_AKMA_NOT_PRESENT` (TS 29.535 §4.2.2.3.2). AF_ID fora da política local → 403 com `ProblemDetails` sem causa específica (P3). AF_ID autorizado pedido por AF a que ele não pertence → 403 (ataque de falsificação de AF; ver `docs/literatura/`). 204 conforme DV-7.
+6. `remove-context` responde 204 e torna o contexto inexistente; SUPI desconhecido → 404 `AKMA_CONTEXT_NOT_FOUND`.
+7. Matriz dos 11 códigos obrigatórios para POST (TS 29.500 Tab. 5.2.7.1-1): cada código ou tem teste, ou tem justificativa escrita de por que só é alcançável por infraestrutura ausente no MVP (por exemplo, 502 via SCP).
+8. `ROAMING_AKMA_SERVICE_DENIED` nunca emitido.
+9. Requisição feita a partir de `192.168.16.129` chega ao AAnF (ADR-0001-R2 §5.2).
+10. Nenhuma chave aparece em log de nível `info` ou inferior em severidade.
+
+**Riscos.** O *middleware* de OAuth2 das NFs do free5GC é por serviço; `retrieve-applicationkey` vindo do AF não terá token (o AF não alcança o NRF) e precisa ser autorizado por política local, operação por operação. O NRF do free5GC emite tokens com escopo do nome do serviço. `[3GPP]` TS 33.501 §13.4.1.0 define esse nível de serviço como a extensão básica do token e torna os escopos adicionais dependentes de configuração do produtor; os escopos finos de TS 29.535 (`naanf-akma:anchorkey` etc.) ficam opcionais no MVP. O NRF ignora `routing-indicator` para `AANF` (correto com uma instância). Colisão de porta em `192.168.16.130`.
+
+**O tutorial ganha.** "Instalar o AAnF no free5GC": aplicar o *patch* do `openapi`, compilar, configurar, iniciar, verificar o registro no NRF.
+
+---
+
+### MVP-2 — UDM e AUSF: indicação AKMA e AnchorKey_Register
+
+**Objetivo.** Depois de uma autenticação primária bem-sucedida (5G-AKA e EAP-AKA') de um assinante com assinatura AKMA, o UDM indica `akmaInd` e `routingId`, e o AUSF deriva K_AKMA, A-TID e A-KID e os registra no AAnF descoberto via NRF.
+
+**Pré-requisitos.** MVP-1; D8 (TS 29.505); D9 e D10 decididas com o texto da norma; aviso antes de aplicar *patches* nas árvores de `NFs/ausf` e `NFs/udm` da VM do free5GC.
+
+**Cláusulas.** TS 33.535 §3.1 e §4.2.5 (assinatura AKMA), §6.1 passos 1–5, NOTAS 1 e 1a, *"The AUSF shall use the RID received from the UDM"*, §6.7 e NOTA 1 · TS 33.501 §6.1.3.1 passo 2 e §6.1.3.2.0 (o UDM *shall* incluir a indicação AKMA e o RID na resposta de `Nudm_UEAuthentication_Get`), §6.1.1.1 (K_AUSF pode ser guardada no AUSF quando AKMA é suportado), §6.2.2.1 (K_AUSF guardada ou substituída quando RES\* = XRES\*, passo 11 do 5G-AKA, ou quando o AUSF envia EAP-Success, passo 10 do EAP-AKA' — os dois pontos de acionamento do AKMA no AUSF), §14.2.2, A.7.0 · TS 29.503 Tab. 6.3.6.2.3-1, §5.4.2.2.2 · TS 29.509 Tab. 6.1.6.2.2-1 (o `routingIndicator` vindo do AMF não serve ao A-KID) · TS 29.505 (`akmaAllowed`) · TS 29.510 (descoberta) · TS 29.535 §4.2.2.2.
+
+**Arquivos.**
+
+| Lado | Caminho no free5GC (VM) | Alteração | *Patch* no repositório |
+|---|---|---|---|
+| free5GC | `NFs/udm/pkg/suci/suci.go` | exportar a extração do RID do SUCI | `free5gc/patches/udm/` |
+| free5GC | `NFs/udm/internal/sbi/processor/generate_auth_data.go` | se `authSubs.AkmaAllowed`, preencher `AkmaInd` e `RoutingId` (cadeia) | idem |
+| free5GC | `NFs/ausf/internal/context/context.go` | `AusfUeContext`: `AkmaInd`, `RoutingId`, PLMN doméstica do SUCI | `free5gc/patches/ausf/` |
+| free5GC | `NFs/ausf/internal/sbi/processor/ue_authentication.go` | guardar a indicação em `UeAuthPostRequestProcedure`; acionar o AKMA no sucesso de `Auth5gAkaComfirmRequestProcedure` e de `EapAuthComfirmRequestProcedure` | idem |
+| free5GC | `NFs/ausf/internal/sbi/processor/akma.go` (novo) | derivação e registro | idem |
+| free5GC | `NFs/ausf/internal/sbi/consumer/aanf_service.go` (novo) | descoberta do AAnF com `routing-indicator`, token, `register-anchorkey`; URI local como alternativa (§6.7) | idem |
+| free5GC | `NFs/ausf/pkg/factory/config.go`, `config/ausfcfg.yaml` | seção `akma` | idem |
+| free5GC | `NFs/ausf/go.mod` | `replace` do `openapi` corrigido e de `shared/akma` | idem |
+| free5GC | `test/ranUe.go`, `test/akma_test.go` (novo) | guardar K_AUSF do UE de teste; testes AKMA em 5G-AKA e EAP-AKA' | `free5gc/patches/test/` |
+| free5GC | MongoDB, `authenticationSubscription` do assinante | `akmaAllowed: true` | `free5gc/scripts/provision-akma-subscriber.sh` |
+| docs | — | — | `docs/free5gc-side/{udm,ausf,assinatura-akma,verificacao}.md` |
+| AF | — | nada | — |
+
+**Estruturas de dados.** `AusfUeContext` acrescido de `AkmaInd bool`, `RoutingId string`, `HomeNetwork akid.HomeNetwork`. Configuração `akma: { enable: bool, aanfUri: string }` no AUSF, com `aanfUri` vazio significando descoberta via NRF.
+
+**Como testar.** Unitários do UDM (RID `"0"`, `"012"`, `"0000"` extraídos do SUCI sem perda). Unitário do AUSF com UDM e AAnF simulados: o `AkmaKeyInfo` enviado tem `supi` com prefixo (forma SBI), `aKId` e `kAkma` iguais aos derivados pelo oráculo a partir da mesma K_AUSF. Integração pelo banco de testes Go do free5GC: o UE de teste se registra; o teste deriva A-KID e K_AF a partir da própria K_AUSF e pede a K_AF ao AAnF. Integração com UERANSIM (5G-AKA).
+
+**Critério de aceitação.**
+1. No banco de testes, para 5G-AKA e para EAP-AKA', a K_AF devolvida pelo AAnF é igual à K_AF derivada pelo UE de teste a partir da sua K_AUSF.
+2. Com UERANSIM (`imsi-208930000000001`, RID `"0000"`), o AAnF guarda o A-KID `rid0000.atid<44 caracteres base64>@5gc.mnc093.mcc208.3gppnetwork.org`.
+3. Assinante sem `akmaAllowed`: `akmaInd` ausente e nenhuma chamada ao AAnF.
+4. Reautenticação substitui o contexto no AAnF.
+5. `TestRegistration`, `TestGUTIRegistration`, `TestReSynchronization` e `TestEAPAKAPrimeAuthentication` continuam passando.
+6. Comportamento com AAnF indisponível conforme D9.
+7. Nenhuma chave em log.
+
+**Riscos.** RID quando não há SUCI (D10). Comprimento do MNC do domínio doméstico: tomado do SUCI, nunca do IMSI. A *webconsole* pode sobrescrever `akmaAllowed` ao editar o assinante — provisionar por `mongosh` e documentar. A política de tokens do NRF pode exigir ajuste para AUSF → AANF. O banco de testes do free5GC exige `sudo` (usa *namespaces*). Os *patches* deixam os submódulos `NFs/ausf` e `NFs/udm` com alterações locais — o usuário decide como versioná-las lá.
+
+**O tutorial ganha.** "Habilitar AKMA no UDM e no AUSF" e "Provisionar um assinante AKMA", com a verificação pelo banco de testes.
+
+---
+
+### MVP-3 — AF mínimo e Ua\* simplificado
+
+**Objetivo.** Um AF na VM do AF que serve um Ua\* simplificado (formato do Digest de TS 24.109 K.2, identificador `FF 00 00 00 01`), obtém K_AF do AAnF por `AkmaAfKeyRequest`, a guarda até `expiry` e autentica um cliente que prova possuir K_AF.
+
+**Pré-requisitos.** MVP-1 (AAnF alcançável da VM do AF); decisão DV-5 (seção 6); especificação do Ua\* simplificado escrita em `docs/af-side/ua-star.md` e aprovada antes do código; Go na VM do AF.
+
+**Cláusulas.** TS 33.535 §4.4.1 (Ua\* carrega o A-KID e trata a expiração de K_AF), §6.2.1 passos 1, 2, 8 e 9, §6.4.2, §6.4.3, §6.5 (iniciação do AKMA pelo AF), A.4, B.1.2.2 (Stage 2 do perfil Digest) · TS 33.220 §4.5.2 (pré-requisitos de consistência do FQDN na derivação), H.2 NOTA 2, H.3 · TS 24.109 §5.2.1 (*product token*), §5.2.2.1 (Digest conforme RFC 7616; `username`; senha em base64; `realm` em duas partes), §5.2.6 (`qop=auth-int` opcional), Anexo K.2 · TS 33.222 §5.3.0 passo 2 (cabeçalho `Host` com o nome do AF) e NOTA 1b (MD5 desaconselhado) · TS 29.522 §5.14.5.3 · TS 29.535 §4.2.2.3.
+
+**O que a leitura fixou.** `[3GPP]` O Ua\* simplificado é, na forma, o Digest de TS 24.109 §5.2 com os parâmetros AKMA de K.2 e de TS 33.535 B.1.2.2 — `User-Agent` com `3gpp-akma`, `username` = A-KID, senha = base64(K_AF), `realm` com o FQDN do AF como segunda parte e a primeira parte conforme DV-6 — sem o túnel TLS que K.2 a) exige. `[INTERPRETAÇÃO]` Por faltar o TLS, não é o perfil K.2; por isso mantém o identificador privado `FF 00 00 00 01` (ADR-0003). O identificador registrado `01 00 00 00 02` (TS 33.220 H.3, "HTTP digest authentication according to TS 24.109") existe, mas está definido para o GBA; usá-lo para chaves AKMA seria afirmar um perfil que TS 24.109 não especifica para o AKMA. O ADR-0003 precisa registrar essa alternativa e o motivo de não adotá-la (I15).
+
+**Arquivos.**
+
+| Lado | Caminho | Conteúdo |
+|---|---|---|
+| AF | `af/af/cmd/af/main.go` | |
+| AF | `af/af/internal/config/` | FQDN, identificador Ua\*, URI do AAnF (configuração local, §6.7), endereço de escuta |
+| AF | `af/af/internal/naanf/client.go` | h2c; usa o cliente do D6 |
+| AF | `af/af/internal/keycache/cache.go` | K_AF por A-KID, até `expiry` |
+| AF | `af/af/internal/uastar/{digest,server}.go` | desafio, verificação, `rspauth` |
+| AF | `af/ue/uaclient/` | cliente Ua\*; no MVP-3 recebe A-KID e K_AF de vetores |
+| free5GC | `free5gc/aanf/tools/seed/` (do MVP-1) | semeia o contexto no AAnF, na VM do free5GC |
+| docs | `docs/af-side/{af,ua-star,teste-af}.md` | |
+
+**Estruturas de dados.** `KafEntry{AKID string; KAf akma.Key; Expiry time.Time; Supi string}`; estado de desafio `{nonce, opaque, criado}`.
+
+**Como testar.** Unitários do Digest contra os exemplos de RFC 7616 (algoritmo conforme DV-5) e com senha `base64(K_AF)`. Integração com o AAnF semeado: cliente com a K_AF correta autentica; com K_AF errada, não; A-KID desconhecido; AF fora da lista local; K_AF expirada leva a nova requisição ao AAnF, que devolve a mesma K_AF enquanto K_AKMA não mudar (§5.2, §6.4.3).
+
+**Critério de aceitação.**
+1. A K_AF obtida pelo AF é igual à do oráculo para o contexto semeado.
+2. O `afId` enviado ao AAnF está na forma de transporte e o `aKId` é exatamente o recebido do cliente.
+3. Autenticação Ua\* bem-sucedida com a K_AF correta e recusada com qualquer outra.
+4. Confirmação de chave nos dois sentidos: o AF prova ao cliente que tem a K_AF (`rspauth` no `Authentication-Info`), e o cliente recusa resposta sem prova válida.
+5. O AF nunca usa K_AF após `expiry` (teste com tempo de vida curto); com K_AF expirada, recusa ou pede nova ao AAnF, conforme TS 33.535 §6.4.2.
+6. Pedido sem parâmetros AKMA recebe a mensagem de iniciação do AKMA (o desafio `WWW-Authenticate`), conforme TS 33.535 §6.5.
+7. Nenhuma chave em log.
+
+**Riscos.** Sem TLS, o A-KID trafega em claro e o AF não é autenticado perante o UE — limitação do perfil privado, declarada em `ua-star.md`. O AF precisa usar, na derivação, o mesmo FQDN que o UE usou (cabeçalho `Host` e segunda parte do `realm`); um AF alcançável por mais de um nome produz K_AF divergente (TS 33.220 §4.5.2). O Go não tem servidor Digest na biblioteca padrão; a implementação de RFC 7616 é do projeto e precisa de vetores da própria RFC.
+
+**O tutorial ganha.** "Escrever um AF que usa AKMA": configurar o AF, autorizá-lo no AAnF, obter K_AF.
+
+---
+
+### MVP-4 — Lado UE: derivação no ME e envio do A-KID
+
+**Objetivo.** O `nr-ue` deriva K_AKMA, A-TID e A-KID após a autenticação primária e K_AF sob demanda; o cliente Ua\* usa o A-KID e a K_AF para autenticar-se no AF, e as chaves do UE e da rede coincidem.
+
+**Pré-requisitos.** MVP-0, MVP-3; D5; compilação do UERANSIM no local escolhido.
+
+**Cláusulas.** TS 33.535 §6.1 (derivação pelo ME antes de comunicar com um AF), §6.2.1 passo 1, A.2–A.4 · TS 33.501 A.7.0 · TS 23.003 §2.2B, §28.2 · TS 24.109 K.2 (*product token* `3gpp-akma` no `User-Agent`).
+
+**Arquivos (com D5 = A).**
+
+| Lado | Caminho | Conteúdo |
+|---|---|---|
+| AF/UE | `af/ue/ueransim/patches/0001-akma-me.patch` sobre `src/ue/nas/keys.{hpp,cpp}`, `src/ue/types.hpp`, `src/ue/nas/mm/auth.cpp` ou `security.cpp`, `src/lib/app/cli_cmd.{hpp,cpp}`, `src/ue/app/cmd_handler.cpp`, leitura de configuração | derivações no ME; comando de `nr-cli` que devolve o A-KID e a K_AF para um AF_ID; opção `akma` na configuração do UE |
+| AF/UE | `af/ue/uaclient/` | obtém (A-KID, K_AF) do ME pelo `nr-cli` e executa o Ua\* |
+| AF/UE | `af/scripts/ue-ua.sh` | executa o cliente no *namespace* do UE |
+| docs | `docs/af-side/{ue-ueransim,ua-client}.md` | |
+
+**Estruturas de dados.** `struct AkmaContext { OctetString kAkma; OctetString aTid; std::string aKid; bool valid; }` no contexto de segurança NAS do UE.
+
+**Como testar.** As derivações em C++ reproduzem os vetores do MVP-0 (comando de autoteste). Integração: o UE se registra; o A-KID devolvido pelo `nr-cli` é igual ao guardado no AAnF; o cliente Ua\* autentica no AF.
+
+**Critério de aceitação.**
+1. A-KID do UE igual, caractere a caractere, ao do AAnF.
+2. Autenticação Ua\* bem-sucedida com a K_AF derivada pelo UE.
+3. As derivações em C++ reproduzem todos os vetores do MVP-0.
+4. Após novo registro com nova autenticação, o A-KID do UE muda e o antigo deixa de ser aceito pelo AAnF.
+5. K_AKMA não é exposta pelo `nr-cli`.
+
+**Riscos.** O comando do `nr-cli` é interface de teste, não interface 3GPP: entrega K_AF a qualquer processo local que o chame, enquanto TS 33.535 §4.4.3 exige que cada aplicação só obtenha K_AF dos AF_ID a que está autorizada (como garantir isso está fora do escopo 3GPP). Limitação a declarar no tutorial. NFKC indisponível no C++ do UERANSIM: FQDN restrito a ASCII no lado UE. Instante da derivação (após o *Security Mode Command* no 5G-AKA). *Toolchain* C++ no Ubuntu 18.04 (já resolvida na instalação atual).
+
+**O tutorial ganha.** "Preparar o UE (UERANSIM) para AKMA" e "Executar o cliente Ua\*".
+
+---
+
+### MVP-5 — Ponta a ponta e testes negativos (primeiro MVP funcional)
+
+**Objetivo.** Executar todo o fluxo obrigatório da tabela de etapas mínimas de forma roteirizada e reprodutível, com o plano de testes negativos.
+
+**Pré-requisitos.** MVP-2, MVP-3, MVP-4.
+
+**Cláusulas.** Todas as da tabela de etapas mínimas · TS 29.500 §5.2.7.1 · TS 29.535 §5.1.7.3 · questão 1 tratada como etapa configurável, desabilitada, registrada como desvio.
+
+**Arquivos.** `af/scripts/e2e.sh` (orquestra as duas VMs por SSH, coleta evidências), `af/scripts/negative/`, `free5gc/scripts/` (apoio), `docs/af-side/e2e.md`, `docs/free5gc-side/verificacao.md`, `docs/conformidade/desvios.md` (consolidado), matriz de rastreabilidade revisão 4, `docs/tutorial/` completo.
+
+**Testes negativos.** A-KID desconhecido; rótulo `akid` aceito; RID `"012"` × `"12"`; AF não autorizado; `afId` malformado (9 dígitos hexadecimais, sem ponto); `AkmaKeyInfo` com `supi` e `gpsi`; `kAkma` fora do padrão; `Content-Type` incorreto (415); corpo acima do limite (413); demais códigos da matriz do MVP-1; desvio deliberado de relógio no AF (aceita K_AF expirada ou recusa válida); reautenticação: A-KID antigo recusado, K_AF antiga ainda válida no AF até `expiry`; assinante sem AKMA; AAnF indisponível durante a autenticação primária (conforme D9); `remove-context` seguido de `retrieve`.
+
+**Critério de aceitação.**
+1. `e2e.sh` termina com código 0 e gera relatório com: registro do UE, contexto AKMA criado no AAnF com A-KID igual ao do UE, K_AF entregue ao AF com `expiry`, autenticação Ua\* bem-sucedida.
+2. Todos os testes negativos com o resultado esperado.
+3. Cada linha da tabela de etapas mínimas ligada a uma evidência (teste ou trecho de log) na matriz revisão 4.
+4. O tutorial, seguido do início sobre o free5GC v4.2.3 instalado e sem os *patches*, reproduz o resultado.
+
+**Riscos.** Instabilidade do ambiente (`gtp5g`, *namespace*, ordem de inicialização). Reprodução em instalação limpa exige *snapshot* da VM.
+
+**O tutorial ganha.** A versão completa do MVP: do free5GC recém-instalado até a aplicação autenticada com K_AF.
+
+---
+
+## 5. MVP-6 em diante
+
+Acesso anônimo (§6.2.2, `anonInd`) · acionamento de `remove-context` pelo núcleo (§6.6) · caminho via NEF (§6.3, `3gpp-akma`) · *roaming* (`ROAMING_STATUS`, `RoamingRestriction`, `Notify` com `3gpp-Sbi-Callback`) · `AuthTrigger` (§6.4.4, divergência D: POST) · GPSI via `id-translation-result` e `AKMA_GPSI_Support` · TLS nas interfaces SBI (§4.4.0) · Ua\* conforme K.2 sobre TLS e TLS 1.3 PSK conforme K.3.3 (`crypto/tls` do Go não suporta PSK externa; avaliar OpenSSL) · filtro `routing-indicator` para `AANF` no NRF · várias instâncias de AAnF · persistência do contexto · desempenho (metodologia do ADR-0001-R2 §5.4) · verificação formal · *upstream* (*rebase* para a versão corrente, modelos do Naanf_AKMA produzidos pela mesma ferramenta OpenAPI que o free5GC usa para os demais, migração de `shared/akma` para `free5gc/util`).
+
+---
+
+## 6. Desvios e escolhas entre textos normativos
+
+Registro oficial, com motivo e impacto: `docs/conformidade/desvios.md`. Cada um é implementado no MVP indicado e, então, marcado como implementado naquele registro.
+
+| Nº | O que a norma exige | O que o projeto faz | Estado (16/10/2026) |
+|---|---|---|---|
+| DV-1 | TS 33.535 §4.4.0: interfaces AAnF↔AUSF, AAnF↔AF/NEF e AAnF↔UDM *"shall be confidentiality, integrity and replay protected"*; §4.2.2 e TS 29.535 §4.2.1.3.2: o AF *"shall be authenticated and authorized"* antes de receber K_AF. TS 33.501 §13.1.0: TLS dentro da PLMN *"unless network security is provided by other means"*; NOTA 2: com interfaces confiáveis, a proteção criptográfica é decisão do operador | `http` (h2c) em AUSF↔AAnF (*loopback*) e em AF↔AAnF (rede virtual entre VMs), declarando ambas como interfaces confiáveis do laboratório. Consequência: o AF não é autenticado pelo transporte, e um AF pode apresentar o AF_ID de outro (ataque de falsificação de AF, Akman et al. 2023). Mitigação no MVP: a política local associa cada AF_ID ao endereço de origem do AF; risco residual declarado. TLS no MVP-6+ | aprovado com o plano · MVP-1 |
+| DV-2 | TS 33.535 §6.2.1 passo 5 (*"shall"*) — questão 1. TS 29.535 condiciona a reação ao *roaming* à *feature* opcional `RoamingRestriction` (Tab. 5.1.8-1, 5.1.7.3-1) | subscrição de `ROAMING_STATUS` implementada como etapa configurável, desabilitada (orientação do material de partida; registrado em `desvios.md`) | aprovado com o plano · MVP-1 |
+| DV-3 | TS 33.501 A.7.0 define P0 também para SUPI do tipo NAI, GCI e GLI | apenas SUPI do tipo IMSI | aprovado com o plano · MVP-0 |
+| DV-4 | TS 33.220 B.2.1.2: NFKC nos parâmetros de cadeia | sem NFKC no lado UE (C++): FQDN só ASCII | aprovado com o plano · MVP-4 |
+| DV-5 | `[DIVERGÊNCIA]` TS 24.109 K.2 c) manda usar HTTP Digest *"(see RFC 3310)"* — o Digest AKA, em que a senha é derivada do RES. O mesmo K.2 b) remete à §5.2, que usa RFC 7616 (§5.2.2.1); TS 33.535 B.1.2.2 segue TS 33.222 §5.3.0, que também usa RFC 7616 e desaconselha MD5 (NOTA 1b). Com senha = base64(K_AF), só RFC 7616 é coerente | Digest conforme RFC 7616, `algorithm=SHA-256`, `qop=auth` (`auth-int` opcional, §5.2.6), `rspauth` obrigatório na resposta. Registrar a citação de RFC 3310 como defeito candidato (I18) | aprovado com o plano · MVP-3 |
+| DV-6 | `[DIVERGÊNCIA]` Divergência E. TS 33.535 B.1.2.2 (Stage 2): o AF inclui `3GPP-bootstrapping-akma` no `WWW-Authenticate`, e o `realm` contém o FQDN do AF (passos 3 e 4); TS 24.109 K.2 b)2) repete a constante; TS 24.109 §5.2.2.1 dá a forma `<constante>@<FQDN>`. Só TS 24.109 K.2 c)3) usa `3gpp-akma@<FQDN>` | Segue TS 33.535: `realm = "3GPP-bootstrapping-akma@<FQDN do AF>"` — constante e FQDN de TS 33.535, separador `@` do Stage 3; primeira parte configurável. Diverge só de K.2 c)3). Registro de defeitos (D-C) e Adendo D a atualizar | **decidido** · MVP-3 |
+| DV-7 | `[DIVERGÊNCIA]` TS 29.535 §4.2.2.3.2: 204 *"if the requested AKMA Application Key information for the UE does not exist"*, mas sem K_AKMA a resposta é 403 `K_AKMA_NOT_PRESENT`, e com K_AKMA a K_AF é sempre derivável — não há condição distinta para o 204 | não emitir 204; 403 `K_AKMA_NOT_PRESENT` quando não há K_AKMA. Registrar como defeito candidato (CT3) | **decidido** · MVP-1 |
+
+Não são desvios, e assim serão documentados: identificador Ua\* da faixa privada (TS 33.220 H.2 NOTA 2, ADR-0003); seleção do AAnF por configuração local (TS 33.535 §6.7); autorização do AF por política local em vez de token OAuth2 (TS 33.535 §6.2.1 passo 2; TS 29.535 §5.1.9: OAuth2 *"may"* ser usado); contexto em memória; GPSI não obtido (condicional à política local, §6.2.1 passo 3); A-KID transmitido a cada AF guardado mesmo sem subscrição de *roaming* (§6.2.1 passo 8 só o exige com a subscrição).
+
+---
+
+## 7. Pontos a conferir na norma antes de implementar
+
+| Nº | Ponto | Estado | MVP |
+|---|---|---|---|
+| P1 | Resposta de `retrieve-applicationkey` para A-KID sem K_AKMA | **Resolvido.** 403 `K_AKMA_NOT_PRESENT` (TS 29.535 §4.2.2.3.2). O 204 da mesma cláusula não tem condição alcançável: DV-7 | — |
+| P2 | Resposta de `register-anchorkey` | **Resolvido.** 200 com `AkmaKeyInfo` no corpo (TS 29.535 §4.2.2.2.2; YAML) | — |
+| P3 | Causa e código para AF não autorizado | **Resolvido.** Nenhuma causa definida em TS 29.535 nem em TS 29.500 Tab. 5.2.7.2-1 para o caso; 403 com `ProblemDetails` opcional (Tab. 5.1.4.3.2-2). `[INTERPRETAÇÃO]` 403 com `ProblemDetails` sem `cause` | — |
+| P4 | Escopos OAuth2 por operação | **Resolvido.** TS 33.501 §13.4.1.0; TS 29.535 §5.1.9 (OAuth2 *"may"*, por configuração local) | — |
+| P5 | Tempo de vida de K_AF | **Resolvido.** TS 33.535 §4.4.0: tempo de vida máximo pela política de autenticação do operador; §5.2: K_AF pode continuar após nova K_AKMA até o fim da sessão ou da validade. Configurável (`akma.kafLifetime`) | — |
+| P6 | Interfaces confiáveis | **Resolvido.** TS 33.501 §13.1.0 NOTA 2; DV-1 | — |
+| P7 | D10 | depende de TS 29.505 (D8) | MVP-2 |
+| P8 | Afirmações atribuídas a TS 33.535 e TS 29.535 | **Conferidas** em 16/10/2026 (`conferencia-normativa.md`) | — |
+| P9 | Forma textual do identificador Ua\* dentro do `AfId` | TS 29.522: *"a string of 5 octet"*; dez caracteres hexadecimais só pelo exemplo (`0100BC0001`, maiúsculas). Decidir: leitura sem distinção de caixa; escrita em maiúsculas como no exemplo, ou minúsculas como no ADR-0003 | MVP-0 |
+| P10 | Restrição de TS 33.220 B.2.0 (P0 *"static ASCII-encoded string"*) | **Resolvido.** TS 33.535 A.4 não a adota | — |
+
+---
+
+## 8. Inconsistências encontradas na documentação existente
+
+| Nº | Onde | O que | Proposta |
+|---|---|---|---|
+| I1 | caminhos | O material de partida cita `~/akma/docs/`; os documentos estão em `~/akma/akma-free5gc/docs/`. Há cópias idênticas soltas em `~/akma/` (README, ADR-0001, matriz, registro de defeitos) e um `.tar.gz` idêntico | resolver com D2 |
+| I2 | `specs/`, `papers/` | normas e artigos estavam em `reference/`, fora do `.gitignore` | **resolvido** (D1); falta só TS 29.505 (D8) |
+| I3 | letras dos defeitos | As questões usam A–E (A = `atid`, B = codificação de chaves, C = codificação do A-TID, D = `trigger-auth`, E = `realm`); o registro de defeitos usa D-A a D-E com outra atribuição (D-B = `trigger-auth`, D-C = `realm`, D-D = `pattern`, D-E = separador `";"`). "D" designa coisas diferentes nos dois esquemas | tabela de correspondência no registro de defeitos |
+| I4 | `00-baseline-normativo.md` §2.5 | a cadeia `S` do A-TID tem um espaço espúrio (`412d54494 4`); o oráculo imprime `412d544944` | corrigir |
+| I5 | `00-baseline-normativo.md` §6.2 | prevê acrescentar `AkmaInd` e `RoutingId` ao `openapi`; já existem | anotar como superado |
+| I6 | README | diz que o código vive em outro repositório | resolver com D2 |
+| I7 | `scripts/bootstrap-repo.sh` | faz `git commit` com mensagem em português e cria repositório **público** no GitHub; conflita com a regra de commits do projeto | não executar; revisar ou remover |
+| I8 | ADR-0001 | cita fases F11, F12 e F15, inexistentes na tabela de fases do README | correspondência F → MVP da seção 2 |
+| I9 | Adendo B §B.1.1 | usa a marcação `[HIPÓTESE]`, fora do conjunto de categorias | já resolvido pela verificação; anotar |
+| I10 | `reference/kdf/akma_kdf.py` | `kdf()` anotada como `-> bytes`, devolve tupla | corrigir no MVP-0 |
+
+Encontradas na conferência contra as normas (detalhe e citações em `docs/baseline/conferencia-normativa.md`):
+
+| Nº | Onde | O que | Proposta |
+|---|---|---|---|
+| I11 | Adendo D §D.1, ADR-0002 §3.1, registro de defeitos D-D | O precedente citado para `kAkma`/`kaf` é só TS 29.509 (padrão não ancorado). `TS29503_Nudm_UEAU.yaml` define `Kausf` como `^[A-Fa-f0-9]{64}$` — ancorado, na interface UDM→AUSF, e é a chave da qual K_AKMA deriva | acrescentar como precedente principal; a decisão (hexadecimal) não muda, fica mais forte |
+| I12 | `00` §5.1; material de partida §4.9 | Atribui a TS 33.501 §6.2.2 a guarda de K_AUSF "quando AKMA é suportado". A menção a AKMA está em §6.1.1.1; §6.2.2.1 define quando guardar/substituir K_AUSF | corrigir as citações |
+| I13 | Adendo A §A.5; material de partida §4.9 | Cita "TS 29.503 §5.2.3.5.2" para `immediateFlag`; a cláusula é §5.5.2.2.2, e o texto diz que o UDM ***may*** incluir o estado corrente *"if available"*. "Torna o passo 6 implementável de forma síncrona" é forte demais: não há garantia | corrigir; pesa na questão 1 (fora do MVP) |
+| I14 | Adendo B §B.3 | Lista 4 cabeçalhos obrigatórios; a Tab. 5.2.3.2.1-1 de TS 29.500 V19.7.0 tem 21 entradas (a maioria para comunicação indireta) | corrigir a lista |
+| I15 | `00` §2.4; ADR-0003 | A tabela de H.3 omite `(0x01,0x00,0x00,0x00,0x02)` — HTTP Digest conforme TS 24.109 — e outros. O ADR-0003 não registra por que essa alternativa não foi adotada | completar a tabela; acrescentar a alternativa ao ADR-0003 |
+| I16 | `00` §2.4 item 2, matriz | Afirma como `[3GPP]` que o identificador Ua\* no `AfId` é representado "por dez dígitos hexadecimais"; o texto normativo diz *"a string of 5 octet"* e a forma hexadecimal vem do exemplo | reclassificar como `[INTERPRETAÇÃO]` (P9) |
+| I17 | material de partida §4.6 | Registra "204 se não existir" e 403 `K_AKMA_NOT_PRESENT` para `ApplicationKey_Get` sem notar que o 204 não tem condição alcançável (o mesmo ocorre em TS 29.535 e na API do NEF em TS 29.522) | DV-7 |
+| I18 | Adendo D §D.4.1 | Registra K.2 com Digest "RFC 3310" sem notar o conflito com TS 24.109 §5.2.2.1 e TS 33.222 §5.3.0 (RFC 7616) | novo defeito candidato (CT1), ligado a DV-5 |
+| I19 | TS 29.522 (editorial) | Tab. 5.14.5.1-1 remete `ServiceDisableNotif` a "5.15.5.3.4" (é 5.14.5.3.4); "table 514.5.2-1" | anotar no registro de defeitos, prioridade baixa |
+
+Encontradas com TS 33.535, TS 29.535, TS 23.502 e os artigos (16/10/2026):
+
+| Nº | Onde | O que | Proposta |
+|---|---|---|---|
+| I20 | registro de defeitos D-C; Adendo D §D.4.1 | A decisão sobre o `realm` (seguir K.2 c)3)) não considerou TS 33.535 B.1.2.2, que manda incluir `3GPP-bootstrapping-akma` no `WWW-Authenticate` | decisão revista (DV-6); atualizar D-C e o Adendo D |
+| I21 | `00` §6.3; material de partida §4.8 | Apresentam a guarda do A-KID transmitido a cada AF como parte incondicional do contexto; TS 33.535 §6.2.1 passo 8 a liga à subscrição de *roaming* | anotar; manter a guarda no MVP |
+| I22 | README; `00` §2.5; `reference/kdf/README.md` | "AKMA+" cita o trabalho de Yang et al. (Zenodo 10.5281/zenodo.14649847); existe outro "AKMA+", de Boureanu et al. (ASIA CCS '25), com proposta diferente | identificar autores ao citar |
+| I23 | material de partida §6.4 | "15 artigos": são 15 arquivos e 14 trabalhos (dois arquivos idênticos) | anotar |
+| I24 | TS 33.535 §4.3.0 NOTA 1, §7.4 × TS 23.502 V19.9.0 §5.2.3.5.2 | A TS 33.535 aponta `Nudm_EventExposure_Subscribe` como serviço do UDM para o AKMA; a TS 23.502 não lista o AAnF como consumidor | acrescentar ao registro das divergências de enumeração |
+| I25 | TS 29.535 (editorial) | `CtxRemove` sem `required` no YAML; `info.title` `3gpp-akma`; "retrieval notification" nas respostas 307/308 de `register-anchorkey` | registro de defeitos, prioridade baixa |
+| I26 | `especificacoes.md` | TS 23.502 fixada em V19.8.0; o acervo tem V19.9.0 | **resolvido** (D12): baseline mantido, nota e Adendo E |
+
+Confirmado sem alteração (detalhe em `docs/baseline/conferencia-normativa.md` §2): todo o fluxo de TS 33.535 §6.1 e §6.2.1, os Anexos A e B, e o Stage 3 de TS 29.535 com seu YAML, tal como o material de partida os descreve, salvo os itens acima; KDF e alocação de FC (TS 33.220 B.2); faixa privada `0xFF` (H.2 NOTA 2); B-TID e TMPI em base64 (TS 33.220 §4.5.2, B.4); NOTA 0 de TS 33.222 §5.4.0.2; separador `";"` (TS 24.109 K.3.3); senha base64(K_AF) (K.2 c)2)); divergências A e D; divergência E confirmada, com a decisão reaberta (DV-6); RID e domínio doméstico (TS 23.003); ausência de AKMA em TS 23.003 e TS 33.222; `akmaInd`/`routingId` e obrigatoriedade em TS 33.501; tipos de TS 29.522, TS 29.571 e TS 29.122; `AANF`, `naanf-akma`, `AanfInfo` e `routing-indicator` em TS 29.510; códigos obrigatórios de POST (TS 29.500); custom operations (TS 29.501); `id-translation-result`, `RoamingStatusReport` e `trigger-auth` em TS 29.503; números de CR citados.
+
+Dos arquivos anteriores, só o `.gitignore` (D1) e `docs/baseline/especificacoes.md` (nota do D12) foram alterados. As correções I1–I26 entram como unidades de trabalho próprias, antes do MVP-0.
+
+---
+
+## 9. A pergunta-guia
+
+> É possível executar o fluxo básico de AKMA em um free5GC modificado, derivar corretamente o material de chave conforme o 3GPP, e permitir que uma aplicação obtenha sua chave de aplicação através do AAnF?
+
+| Parte da pergunta | Evidência | MVP |
+|---|---|---|
+| fluxo básico num free5GC modificado | autenticação primária real (UERANSIM e banco de testes Go) seguida de `AnchorKey_Register` | MVP-2, MVP-5 |
+| derivação correta conforme o 3GPP | concordância octeto a octeto entre Python, Go, C++ e a KDF do free5GC; A-KID igual no UE e no AAnF | MVP-0, MVP-4 |
+| aplicação obtém K_AF pelo AAnF | AF recebe K_AF com `expiry` e autentica o UE pelo Ua\* | MVP-3, MVP-5 |
+
+Nenhuma etapa obrigatória da tabela de etapas mínimas é removida. A única etapa de estado aberto (`ROAMING_STATUS`) segue a orientação já dada e entra como desvio registrado (DV-2).
