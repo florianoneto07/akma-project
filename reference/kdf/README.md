@@ -10,6 +10,16 @@ Escrito diretamente a partir de **TS 33.220 V19.1.0, Anexo B.2**, sem consultar 
 python3 akma_kdf.py
 ```
 
+Mostra a cadeia `S` e o resultado de K_AKMA, A-TID e K_AF para o exemplo de `docs/00-baseline-normativo.md` §2.5.
+
+## Gerador de vetores
+
+```
+python3 reference/kdf/gen_vectors.py > shared/akma/testdata/vectors.json
+```
+
+`gen_vectors.py` usa as funções de `akma_kdf.py` e acrescenta, escritos também a partir das normas e sem consultar o código Go: SUPI como parâmetro (TS 33.501 A.7.0), Home Network Domain (TS 23.003 §28.2), A-KID (TS 29.522) nas três codificações do ADR-0002 e as duas formas do AF_ID. Produz 8 vetores, as igualdades esperadas e dois contraexemplos. Ver `docs/shared/vetores.md`.
+
 ## O que implementa
 
 | Derivação | FC | Norma |
