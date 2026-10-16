@@ -3,6 +3,7 @@
 **Documento:** complemento ao *Baseline Normativo* v2.0 e ao *Adendo A*
 **Versão:** B.1
 **Data:** 02 de setembro de 2026
+**Errata:** 16 de outubro de 2026 — §B.1.1 e §B.3, marcadas como *(errata 16/10/2026)*
 **Fontes incorporadas:** 3GPP TS 29.571 V19.7.0, TS 29.510 V19.7.0, TS 29.500 V19.7.0, TS 29.501 V19.5.0, e os respectivos arquivos OpenAPI do Anexo A
 
 ---
@@ -72,7 +73,7 @@ Com isso, a cláusula 6.7 de TS 33.535 fica integralmente mapeada no Stage 3:
 
 `[FREE5GC]` O AUSF do free5GC já implementa registro no NRF com essa estrutura. O esqueleto do AAnF, derivado do AUSF conforme proposto na seção 6.3 do documento v2.0, herda o mecanismo; as alterações necessárias limitam-se a `nfType = "AANF"`, `serviceName = "naanf-akma"` e ao preenchimento de `aanfInfoList`.
 
-`[HIPÓTESE]` A presença das constantes `AANF` e `naanf-akma` no repositório `free5gc/openapi` não foi verificada. A verificação deve preceder o início da fase F3.
+`[LACUNA]` *(errata 16/10/2026: marcação corrigida de `[HIPÓTESE]`, fora do conjunto de categorias do projeto)* A presença das constantes `AANF` e `naanf-akma` no repositório `free5gc/openapi` não foi verificada. A verificação deve preceder o início da fase F3. **Encerrada em 15/10/2026:** ambas presentes no `openapi` v1.2.4 (`docs/baseline/ambiente-verificado.md` §3).
 
 ---
 
@@ -96,7 +97,7 @@ Com isso, a cláusula 6.7 de TS 33.535 fica integralmente mapeada no Stage 3:
 
 `[3GPP]` TS 29.535 V19.5.0, §5.1.2.3, exige suporte aos cabeçalhos obrigatórios de TS 29.500 §5.2.3.2 e admite suporte aos opcionais de §5.2.3.3, sem definir cabeçalhos próprios.
 
-`[3GPP]` TS 29.500 V19.7.0, Tabela 5.2.3.2.1-1 — obrigatórios:
+`[3GPP]` TS 29.500 V19.7.0, Tabela 5.2.3.2.1-1 — obrigatórios (recorte; *errata 16/10/2026*: a tabela tem 21 entradas — ver o fim desta seção):
 
 | Cabeçalho | Aplicação ao AKMA |
 |---|---|
@@ -107,7 +108,9 @@ Com isso, a cláusula 6.7 de TS 33.535 fica integralmente mapeada no Stage 3:
 
 `[3GPP]` **Consequência concreta:** a operação `Naanf_AKMA_Notify` (TS 29.535 §4.2.2.5) é uma notificação enviada pelo AAnF ao consumidor via POST no `notifUri`. Segundo TS 29.500, o cabeçalho `3gpp-Sbi-Callback` **deveria** ser incluído nessa requisição mesmo em comunicação direta. Este requisito não constava dos documentos anteriores e deve ser acrescentado à especificação da notificação, quando esta for implementada.
 
-`[MVP]` Os quatro cabeçalhos dizem respeito a prioridade, *callbacks* e comunicação indireta. Nenhum é exercitado pelo fluxo básico do MVP em comunicação direta sem SCP. O suporte deve, ainda assim, constar do plano de conformidade da fase F7.
+*(errata 16/10/2026)* `[3GPP]` A Tabela 5.2.3.2.1-1 da V19.7.0 lista também `3gpp-Sbi-Routing-Binding`, `-Binding`, `-Discovery-*`, `-Producer-Id`, `-Oci`, `-Lci`, `-Client-Credentials`, `-Source-NF-Client-Credentials`, `-Nrf-Uri`, `-Target-Nf-Id`, `-Max-Forward-Hops`, `-Originating-Network-Id`, `-Access-Scope`, `-Access-Token`, `-Target-Nf-Group-Id`, `-Nrf-Uri-Callback` e `-NF-Peer-Info`. A maior parte serve à comunicação indireta (SCP), sobrecarga e credenciais de cliente; nenhuma é exercitada pelo fluxo básico em comunicação direta.
+
+`[MVP]` Os quatro cabeçalhos da tabela acima dizem respeito a prioridade, *callbacks* e comunicação indireta. Nenhum é exercitado pelo fluxo básico do MVP em comunicação direta sem SCP. O suporte deve, ainda assim, constar do plano de conformidade da fase F7.
 
 ---
 

@@ -3,6 +3,7 @@
 **Documento:** complemento ao *Baseline Normativo* v2.0
 **Versão:** A.1
 **Data:** 02 de setembro de 2026
+**Errata:** 16 de outubro de 2026 — §A.5 e §A.7, marcadas como *(errata 16/10/2026)*
 **Fonte incorporada:** arquivos OpenAPI do Anexo A de 3GPP TS 29.503 V19.7.0
 
 ---
@@ -175,9 +176,9 @@ RoamingStatusReport:
 
 `[3GPP]` **Articulação com TS 33.535 §6.2.1 passo 7.** A cláusula estabelece que, em registro duplo, o UE é tratado como em *roaming* se ao menos uma das PLMNs servidoras assim indicar. O esquema `RoamingStatusReport` fornece exatamente os elementos necessários a essa avaliação: o indicador booleano `roaming` e o `accessType` que discrimina o acesso ao qual o relatório se refere. O AAnF deve, portanto, manter o estado de *roaming* **por tipo de acesso** e aplicar disjunção lógica, e não armazenar um único booleano por UE.
 
-`[3GPP]` A cláusula 5.2.3.5.2 de TS 29.503 registra que, com `immediateFlag` definido como `true`, o UDM pode incluir o estado corrente do evento já na resposta à subscrição. Isto corresponde diretamente ao passo 6 de TS 33.535 §6.2.1, no qual o AAnF recebe a informação de *roaming* na própria resposta à subscrição, sem aguardar uma notificação posterior. **Sem `immediateFlag`, o passo 6 não é satisfeito** e o AAnF ficaria bloqueado à espera de uma mudança de estado que pode nunca ocorrer.
+`[3GPP]` A cláusula 5.5.2.2.2 de TS 29.503 *(errata 16/10/2026: antes citada como 5.2.3.5.2)* registra que, com `immediateFlag` definido como `true`, o UDM *"may include the current status of the event if available in the response"*. Isto corresponde diretamente ao passo 6 de TS 33.535 §6.2.1, no qual o AAnF recebe a informação de *roaming* na própria resposta à subscrição, sem aguardar uma notificação posterior. **Sem `immediateFlag`, o passo 6 não é satisfeito** e o AAnF ficaria bloqueado à espera de uma mudança de estado que pode nunca ocorrer. *(errata 16/10/2026)* Mesmo com `immediateFlag`, o relatório imediato é permissivo (*"may"*, *"if available"*); TS 23.502 V19.9.0 §5.2.3.5.2 diz o mesmo (*"First corresponding event report is included, if corresponding information is available"*). O AAnF precisa tratar a resposta sem relatório.
 
-Esta constatação é relevante para a INCERTEZA 1: ela demonstra que os passos 5 e 6 da cláusula 6.2.1 são implementáveis de forma síncrona, o que torna a leitura literal — subscrição incondicional — tecnicamente viável, embora ainda não resolva a questão da condicionalidade em relação à *feature* `RoamingRestriction`.
+Esta constatação é relevante para a INCERTEZA 1: ela demonstra que os passos 5 e 6 da cláusula 6.2.1 podem ser implementados de forma síncrona quando o UDM tem o estado disponível *(errata 16/10/2026: a síncronia não é garantida)*, o que torna a leitura literal — subscrição incondicional — tecnicamente viável, embora ainda não resolva a questão da condicionalidade em relação à *feature* `RoamingRestriction`.
 
 ---
 
@@ -212,7 +213,7 @@ Acrescentar ou revisar as seguintes linhas:
 | `routingId` como cadeia com zeros à esquerda preservados | TS 29.503 §6.3.6.2.3; `TS29503_Nudm_UEAU.yaml` | — | `patches/udm/`, `akma/akid/rid.go` | `rid_test.go` com RID `"0"`, `"012"`, `"0000"` | **Especificado** |
 | Conversão SUPI SBI ↔ SUPI KDF | TS 33.501 A.7.0; TS 29.503 Tab. 6.2.3.13.2-1 | — | `akma/kdf/supi.go` | `supi_test.go` | **Especificado** |
 | GPSI via `id-translation-result` | TS 29.503; `TS29503_Nudm_SDM.yaml` | 5.2.2.2.10 | `NFs/aanf/internal/sbi/consumer/` | integração | Fora do MVP; **tratamento de `gpsi` ausente é obrigatório** |
-| Subscrição `ROAMING_STATUS` com `immediateFlag` | TS 29.503 §5.2.3.5.2; `TS29503_Nudm_EE.yaml` | 6.4.6.2.8 | — | — | **INCERTEZA 1** |
+| Subscrição `ROAMING_STATUS` com `immediateFlag` | TS 29.503 §5.5.2.2.2 *(errata)*; `TS29503_Nudm_EE.yaml` | 6.4.6.2.8 | — | — | **INCERTEZA 1** |
 | Estado de *roaming* por tipo de acesso | TS 33.535 §6.2.1 passo 7; `RoamingStatusReport` | — | `NFs/aanf/internal/context/` | unitário | **Especificado** |
 | `trigger-auth` — método HTTP | TS 29.503 Tab. 6.2.3.13.4.1-1 × `TS29503_Nudm_UECM.yaml` | — | — | — | **DIVERGÊNCIA D** — adotar POST |
 | Erro `REAUTHENTICATION_NOT_ALLOWED` | TS 29.503 Tab. 6.2.3.13.4.2.2-2 | — | — | — | Fora do MVP |

@@ -3,6 +3,7 @@
 **Documento:** Parte 1 do *Roadmap de Implementação do 3GPP AKMA no free5GC*
 **Versão:** 2.0 — substitui a v1.0
 **Data:** 02 de setembro de 2026
+**Errata:** 16 de outubro de 2026 — correções apontadas em `docs/baseline/conferencia-normativa.md`, marcadas no texto como *(errata 16/10/2026)*
 **Alteração principal:** incorporação de TS 29.522, TS 33.220, TS 23.003, TS 33.501 e TS 29.503; encerramento de quatro das cinco lacunas bloqueantes e de três das cinco incertezas registradas na v1.0
 
 ---
@@ -140,12 +141,14 @@ derived key = HMAC-SHA-256 ( Key , S )
 | `(0x01,0x00,0x00,0x00,0x08)` | OSCORE, Anexo P de TS 33.220 |
 | `(0x01,0x00,0x00,0x00,0x09)` | DTLS, Anexo O de TS 33.220 |
 
+*(errata 16/10/2026)* `[3GPP]` A tabela acima é um recorte. H.3 também registra, entre outros, `(0x01,0x00,0x00,0x00,0x02)` — *"Ua security protocol HTTP digest authentication according to TS 24.109"* —, `(0x01,0x00,0x00,0x00,0x00)` a `(…,0x06)`, `(0x01,0x00,0x00,0x01,0x00)` (TMPI) e `(0x01,0x00,0x02,yy,zz)`. O `…02` interessa ao projeto porque o Ua\* simplificado tem a forma de um HTTP Digest; o ADR-0003 registra por que ele não é usado.
+
 `[MVP]` **Consequência favorável ao MVP.** Um protocolo Ua* simplificado, criado para demonstração, pode utilizar legitimamente um identificador da faixa privada `0xFF`, por exemplo `(0xFF,0x00,0x00,0x00,0x01)`. Isto **não constitui desvio da norma**: o Anexo H.2, NOTA 2, prevê expressamente esse uso. A alternativa de usar o valor padrão `(0x00,0x00,0x00,0x00,0x00)` também é normativa, mas elimina a separação criptográfica entre protocolos e é, portanto, menos adequada.
 
 `[INTERPRETAÇÃO]` **Duas representações distintas de AF_ID.** É preciso distinguir:
 
 1. **AF_ID como parâmetro P0 da KDF** (TS 33.535 A.4): concatenação de FQDN com os cinco octetos do identificador. Por analogia direta com o `NAF_Id` do GBA — TS 33.220 estabelece que "os parâmetros de entrada IMPI e a parte FQDN do NAF_Id devem ser codificados conforme o Anexo B.2.1" —, adota-se: `P0 = UTF-8_NFKC(FQDN) ‖ 5 octetos brutos`, e `L0 = len(UTF-8(FQDN)) + 5`. TS 33.535 não afirma isto de forma explícita; a leitura é do projeto e deve constar como decisão registrada.
-2. **`afId` como atributo transportado na API** (TS 29.522 V19.7.0, Tabela 5.14.5.4-1, tipo `AfId`): cadeia formatada como `"<FQDN>.<Ua* security protocol id>"`, com o identificador representado por **dez dígitos hexadecimais**. Exemplo da especificação: FQDN `www.app1.com`, identificador `0100BC0001`, resultando em `www.app1.com.0100BC0001`.
+2. **`afId` como atributo transportado na API** (TS 29.522 V19.7.0, Tabela 5.14.5.4.2-1, tipo `AfId`): cadeia formatada como `"<FQDN>.<Ua* security protocol id>"`, com o identificador descrito como *"a string of 5 octet"*. *(errata 16/10/2026)* `[INTERPRETAÇÃO]` A representação por **dez dígitos hexadecimais** vem do exemplo da tabela, não do texto normativo; o exemplo usa maiúsculas. Exemplo da especificação: FQDN `www.app1.com`, identificador `0100BC0001`, resultando em `www.app1.com.0100BC0001`.
 
 O AAnF recebe a forma (2) e deve reconstruir a forma (1) antes de invocar a KDF. A regra de análise sintática é determinada: separar os dez últimos caracteres hexadecimais precedidos por um ponto. **Nem TS 33.535 nem TS 29.522 declaram explicitamente que a forma (2) não é o P0**; assumir o contrário produziria um K_AF distinto no UE e no AAnF. Esta é a segunda advertência de implementação de alto impacto do documento, e deve ser objeto de teste dedicado.
 
@@ -168,7 +171,7 @@ Cadeias `S` e saídas:
 K_AKMA   S   = 80 414b4d41 0004 323038393330303030303030303033 000f
          out = d6aa856e127fb8de3eb1a1d0cebf52a7df6b69b4a6c68c21c18c1c27d466dbba
 
-A-TID    S   = 81 412d54494 4 0005 323038393330303030303030303033 000f
+A-TID    S   = 81 412d544944 0005 323038393330303030303030303033 000f
          out = 1914b806ff737fe54dd5cd9d3e19cc184a8d2e22cc445ee3fbd9fc3eca329152
 
 K_AF     S   = 82 61662e616b6d612e667265653567632e6f7267 ff00000001 0018
@@ -177,7 +180,7 @@ K_AF     S   = 82 61662e616b6d612e667265653567632e6f7267 ff00000001 0018
 
 Leitura da terceira cadeia: `FC = 0x82`; `P0` = os 19 octetos UTF-8 de `af.akma.free5gc.org` seguidos dos 5 octetos `ff00000001`, totalizando 24 octetos; `L0 = 0x0018 = 24`.
 
-Origem dos valores esperados: implementação de referência em Python escrita diretamente a partir de TS 33.220 B.2.0/B.2.1. O procedimento de validação previsto é a comparação byte a byte com a implementação em Go, mais a verificação cruzada de derivações não modificadas contra a implementação em C do artefato AKMA+ (Zenodo, DOI 10.5281/zenodo.14649847).
+Origem dos valores esperados: implementação de referência em Python escrita diretamente a partir de TS 33.220 B.2.0/B.2.1. O procedimento de validação previsto é a comparação byte a byte com a implementação em Go, mais a verificação cruzada de derivações não modificadas contra a implementação em C do artefato AKMA+ de Yang et al. (Zenodo, DOI 10.5281/zenodo.14649847). *(errata 16/10/2026: há outro "AKMA+" na literatura, de Boureanu et al., com proposta diferente — ver `docs/literatura/analise-dos-artigos.md`.)*
 
 ---
 
@@ -316,9 +319,9 @@ A mesma sentença aparece duas vezes em TS 33.501, nos fluxos de 5G-AKA e de EAP
 
 Conclusão para a implementação: `akmaInd` é opcional no esquema JSON, mas sua omissão para um assinante com assinatura AKMA constitui não conformidade com TS 33.501. O UDM do free5GC deve emiti-lo sempre que o perfil do assinante contiver assinatura AKMA.
 
-`[3GPP]` TS 33.501 V19.7.0, cláusula 6.2.2: K_AUSF pode ser armazenada com segurança no AUSF conforme a política do operador, por exemplo quando SoR, UPU **ou AKMA** são suportados pela HPLMN. Isto fundamenta normativamente a persistência de K_AUSF no AUSF do free5GC, já presente no `AusfUeContext`.
+`[3GPP]` TS 33.501 V19.7.0, cláusula 6.1.1.1 *(errata 16/10/2026: antes citada como 6.2.2)*: K_AUSF pode ser armazenada com segurança no AUSF conforme a política do operador, por exemplo quando SoR, UPU **ou AKMA** são suportados pela HPLMN. A cláusula 6.2.2.1 define quando o AUSF guarda ou substitui a K_AUSF: quando RES\* e XRES\* coincidem (5G-AKA) ou quando envia EAP-Success (EAP-AKA'). Isto fundamenta normativamente a persistência de K_AUSF no AUSF do free5GC, já presente no `AusfUeContext`.
 
-`[3GPP]` TS 29.503 V19.7.0, cláusula 5.4.2 (descrição de `Nudm_UEAuthentication_Get`): *"Se o AUSF estiver configurado para armazenar Kausf (por exemplo, com base em seu suporte a SoRProtection / UPUProtection / derivação de chave AKMA após autenticação primária), o AUSF deve preservar Kausf e informação relacionada (por exemplo, SUPI) após a conclusão da autenticação primária."*
+`[3GPP]` TS 29.503 V19.7.0, cláusula 5.4.2.2.2 (descrição de `Nudm_UEAuthentication_Get`): *"Se o AUSF estiver configurado para armazenar Kausf (por exemplo, com base em seu suporte a SoRProtection / UPUProtection / derivação de chave AKMA após autenticação primária), o AUSF deve preservar Kausf e informação relacionada (por exemplo, SUPI) após a conclusão da autenticação primária."*
 
 ### 5.2 INCERTEZA 2 encerrada — `Nudm_UECM_AuthTrigger` existe e está especificada
 
@@ -385,7 +388,7 @@ Elemento novo que reforça a segunda leitura: TS 29.522 V19.7.0 marca o atributo
 |---|---|---|
 | Emitir `akmaInd` e `routingId` em `Nudm_UEAuthentication_Get Response` para assinantes com assinatura AKMA | TS 33.501 V19.7.0 (linguagem obrigatória) + TS 29.503 §6.3.6.2.3 | `[3GPP]` |
 | Adicionar assinatura AKMA ao perfil do assinante (UDR/MongoDB, *webconsole*) | TS 33.535 §4.2.5 | `[3GPP]` |
-| Adicionar `AkmaInd` e `RoutingId` ao modelo `AuthenticationInfoResult` em `free5gc/openapi` | Consequência de implementação | `[FREE5GC]` |
+| ~~Adicionar `AkmaInd` e `RoutingId` ao modelo `AuthenticationInfoResult` em `free5gc/openapi`~~ *(errata 16/10/2026: já existem no `openapi` v1.2.4 — `docs/baseline/ambiente-verificado.md` §3)* | Consequência de implementação | `[FREE5GC]` |
 | Implementar `GET /{ueId}/id-translation-result` para consumo pelo AAnF | TS 29.503 §5.2.2.2.10; TS 33.535 §6.2.1 passos 3–4 | `[3GPP]`, fora do MVP por política local |
 | Implementar `Nudm_EventExposure_Subscribe` com evento `ROAMING_STATUS` | TS 29.503 §6.4.6.2.8; TS 33.535 §6.2.1 passos 5–6 | `[3GPP]`, decisão pendente (INCERTEZA 1) |
 | Implementar `POST /{ueId}/registrations/trigger-auth` | TS 33.501 §14.2.6; TS 29.503 §5.3.2.16 | `[3GPP]`, fora do MVP |
@@ -406,12 +409,14 @@ por AF atendido:
     K_AF          256 bits
     expiry        instante absoluto (DateTime)
     A-KID transmitido                — TS 33.535 §6.8.1 NOTA 1; TS 29.522 ServiceDisableNotif
+                                       (errata 16/10/2026: TS 33.535 §6.2.1 passo 8 só o exige
+                                        quando há subscrição de RoamingStatusReport)
     notifUri + expiração da subscrição implícita   — TS 33.535 §6.2.1 passo 2
 ```
 
 `[3GPP]` Comportamento de substituição (TS 33.535 §6.1, NOTA 1a): ao receber novo par (A-KID, K_AKMA) para o mesmo SUPI, o AAnF apaga o par anterior e armazena o novo. Os registros de K_AF por AF permanecem válidos até a expiração, conforme §5.2.
 
-`[LACUNA]` Permanece por determinar o valor de `NFType` do AAnF no perfil registrado no NRF (TS 29.510) e sua presença entre as constantes de `free5gc/openapi`.
+`[LACUNA]` Permanece por determinar o valor de `NFType` do AAnF no perfil registrado no NRF (TS 29.510) e sua presença entre as constantes de `free5gc/openapi`. *(errata 16/10/2026: encerrada — `AANF` em TS 29.510, Adendo B §B.1; presente no `openapi` v1.2.4.)*
 
 ### 6.4 AF e Ua*
 

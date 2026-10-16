@@ -3,6 +3,7 @@
 **Documento:** complemento ao *Baseline Normativo* v2.0 e aos Adendos A, B e C
 **Versão:** D.1
 **Data:** 02 de setembro de 2026
+**Errata:** 16 de outubro de 2026 — §D.1.2, §D.4.1 e §D.5, marcadas como *(errata 16/10/2026)*
 **Fontes incorporadas:** 3GPP TS 29.509 V19.6.0, TS 33.222 V19.0.0, TS 24.109 V19.0.0
 **Aviso:** este adendo **revê uma recomendação anterior do projeto**. Ver seção D.3.
 
@@ -40,6 +41,8 @@ A ausência de `pattern` nesses dois atributos é, à luz desta comparação, um
 **A LACUNA B passa a estar encerrada por precedente.** Permanece, contudo, verdadeiro que nenhuma cláusula normativa fixa a codificação para o AKMA; registrar como observação no trabalho e como candidata a submissão editorial ao 3GPP, junto com as DIVERGÊNCIAS A e D.
 
 `[3GPP]` **Observação de implementação.** Os padrões em `TS29509_Nausf_UEAuthentication.yaml` **não são ancorados** — `'[A-Fa-f0-9]{64}'`, sem `^` e `$`. Uma validação que aplique o padrão literalmente aceita cadeias com prefixo e sufixo arbitrários. Os arquivos de SoR e UPU, por contraste, usam a forma ancorada. A implementação do AKMA deve ancorar seus padrões, independentemente da forma adotada pelo precedente.
+
+*(errata 16/10/2026)* `[3GPP]` **Precedente mais próximo, e ancorado.** `TS29503_Nudm_UEAU.yaml` define `Kausf` como `type: string`, `pattern: '^[A-Fa-f0-9]{64}$'`: material de chave de 256 bits transportado do UDM ao AUSF, com padrão ancorado — e é a chave da qual K_AKMA deriva. A conclusão desta seção não muda; ganha um precedente direto na mesma cadeia de chaves (`docs/baseline/conferencia-normativa.md` §3.1).
 
 ---
 
@@ -108,12 +111,14 @@ TS 24.109 V19.0.0, Anexo K (normativo), *"TLS with AKMA profiles"*, fornece o St
 - O UE indica suporte a Digest baseado em AKMA incluindo o *product token* constante **`"3gpp-akma"`** no cabeçalho `User-Agent`.
 - O AF indica a escolha pelo segredo compartilhado AKMA por meio do parâmetro `realm` do cabeçalho `WWW-Authenticate`, que deve conter a cadeia constante **`"3GPP-bootstrapping-akma"`**.
 - Havendo escolha entre GBA_Digest e AKMA, o AF deve selecionar AKMA.
-- No HTTP Digest (RFC 3310): `username` = **A-KID**; senha = **base64(K_AF)**; `realm` com duas partes delimitadas por `@`, sendo a primeira a cadeia constante **`"3gpp-akma"`** e a segunda o **FQDN do AF**, por exemplo `3gpp-akma@af1.operator.com`.
+- No HTTP Digest (K.2 c) cita RFC 3310 — *errata 16/10/2026*: o mesmo K.2 b) remete à §5.2 de TS 24.109, que usa RFC 7616, e TS 33.535 B.1.2.2 segue TS 33.222 §5.3.0, também RFC 7616; com senha = base64(K_AF), só RFC 7616 é coerente — desvio DV-5): `username` = **A-KID**; senha = **base64(K_AF)**; `realm` com duas partes delimitadas por `@`, sendo a primeira a cadeia constante **`"3gpp-akma"`** e a segunda o **FQDN do AF**, por exemplo `3gpp-akma@af1.operator.com`.
 - UE e AF devem verificar, em cada requisição e resposta, que a segunda parte do atributo `realm` é igual ao FQDN do AF.
 
 `[DIVERGÊNCIA] — DIVERGÊNCIA E.` A cláusula K.2 especifica **dois valores distintos** para o parâmetro `realm` do mesmo intercâmbio Digest: `"3GPP-bootstrapping-akma"` no item b) 2), referente ao desafio `WWW-Authenticate`, e `"3gpp-akma@<FQDN>"` no item c) 3), referente ao cálculo do digest. Em HTTP Digest, o cliente ecoa no cabeçalho `Authorization` o `realm` recebido no desafio, e o valor participa do cálculo de `HA1`; os dois valores devem, portanto, coincidir.
 
-A redação de b) 2) assemelha-se à do perfil GBA correspondente e pode ser resíduo editorial da adaptação. `[INTERPRETAÇÃO]` Seguir o item c) 3) — `"3gpp-akma@<FQDN do AF>"` —, que é o que participa do cálculo e o que a alínea d) manda verificar. Registrar a divergência.
+A redação de b) 2) assemelha-se à do perfil GBA correspondente e pode ser resíduo editorial da adaptação. ~~`[INTERPRETAÇÃO]` Seguir o item c) 3) — `"3gpp-akma@<FQDN do AF>"` —, que é o que participa do cálculo e o que a alínea d) manda verificar.~~ Registrar a divergência.
+
+*(errata 16/10/2026)* **Decisão revista.** TS 33.535 B.1.2.2 (Stage 2) manda o AF incluir `"3GPP-bootstrapping-akma"` no `WWW-Authenticate` (passo 3) e o cliente verificar o FQDN no `realm` (passo 4); K.2 b) 2) repete a constante; o modelo GBA (TS 24.109 §5.2.2.1) usa `<constante>@<FQDN>`. A alínea d) verifica só o FQDN, que as duas leituras satisfazem, e o valor que entra no cálculo é o que o AF envia no desafio. O projeto segue TS 33.535: `realm = "3GPP-bootstrapping-akma@<FQDN do AF>"` (desvio DV-6, `docs/conformidade/desvios.md`). Diverge só de K.2 c) 3).
 
 ### D.4.2 K.3.2 — TLS 1.2 com PSK
 
@@ -167,7 +172,7 @@ Isto explica a estrutura do Anexo H de TS 33.220 registrada no documento v2.0 §
 | B | Codificação de `kAkma` e `kaf` | **Encerrada por precedente.** Hexadecimal, 64 caracteres (TS 29.509) |
 | C | Codificação do valor do A-TID | Aberta — **recomendação revista para base64 RFC 4648** |
 | D | Método HTTP de `trigger-auth` | Aberta — três fontes sustentam POST |
-| **E** | Dois valores de `realm` em TS 24.109 K.2 | **Nova, aberta** — seguir K.2 c) 3) |
+| **E** | Dois valores de `realm` em TS 24.109 K.2 | ~~**Nova, aberta** — seguir K.2 c) 3)~~ *(errata 16/10/2026)* **Decidida**: seguir TS 33.535 B.1.2.2, `3GPP-bootstrapping-akma@<FQDN>` (DV-6) |
 
 ### D.5.2 Defeitos editoriais candidatos a submissão
 
