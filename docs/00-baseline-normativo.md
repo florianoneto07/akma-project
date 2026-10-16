@@ -423,7 +423,7 @@ por AF atendido:
 `[MVP]` Com o Anexo H de TS 33.220 disponível, a especificação do Ua* simplificado do MVP fica completa e normativamente fundamentada:
 
 - Identificador de protocolo de segurança Ua*: faixa privada, `(0xFF,0x00,0x00,0x00,0x01)`, admitida pelo Anexo H.2 NOTA 2
-- `afId` transportado: `"<FQDN do AF>.ff00000001"`
+- `afId` transportado: `"<FQDN do AF>.FF00000001"` *(errata 16/10/2026: identificador em maiúsculas na escrita, decisão P9; a leitura aceita as duas caixas)*
 - `AF_ID` usado como P0: `UTF-8(FQDN) ‖ 0xFF 0x00 0x00 0x00 0x01`
 
 A evolução para o perfil TLS 1.3 PSK do Anexo B.1.3.2.2 de TS 33.535 implica apenas trocar o identificador por `(0x01,0x00,0x00,0x00,0x07)`, sem alterar a arquitetura.

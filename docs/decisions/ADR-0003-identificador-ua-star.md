@@ -15,7 +15,7 @@ O `AF_ID` usado como P0 na derivação de K_AF é composto pelo FQDN do AF conca
 
 Adotar o identificador de faixa privada **`(0xFF, 0x00, 0x00, 0x00, 0x01)`** para o protocolo Ua* simplificado do MVP.
 
-Forma de transporte do `afId`: `"<FQDN do AF>.ff00000001"`.
+Forma de transporte do `afId`: `"<FQDN do AF>.FF00000001"` *(errata 16/10/2026: maiúsculas na escrita, como no exemplo de TS 29.522 — decisão P9 do plano; a leitura aceita as duas caixas)*.
 Forma de P0 da KDF: `UTF-8_NFKC(FQDN) ‖ 0xFF 0x00 0x00 0x00 0x01`.
 
 ---
