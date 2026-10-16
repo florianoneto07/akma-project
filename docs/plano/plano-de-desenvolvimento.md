@@ -469,7 +469,25 @@ Encontradas com TS 33.535, TS 29.535, TS 23.502 e os artigos (16/10/2026):
 
 Confirmado sem alteração (detalhe em `docs/baseline/conferencia-normativa.md` §2): todo o fluxo de TS 33.535 §6.1 e §6.2.1, os Anexos A e B, e o Stage 3 de TS 29.535 com seu YAML, tal como o material de partida os descreve, salvo os itens acima; KDF e alocação de FC (TS 33.220 B.2); faixa privada `0xFF` (H.2 NOTA 2); B-TID e TMPI em base64 (TS 33.220 §4.5.2, B.4); NOTA 0 de TS 33.222 §5.4.0.2; separador `";"` (TS 24.109 K.3.3); senha base64(K_AF) (K.2 c)2)); divergências A e D; divergência E confirmada, com a decisão reaberta (DV-6); RID e domínio doméstico (TS 23.003); ausência de AKMA em TS 23.003 e TS 33.222; `akmaInd`/`routingId` e obrigatoriedade em TS 33.501; tipos de TS 29.522, TS 29.571 e TS 29.122; `AANF`, `naanf-akma`, `AanfInfo` e `routing-indicator` em TS 29.510; códigos obrigatórios de POST (TS 29.500); custom operations (TS 29.501); `id-translation-result`, `RoamingStatusReport` e `trigger-auth` em TS 29.503; números de CR citados.
 
-Dos arquivos anteriores, só o `.gitignore` (D1) e `docs/baseline/especificacoes.md` (nota do D12) foram alterados. As correções I1–I26 entram como unidades de trabalho próprias, antes do MVP-0.
+**Situação em 16/10/2026 — correções aplicadas** (errata marcada no texto de cada documento; resumo no `CHANGELOG.md`, versão 2.1):
+
+| Itens | Onde | Estado |
+|---|---|---|
+| I1, I6 | README | repositório único em `~/akma/akma-free5gc/` (D2). As cópias soltas em `~/akma/` (README, ADR-0001, matriz, registro de defeitos) e o `.tar.gz` ficam fora do repositório; removê-las fica a critério do responsável |
+| I2, I26 | — | resolvidos por D1 e D12 |
+| I3, I18–I20, I24, I25 | registro de defeitos | tabela de correspondência das letras; D-C revisto; D-D complementado; D-F a D-I acrescentados; inconsistência TS 33.535 × TS 23.502 registrada |
+| I4, I5, I12, I15, I16, I21, I22 | `00-baseline-normativo.md` | corrigidos |
+| I8 | ADR-0001 | estado "revisto pelo ADR-0001-R2" e correspondência das fases F → MVP |
+| I9, I14 | Adendo B | corrigidos |
+| I10 | `reference/kdf/akma_kdf.py` | anotação de tipo corrigida e comentários em inglês; saída idêntica à anterior |
+| I11 | Adendo D, ADR-0002, registro D-D | precedente `Kausf` acrescentado |
+| I13 | Adendo A | corrigido |
+| I15 | ADR-0003 | §3.4 acrescentada |
+| I16, I21 | matriz de rastreabilidade (revisão 3.1) | corrigidos, junto com as consequências do ADR-0001-R2 e as decisões DV-1 a DV-7 e D9 |
+| I7 | `scripts/bootstrap-repo.sh` | removido |
+| I17, I23 | material de partida | o texto de partida não está no repositório; as correções ficam registradas em `conferencia-normativa.md` e neste plano |
+
+ADR-0002 e ADR-0003 passaram ao estado "Aceito" com a aprovação deste plano.
 
 ---
 
