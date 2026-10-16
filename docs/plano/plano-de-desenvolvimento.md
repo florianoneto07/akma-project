@@ -110,6 +110,8 @@ O código do lado free5GC é editado e versionado aqui e implantado na VM do fre
 
 ### MVP-0 — Biblioteca AKMA comum e validação cruzada
 
+**Estado (16/10/2026):** implementado. Critérios 2 a 6 atendidos; critério 1 atendido com `go test ./...` — a variante `-race` aguarda um compilador C na VM do AF (o detector de corridas exige cgo). Arquivos conforme a tabela abaixo, com duas diferenças de organização: as derivações ficaram em `shared/akma/derive/` (não em `kdf/akma.go`), para que `derive.KAf` receba um `afid.AfID` sem ciclo de importação; e a comparação com `ueauth` ficou num módulo próprio, `shared/crosscheck/`, para que a biblioteca não dependa de `free5gc/util`.
+
 **Objetivo.** Implementar em Go as três derivações, a conversão de SUPI, a construção e a análise do A-KID e do AF_ID, e as codificações por camada, concordando octeto a octeto com o oráculo Python e com a KDF do free5GC.
 
 **Pré-requisitos.** D1, D2, D3, D7. Estrutura `docs/` por lado criada. Oráculo Python estendido para emitir vetores em JSON.
@@ -421,7 +423,7 @@ Não são desvios, e assim serão documentados: identificador Ua\* da faixa priv
 | P6 | Interfaces confiáveis | **Resolvido.** TS 33.501 §13.1.0 NOTA 2; DV-1 | — |
 | P7 | D10 | depende de TS 29.505 (D8) | MVP-2 |
 | P8 | Afirmações atribuídas a TS 33.535 e TS 29.535 | **Conferidas** em 16/10/2026 (`conferencia-normativa.md`) | — |
-| P9 | Forma textual do identificador Ua\* dentro do `AfId` | TS 29.522: *"a string of 5 octet"*; dez caracteres hexadecimais só pelo exemplo (`0100BC0001`, maiúsculas). Decidir: leitura sem distinção de caixa; escrita em maiúsculas como no exemplo, ou minúsculas como no ADR-0003 | MVP-0 |
+| P9 | Forma textual do identificador Ua\* dentro do `AfId` | **Resolvido** em 16/10/2026: dez caracteres hexadecimais, **maiúsculas na escrita** (como o exemplo de TS 29.522), as duas caixas na leitura | MVP-0 |
 | P10 | Restrição de TS 33.220 B.2.0 (P0 *"static ASCII-encoded string"*) | **Resolvido.** TS 33.535 A.4 não a adota | — |
 
 ---

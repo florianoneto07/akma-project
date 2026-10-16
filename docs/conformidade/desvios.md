@@ -9,7 +9,7 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 |---|---|---|---|
 | DV-1 | SBI sem TLS (h2c) | aprovado com o plano | MVP-1 |
 | DV-2 | Subscrição de `ROAMING_STATUS` desabilitada | aprovado com o plano (orientação do material de partida) | MVP-1 |
-| DV-3 | Só SUPI do tipo IMSI | aprovado com o plano | MVP-0 |
+| DV-3 | Só SUPI do tipo IMSI | **implementado** (MVP-0, 16/10/2026) | MVP-0 |
 | DV-4 | Sem NFKC no lado UE | aprovado com o plano | MVP-4 |
 | DV-5 | Digest do Ua\* conforme RFC 7616 | aprovado com o plano | MVP-3 |
 | DV-6 | `realm` do Digest conforme TS 33.535 | **decidido** em 16/10/2026 | MVP-3 |
@@ -50,6 +50,8 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 **Por quê.** O free5GC e o UERANSIM do testbed usam IMSI.
 
 **Impacto.** Assinantes com SUPI NAI/GLI/GCI não obtêm AKMA.
+
+**Implementação (16/10/2026).** `shared/akma/supi/supi.go`: `FromSBI` devolve `ErrUnsupportedType` para `nai-`, `gci-` e `gli-`; `Param.Validate` recusa qualquer valor fora de `^[0-9]{5,15}$`, inclusive com o prefixo `imsi-`. Testes: `supi_test.go` (`TestUnsupportedTypes`, `TestPrefixRejectedAtKDFLayer`) e `derive_test.go` (`TestSBIPrefixRejected`).
 
 ---
 

@@ -46,8 +46,14 @@ docs/
 ├── defects/                          defeitos identificados em especificações
 ├── literatura/                       análise dos artigos sobre AKMA
 ├── plano/                            plano de desenvolvimento por MVPs
-└── traceability/                     matriz cláusula → código → teste
-reference/kdf/                        implementação de referência da KDF (oráculo)
+├── traceability/                     matriz cláusula → código → teste
+├── shared/                           KDF, identificadores, codificação, vetores (comum aos dois lados)
+├── free5gc-side/                     o que se faz dentro do free5GC
+├── af-side/                          AF, Ua* e lado UE
+└── tutorial/                         o que fazer depois de instalar o free5GC
+shared/akma/                          biblioteca Go comum (KDF, SUPI, A-KID, AF_ID, codecs)
+shared/crosscheck/                    comparação com a KDF do free5GC (módulo próprio)
+reference/kdf/                        oráculo Python e gerador de vetores
 specs/  papers/                       normas e artigos — locais, fora do controle de versão
 ```
 
@@ -107,7 +113,7 @@ As fases passaram a MVPs no [plano de desenvolvimento](docs/plano/plano-de-desen
 |---|---|---|---|
 | F0 | — | Aquisição documental e fixação do baseline | **Concluída** |
 | F1 | — | Decisões de codificação | **Concluída** — ADR-0002, ADR-0003 |
-| F2 | MVP-0 | KDF, A-KID, AF_ID, com validação cruzada Go × Python × KDF do free5GC | Próxima |
+| F2 | MVP-0 | KDF, A-KID, AF_ID, com validação cruzada Go × Python × KDF do free5GC | **Concluída** em 16/10/2026 (`go test -race` pendente de compilador C) |
 | F3 | MVP-1 | AAnF autônomo — NRF, três *endpoints*, contexto, erros | |
 | F4 | MVP-2 | Integração AUSF e UDM | |
 | F5 | MVP-3 | AF e Ua* simplificado | |

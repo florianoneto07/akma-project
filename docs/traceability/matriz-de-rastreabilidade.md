@@ -11,31 +11,32 @@ Legenda de estado:
 - **Parcial** — parcialmente determinado; ver questão associada
 - **Decisão** — determinado por decisão do projeto, registrada em ADR ou no registro de defeitos
 - **Pendente** — fora do escopo do MVP ou aguardando decisão
+- **Implementado** — código e testes no repositório, com o MVP indicado
 
 ## Derivação criptográfica
 
 | Requisito | Norma | Cláusula | Implementação | Teste | Estado |
 |---|---|---|---|---|---|
-| KDF genérica HMAC-SHA-256 | TS 33.220 V19.1.0 | B.2.0, B.2.1 | `akma/kdf/kdf.go` | `kdf_test.go` | Especificado |
-| Codificação de cadeias UTF-8 + NFKC | TS 33.220 V19.1.0 | B.2.1.2 | `akma/kdf/encoding.go` | `encoding_test.go` | Especificado |
-| Codificação de comprimentos em 2 octetos | TS 33.220 V19.1.0 | B.2.1.3 | `akma/kdf/kdf.go` | `kdf_test.go` | Especificado |
-| Derivação de K_AKMA — FC `0x80` | TS 33.535 V19.0.0 | A.2 | `akma/kdf/kakma.go` | `kakma_test.go` | Especificado |
-| Derivação de A-TID — FC `0x81` | TS 33.535 V19.0.0 | A.3 | `akma/kdf/atid.go` | `atid_test.go` | Especificado |
-| Derivação de K_AF — FC `0x82` | TS 33.535 V19.0.0 | A.4 | `akma/kdf/kaf.go` | `kaf_test.go` | Especificado |
-| SUPI como P0/P1, sem prefixo `imsi-` | TS 33.501 V19.7.0 | A.7.0 | `akma/kdf/supi.go` | `supi_test.go` | Especificado |
+| KDF genérica HMAC-SHA-256 | TS 33.220 V19.1.0 | B.1, B.2.0, B.2.1 | `shared/akma/kdf/kdf.go` | `kdf_test.go`, `vectors_test.go`, `shared/crosscheck` | **Implementado** (MVP-0) |
+| Codificação de cadeias UTF-8 + NFKC | TS 33.220 V19.1.0 | B.2.1.2 | `shared/akma/kdf/kdf.go` (`String`) | `kdf_test.go`; vetores `nfkc-*` | **Implementado** (MVP-0) |
+| Codificação de comprimentos em 2 octetos | TS 33.220 V19.1.0 | B.2.1.3 | `shared/akma/kdf/kdf.go` | `kdf_test.go` | **Implementado** (MVP-0) |
+| Derivação de K_AKMA — FC `0x80` | TS 33.535 V19.0.0 | A.2 | `shared/akma/derive/derive.go` | `vectors_test.go`, `shared/crosscheck` | **Implementado** (MVP-0) |
+| Derivação de A-TID — FC `0x81` | TS 33.535 V19.0.0 | A.3 | `shared/akma/derive/derive.go` | `vectors_test.go`, `shared/crosscheck` | **Implementado** (MVP-0) |
+| Derivação de K_AF — FC `0x82` | TS 33.535 V19.0.0 | A.4 | `shared/akma/derive/derive.go` | `vectors_test.go`, `shared/crosscheck` | **Implementado** (MVP-0) |
+| SUPI como P0/P1, sem prefixo `imsi-` | TS 33.501 V19.7.0 | A.7.0 | `shared/akma/supi/supi.go` | `supi_test.go`, `derive_test.go`; contraexemplo nos vetores | **Implementado** (MVP-0); só IMSI (DV-3) |
 
 ## Identificadores
 
 | Requisito | Norma | Cláusula | Implementação | Teste | Estado |
 |---|---|---|---|---|---|
-| Identificador Ua* — 5 octetos | TS 33.220 V19.1.0 | H.1–H.3 | `akma/afid/uastar.go` | `uastar_test.go` | Especificado |
-| `AfId` de transporte — `<FQDN>.<10 hex>` | TS 29.522 V19.7.0 | Tab. 5.14.5.4.2-1 | `akma/afid/afid.go` | `afid_test.go` | Decisão — o texto diz *"a string of 5 octet"*; os 10 hexadecimais vêm do exemplo (P9 do plano) |
-| Conversão `AfId` → P0 da KDF | TS 33.535 A.4 + TS 29.522 | — | `akma/afid/afid.go` | `afid_kdf_test.go` | Decisão — ADR-0002 |
-| Home Network Domain | TS 23.003 V19.7.0 | 28.2 | `akma/akid/realm.go` | `realm_test.go` | Especificado |
-| Routing Indicator, cadeia, valor padrão `"0"` | TS 23.003 V19.7.0 | 2.2B | `akma/akid/rid.go` | `rid_test.go` — casos `"0"`, `"012"`, `"0000"` | Especificado |
-| A-KID — formato NAI `rid<v>.atid<v>@<realm>` | TS 29.522 V19.7.0 | 5.14.5.4.2 | `akma/akid/akid.go` | `akid_test.go` | Parcial — defeito D-A |
-| Codificação do valor do A-TID | — | — | `akma/akid/akid.go` | `akid_test.go` | Decisão — ADR-0002 |
-| Codificação de `kAkma` e `kaf` | TS 29.509 V19.6.0 (precedente) | — | `akma/codec/` | `codec_test.go` | Decisão — ADR-0002 |
+| Identificador Ua* — 5 octetos | TS 33.220 V19.1.0 | H.1–H.3 | `shared/akma/afid/uastar.go` | `afid_test.go`, `derive_test.go` | **Implementado** (MVP-0) |
+| `AfId` de transporte — `<FQDN>.<10 hex>` | TS 29.522 V19.7.0 | Tab. 5.14.5.4.2-1 | `shared/akma/afid/afid.go` | `afid_test.go` | **Implementado** (MVP-0) — decisão P9: maiúsculas na escrita, as duas caixas na leitura |
+| Conversão `AfId` → P0 da KDF | TS 33.535 A.4 + TS 29.522 | — | `shared/akma/afid/afid.go` | `afid_test.go`; contraexemplo nos vetores | **Implementado** (MVP-0) — decisão ADR-0002 |
+| Home Network Domain | TS 23.003 V19.7.0 | 2.2, 28.2 | `shared/akma/akid/realm.go` | `akid_test.go` | **Implementado** (MVP-0) |
+| Routing Indicator, cadeia, valor padrão `"0"` | TS 23.003 V19.7.0 | 2.2B | `shared/akma/akid/rid.go` | `akid_test.go` — casos `"0"`, `"012"`, `"12"`, `"0000"` | **Implementado** (MVP-0) |
+| A-KID — formato NAI `rid<v>.atid<v>@<realm>` | TS 33.535 V19.0.0; TS 29.522 V19.7.0 | 6.1; Tab. 5.14.5.4.2-1 | `shared/akma/akid/akid.go`, `shared/akma/derive/derive.go` | `akid_test.go`, `vectors_test.go` | **Implementado** (MVP-0) — defeito D-A: `atid` na escrita, `atid`/`akid` na leitura |
+| Codificação do valor do A-TID | — | — | `shared/akma/akid/akid.go` | `akid_test.go`, `vectors_test.go` | **Implementado** (MVP-0) — decisão ADR-0002 (base64; base64url e hexadecimal configuráveis) |
+| Codificação de `kAkma` e `kaf` | TS 29.503 (`Kausf`) e TS 29.509 (precedentes) | — | `shared/akma/codec/key.go` | `key_test.go` | **Implementado** (MVP-0) — decisão ADR-0002 |
 
 ## API Naanf_AKMA
 

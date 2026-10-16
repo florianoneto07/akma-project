@@ -1,5 +1,14 @@
 # Registro de alterações
 
+## [Não lançado]
+
+### MVP-0 — biblioteca AKMA comum (16/10/2026)
+- `shared/akma`: KDF de TS 33.220 B.2 com NFKC; SUPI como parâmetro (TS 33.501 A.7.0, só IMSI — DV-3); Routing Indicator, Home Network Domain e A-KID (TS 23.003, TS 29.522); AF_ID nas formas da KDF e de transporte; K_AKMA, A-TID e K_AF (TS 33.535 Anexo A); codecs por camada (ADR-0002).
+- `shared/crosscheck`: comparação com `ueauth.GetKDFValue` do free5GC (`free5gc/util` v1.3.2).
+- `reference/kdf/gen_vectors.py` e `shared/akma/testdata/vectors.json`: 8 vetores do projeto, igualdades esperadas e contraexemplos; não são vetores 3GPP.
+- Decisão P9: identificador Ua\* no `AfId` em maiúsculas na escrita (errata no `00` §6.4 e no ADR-0003).
+- Documentação: `docs/shared/` (KDF, identificadores, codificação, vetores), `docs/tutorial/` (pré-requisitos e conferência das derivações), `docs/free5gc-side/` e `docs/af-side/` criados.
+
 ## [2.1] — 2026-10-16
 
 Verificação do ambiente, conferência contra o texto das normas, revisão da topologia e plano de desenvolvimento aprovado.
