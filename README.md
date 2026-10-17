@@ -113,8 +113,8 @@ As fases passaram a MVPs no [plano de desenvolvimento](docs/plano/plano-de-desen
 |---|---|---|---|
 | F0 | — | Aquisição documental e fixação do baseline | **Concluída** |
 | F1 | — | Decisões de codificação | **Concluída** — ADR-0002, ADR-0003 |
-| F2 | MVP-0 | KDF, A-KID, AF_ID, com validação cruzada Go × Python × KDF do free5GC | **Concluída** em 16/10/2026 (`go test -race` pendente de compilador C) |
-| F3 | MVP-1 | AAnF autônomo — NRF, três *endpoints*, contexto, erros | |
+| F2 | MVP-0 | KDF, A-KID, AF_ID, com validação cruzada Go × Python × KDF do free5GC | **Concluída** em 16/10/2026 (`go test -race` atendido em 17/10/2026) |
+| F3 | MVP-1 | AAnF autônomo — NRF, três *endpoints*, contexto, erros | **Concluída** em 17/10/2026 — limitações do NRF do free5GC para *patch* futuro (D13) |
 | F4 | MVP-2 | Integração AUSF e UDM | |
 | F5 | MVP-3 | AF e Ua* simplificado | |
 | F6 | MVP-4 | UE (ME no UERANSIM e cliente Ua*) | |

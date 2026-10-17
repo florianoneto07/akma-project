@@ -196,5 +196,6 @@ Atualizado em 15 e 16/10/2026, após a cópia das especificações para o reposi
 |---|---|
 | TS 29.505 | ausente — ver D8 do plano |
 | Versão de TS 23.502 | baseline mantido em V19.8.0; cópia do acervo V19.9.0 — Adendo E |
-| git e Go na VM do AF | ausentes — pré-requisito do MVP-0 |
-| Alcançabilidade da porta do AAnF a partir da VM do AF | a verificar quando o AAnF existir (MVP-1) |
+| git e Go na VM do AF | instalados para o MVP-0 (Go 1.26.2 em `~/sdk/go1.26.2`); gcc instalado em 17/10/2026 (detector de corridas) |
+| Alcançabilidade da porta do AAnF a partir da VM do AF | **verificada** em 17/10/2026: `192.168.16.130:8000` responde a pedidos de `192.168.16.129`; UFW desabilitado na VM do free5GC (`/etc/ufw/ufw.conf`: `ENABLED=no`) — `docs/free5gc-side/aanf.md` §9 |
+| `curl` na VM do AF | ausente; os testes de protocolo do AAnF usam h2c nos testes Go |

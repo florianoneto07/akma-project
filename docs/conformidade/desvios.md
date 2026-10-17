@@ -7,13 +7,14 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 
 | Nº | Assunto | Estado | MVP |
 |---|---|---|---|
-| DV-1 | SBI sem TLS (h2c) | aprovado com o plano | MVP-1 |
-| DV-2 | Subscrição de `ROAMING_STATUS` desabilitada | aprovado com o plano (orientação do material de partida) | MVP-1 |
+| DV-1 | SBI sem TLS (h2c) | **implementado** (MVP-1, 17/10/2026) | MVP-1 |
+| DV-2 | Subscrição de `ROAMING_STATUS` desabilitada | **implementado** (MVP-1, 17/10/2026) — parcial: a etapa não existe; o campo só aceita `false` | MVP-1 |
 | DV-3 | Só SUPI do tipo IMSI | **implementado** (MVP-0, 16/10/2026) | MVP-0 |
 | DV-4 | Sem NFKC no lado UE | aprovado com o plano | MVP-4 |
 | DV-5 | Digest do Ua\* conforme RFC 7616 | aprovado com o plano | MVP-3 |
 | DV-6 | `realm` do Digest conforme TS 33.535 | **decidido** em 16/10/2026 | MVP-3 |
-| DV-7 | Nunca emitir 204 em `retrieve-applicationkey` | **decidido** em 16/10/2026 | MVP-1 |
+| DV-7 | Nunca emitir 204 em `retrieve-applicationkey` | **implementado** (MVP-1, 17/10/2026) | MVP-1 |
+| DV-8 | `aud` vazio tolerado no token OAuth2 | **decidido** e **implementado** em 17/10/2026 | MVP-1 |
 
 ---
 
@@ -27,6 +28,8 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 
 **Impacto.** O AF não é autenticado pelo transporte; um AF que conheça um A-KID pode apresentar o AF_ID de outro AF (ataque de falsificação de AF descrito por Akman et al., 2023 — `docs/literatura/analise-dos-artigos.md`). A associação AF_ID↔endereço reduz, mas não elimina, o risco. O suporte a TLS continua obrigatório para a NF (TS 33.501 §13.1.0).
 
+**Implementação (17/10/2026).** O AAnF serve h2c (`sbi.scheme: http`) em `192.168.16.130:8000`, alcançável da VM do AF. A política local está em `akma.authorizedAfs`: cada AF_ID tem a lista de endereços de origem autorizados, e o endereço é o da conexão, não o de `X-Forwarded-For` (`free5gc/aanf/internal/context/context.go`, `AfPolicy`). Testes: `TestRetrieveAfNotAuthorized` e, na VM, AF_ID autorizado pedido de outra máquina → 403 (`docs/free5gc-side/aanf.md` §9). O suporte a `https` existe na configuração (`sbi.tls`), mas não foi exercitado.
+
 ---
 
 ## DV-2 — Subscrição de `ROAMING_STATUS` desabilitada
@@ -38,6 +41,8 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 **Por quê.** Questão em aberto nº 1: o `shall` do Stage 2 convive com a *feature* opcional do Stage 3. Orientação do material de partida do projeto.
 
 **Impacto.** Sem subscrição, o AAnF não detecta UE em *roaming* nem recusa por política de *roaming*; o testbed é sem *roaming*. `ROAMING_AKMA_SERVICE_DENIED` nunca é emitido.
+
+**Implementação (17/10/2026).** `akma.roamingStatusSubscription` existe no `aanfcfg.yaml`, mas o valor `true` impede a partida do AAnF com mensagem que cita este desvio (`free5gc/aanf/pkg/factory/config.go`; teste `TestInvalidConfigs`). A etapa configurável prevista acima fica para quando o AAnF consumir o UDM. A *feature* `RoamingRestriction` não é anunciada, e o `notifUri` dos pedidos é ignorado. Todo teste de API confere que `ROAMING_AKMA_SERVICE_DENIED` não aparece em nenhuma resposta (`api_akma_test.go`, função `do`).
 
 ---
 
@@ -100,3 +105,21 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 **Por quê.** Não há condição distinta que leve ao 204: sem K_AKMA a resposta é 403, e com K_AKMA a K_AF é sempre derivável.
 
 **Impacto.** Nenhum consumidor conforme deixa de funcionar (o 204 continua previsto no cliente, que o trata). Candidato a defeito (CT3).
+
+**Implementação (17/10/2026).** `free5gc/aanf/internal/sbi/processor/retrieve_applicationkey.go`: sem K_AKMA, 403 `K_AKMA_NOT_PRESENT`; com K_AKMA, 200. Todo pedido a `retrieve-applicationkey` nos testes de API confere que a resposta não é 204. O cliente do *patch* do `openapi` trata o 204 (`NoContent`).
+
+---
+
+## DV-8 — `aud` vazio tolerado no token OAuth2
+
+**Norma.** `[3GPP]` TS 33.501 §13.4.1.1.2 passo 2: verificada a integridade, o produtor *"checks that the audience claim in the access token matches its own identity or the NF type of NF Service Producer"* e *"checks that the access token has not expired by verifying the expiration time"*. Na mesma cláusula, as *claims* do token emitido pelo NRF incluem *"NF type of the NF Service Producer (audience)"*.
+
+**O que o free5GC faz.** `[FREE5GC]` `oauth.VerifyOAuth` (`free5gc/openapi` v1.2.4) verifica assinatura e escopo, mas não verifica `exp` nem `aud`: o campo `exp` é próprio do modelo e não chega à validação do `jwt`. O NRF v1.4.5 preenche `aud` com o `targetNfInstanceId` do pedido de token, que os clientes do free5GC não enviam; o `aud` sai vazio.
+
+**O que o projeto faz.** O AAnF verifica `exp` (conforme) e aceita `aud` igual ao seu `nfInstanceId` ou a `AANF`. **Tolera `aud` vazio**; um `aud` não vazio diferente desses é recusado.
+
+**Por quê.** Exigir `aud` recusaria todo token do NRF atual, e `register-anchorkey` e `remove-context` só funcionariam depois de um *patch* no NRF. Decidido pelo responsável em 17/10/2026, entre três opções: esta, a estrita e a do free5GC (sem `exp` nem `aud`).
+
+**Impacto.** Um token emitido para outro produtor, com `aud` vazio e escopo `naanf-akma`, é aceito. Como o NRF só emite escopo `naanf-akma` para os tipos em `allowedNfTypes` do AAnF (AUSF, NEF, AF), o risco fica nesses consumidores. Corrigido quando o *patch* futuro no NRF preencher `aud` (`docs/free5gc-side/registro-nrf.md` §5, N3); então a tolerância sai.
+
+**Implementação (17/10/2026).** `free5gc/aanf/internal/context/context.go` (`VerifyAccessToken`, `audienceAccepted`). Testes: `TestOAuth2` (expirado, sem `exp`, `aud` de outra instância e de outro tipo recusados; `aud` vazio, igual ao ID, igual a `AANF` e em lista aceitos).

@@ -13,7 +13,9 @@ Base de código: free5GC v4.2.3 (`docs/baseline/ambiente-verificado.md`).
 
 | Documento | MVP | Estado |
 |---|---|---|
-| `aanf.md`, `openapi.md`, `registro-nrf.md` | MVP-1 | a escrever |
+| `aanf.md` — a NF AAnF: configuração, operações, erros, verificação | MVP-1 | escrito (17/10/2026) |
+| `openapi.md` — *patches* com os modelos e o cliente do Naanf_AKMA | MVP-1 | escrito (17/10/2026) |
+| `registro-nrf.md` — perfil no NRF, OAuth2, limitações do NRF v1.4.5 | MVP-1 | escrito (17/10/2026) |
 | `udm.md`, `ausf.md`, `assinatura-akma.md`, `verificacao.md` | MVP-2 | a escrever |
 
 O que é comum aos dois lados — KDF, formatos de identificador, codificação, vetores — fica em `docs/shared/`.

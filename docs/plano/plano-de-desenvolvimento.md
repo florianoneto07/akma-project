@@ -1,6 +1,6 @@
 # Plano de desenvolvimento por MVPs
 
-**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Nenhum código escrito ainda.
+**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026).
 **Data:** 15 de outubro de 2026; revisão 3 em 16 de outubro de 2026; aprovação em 16 de outubro de 2026
 **Base:** documentos `00` a `04`, Adendo E, ADR-0001-R2, ADR-0002, ADR-0003, `docs/baseline/ambiente-verificado.md`, `docs/baseline/conferencia-normativa.md`, `docs/literatura/analise-dos-artigos.md`, `docs/conformidade/desvios.md`
 **Revisão 2 (15/10/2026):** conferido contra as normas do acervo (hoje em `specs/`).
@@ -26,6 +26,7 @@ Estado em 16/10/2026. "Aprovada" = recomendação aprovada com o plano; "decidid
 | D8 | TS 29.505 no baseline | Acrescentar. `[FREE5GC]` O `AuthenticationSubscription` do UDR já tem `akmaAllowed` e `routingId`. `[3GPP]` TS 33.535 §3.1 define *"AKMA subscription data"* como o dado que indica se o assinante pode usar AKMA, e §4.2.5 o põe no UDM; a semântica Stage 3 do campo está em TS 29.505 | aprovada; **a norma precisa ser obtida antes do MVP-2** | MVP-2 |
 | D9 | Momento do registro no AAnF e efeito de falha | `[3GPP]` TS 33.535 §6.1 passo 3: K_AKMA e A-TID são gerados *"after the primary authentication procedure is successfully completed"*; a norma não condiciona a autenticação primária ao registro. `[INTERPRETAÇÃO]` O AUSF responde ao AMF normalmente e faz `AnchorKey_Register` em seguida, sem bloquear; falha no AAnF é registrada em log e não altera o resultado da autenticação | **decidida** em 16/10/2026 | MVP-2 |
 | D12 | Versão de TS 23.502 | O baseline permanece **V19.8.0**; a cópia do acervo é a V19.9.0 e o projeto segue com ela para consulta. Registrado no Adendo E e em `especificacoes.md` | **decidida** em 16/10/2026 | registro do baseline |
+| D13 | Limitações do NRF do free5GC v1.4.5 encontradas no MVP-1: descarta `aanfInfoList` (N1), recusa descoberta de `AANF` (N2), emite token com `aud` vazio (N3) — `docs/free5gc-side/registro-nrf.md` §5 | Corrigir com um *patch* no NRF **mais adiante**; até lá, critério 1 do MVP-1 verificado no perfil enviado pelo AAnF, seleção do AAnF por configuração local (TS 33.535 §6.7) e `aud` vazio tolerado (DV-8) | **decidida** em 17/10/2026 | MVP-1, MVP-2 |
 
 Decisão que depende de norma ainda fora do acervo:
 
@@ -110,7 +111,7 @@ O código do lado free5GC é editado e versionado aqui e implantado na VM do fre
 
 ### MVP-0 — Biblioteca AKMA comum e validação cruzada
 
-**Estado (16/10/2026):** implementado. Critérios 2 a 6 atendidos; critério 1 atendido com `go test ./...` — a variante `-race` aguarda um compilador C na VM do AF (o detector de corridas exige cgo). Arquivos conforme a tabela abaixo, com duas diferenças de organização: as derivações ficaram em `shared/akma/derive/` (não em `kdf/akma.go`), para que `derive.KAf` receba um `afid.AfID` sem ciclo de importação; e a comparação com `ueauth` ficou num módulo próprio, `shared/crosscheck/`, para que a biblioteca não dependa de `free5gc/util`.
+**Estado (16/10/2026):** implementado. Critérios 2 a 6 atendidos; critério 1 atendido com `go test ./...` — a variante `-race` aguarda um compilador C na VM do AF (o detector de corridas exige cgo). **17/10/2026:** com o gcc instalado, `go test -race ./...` passa em `shared/akma`; critério 1 atendido por inteiro. Arquivos conforme a tabela abaixo, com duas diferenças de organização: as derivações ficaram em `shared/akma/derive/` (não em `kdf/akma.go`), para que `derive.KAf` receba um `afid.AfID` sem ciclo de importação; e a comparação com `ueauth` ficou num módulo próprio, `shared/crosscheck/`, para que a biblioteca não dependa de `free5gc/util`.
 
 **Objetivo.** Implementar em Go as três derivações, a conversão de SUPI, a construção e a análise do A-KID e do AF_ID, e as codificações por camada, concordando octeto a octeto com o oráculo Python e com a KDF do free5GC.
 
@@ -169,6 +170,23 @@ func ParseAKID(s string, o Options) (AKID, error)
 ---
 
 ### MVP-1 — AAnF autônomo na VM do free5GC
+
+**Estado (17/10/2026):** implementado e verificado na VM do free5GC e a partir da VM do AF (`docs/free5gc-side/aanf.md` §9). `go test -race ./...` passa no módulo `free5gc/aanf`. Critérios:
+
+| Nº | Resultado |
+|---|---|
+| 1 | Parcial por limitação do NRF (D13, N1). O perfil guardado no NRF tem `nfType: AANF`, `naanf-akma` `v1` e `ipEndPoints` em `192.168.16.130`, mas o NRF descarta `aanfInfoList`. O AAnF o envia com `"0000"` preservado (`TestRegisterNFInstanceProfile`). A descoberta `target-nf-type=AANF` responde 400 no NRF (N2) |
+| 2 | Atendido; `gpsi` → 400 `OPTIONAL_IE_INCORRECT` (`[INTERPRETAÇÃO]`, `aanf.md` §3.1) |
+| 3 | Atendido (`TestReRegistrationReplacesPair`, `TestReRegistrationOverAPI`) |
+| 4 | Atendido; K_AF igual ao vetor `testbed-ue` nos testes e na VM |
+| 5 | Atendido nos testes e na VM, inclusive o AF_ID autorizado pedido de outra máquina |
+| 6 | Atendido |
+| 7 | Atendido: 8 códigos testados; 429, 502 e 503 justificados (`aanf.md` §6) |
+| 8 | Atendido (conferido em todo teste de API) |
+| 9 | Atendido: pedidos de `192.168.16.129` chegam ao AAnF |
+| 10 | Atendido (`TestNoKeyInLogs` em nível `trace`; zero ocorrências nos logs da VM) |
+
+Diferenças em relação à tabela de arquivos: `internal/context/{context,akma_context}.go` como previsto, mais `internal/util/problem.go` (`ProblemDetails`); `free5gc/scripts/prepare-openapi.sh` prepara a cópia do `openapi` com os *patches*; a ferramenta de teste ficou em `free5gc/aanf/tools/seed/` com os subcomandos `register` (papel do AUSF), `retrieve` (papel do AF), `remove` e `discover`. Decisão nova: DV-8 (`aud` vazio tolerado).
 
 **Objetivo.** Uma NF AAnF, com a estrutura das NFs do free5GC, que se registra no NRF como `AANF`/`naanf-akma`, expõe as três operações do Naanf_AKMA com contexto em memória e responde aos erros de TS 29.535 e TS 29.500 — testada sem AUSF.
 
@@ -399,13 +417,14 @@ Registro oficial, com motivo e impacto: `docs/conformidade/desvios.md`. Cada um 
 
 | Nº | O que a norma exige | O que o projeto faz | Estado (16/10/2026) |
 |---|---|---|---|
-| DV-1 | TS 33.535 §4.4.0: interfaces AAnF↔AUSF, AAnF↔AF/NEF e AAnF↔UDM *"shall be confidentiality, integrity and replay protected"*; §4.2.2 e TS 29.535 §4.2.1.3.2: o AF *"shall be authenticated and authorized"* antes de receber K_AF. TS 33.501 §13.1.0: TLS dentro da PLMN *"unless network security is provided by other means"*; NOTA 2: com interfaces confiáveis, a proteção criptográfica é decisão do operador | `http` (h2c) em AUSF↔AAnF (*loopback*) e em AF↔AAnF (rede virtual entre VMs), declarando ambas como interfaces confiáveis do laboratório. Consequência: o AF não é autenticado pelo transporte, e um AF pode apresentar o AF_ID de outro (ataque de falsificação de AF, Akman et al. 2023). Mitigação no MVP: a política local associa cada AF_ID ao endereço de origem do AF; risco residual declarado. TLS no MVP-6+ | aprovado com o plano · MVP-1 |
-| DV-2 | TS 33.535 §6.2.1 passo 5 (*"shall"*) — questão 1. TS 29.535 condiciona a reação ao *roaming* à *feature* opcional `RoamingRestriction` (Tab. 5.1.8-1, 5.1.7.3-1) | subscrição de `ROAMING_STATUS` implementada como etapa configurável, desabilitada (orientação do material de partida; registrado em `desvios.md`) | aprovado com o plano · MVP-1 |
+| DV-1 | TS 33.535 §4.4.0: interfaces AAnF↔AUSF, AAnF↔AF/NEF e AAnF↔UDM *"shall be confidentiality, integrity and replay protected"*; §4.2.2 e TS 29.535 §4.2.1.3.2: o AF *"shall be authenticated and authorized"* antes de receber K_AF. TS 33.501 §13.1.0: TLS dentro da PLMN *"unless network security is provided by other means"*; NOTA 2: com interfaces confiáveis, a proteção criptográfica é decisão do operador | `http` (h2c) em AUSF↔AAnF (*loopback*) e em AF↔AAnF (rede virtual entre VMs), declarando ambas como interfaces confiáveis do laboratório. Consequência: o AF não é autenticado pelo transporte, e um AF pode apresentar o AF_ID de outro (ataque de falsificação de AF, Akman et al. 2023). Mitigação no MVP: a política local associa cada AF_ID ao endereço de origem do AF; risco residual declarado. TLS no MVP-6+ | **implementado** (17/10/2026) · MVP-1 |
+| DV-2 | TS 33.535 §6.2.1 passo 5 (*"shall"*) — questão 1. TS 29.535 condiciona a reação ao *roaming* à *feature* opcional `RoamingRestriction` (Tab. 5.1.8-1, 5.1.7.3-1) | subscrição de `ROAMING_STATUS` implementada como etapa configurável, desabilitada (orientação do material de partida; registrado em `desvios.md`) | **implementado** (17/10/2026), parcial: o campo só aceita `false` · MVP-1 |
 | DV-3 | TS 33.501 A.7.0 define P0 também para SUPI do tipo NAI, GCI e GLI | apenas SUPI do tipo IMSI | aprovado com o plano · MVP-0 |
 | DV-4 | TS 33.220 B.2.1.2: NFKC nos parâmetros de cadeia | sem NFKC no lado UE (C++): FQDN só ASCII | aprovado com o plano · MVP-4 |
 | DV-5 | `[DIVERGÊNCIA]` TS 24.109 K.2 c) manda usar HTTP Digest *"(see RFC 3310)"* — o Digest AKA, em que a senha é derivada do RES. O mesmo K.2 b) remete à §5.2, que usa RFC 7616 (§5.2.2.1); TS 33.535 B.1.2.2 segue TS 33.222 §5.3.0, que também usa RFC 7616 e desaconselha MD5 (NOTA 1b). Com senha = base64(K_AF), só RFC 7616 é coerente | Digest conforme RFC 7616, `algorithm=SHA-256`, `qop=auth` (`auth-int` opcional, §5.2.6), `rspauth` obrigatório na resposta. Registrar a citação de RFC 3310 como defeito candidato (I18) | aprovado com o plano · MVP-3 |
 | DV-6 | `[DIVERGÊNCIA]` Divergência E. TS 33.535 B.1.2.2 (Stage 2): o AF inclui `3GPP-bootstrapping-akma` no `WWW-Authenticate`, e o `realm` contém o FQDN do AF (passos 3 e 4); TS 24.109 K.2 b)2) repete a constante; TS 24.109 §5.2.2.1 dá a forma `<constante>@<FQDN>`. Só TS 24.109 K.2 c)3) usa `3gpp-akma@<FQDN>` | Segue TS 33.535: `realm = "3GPP-bootstrapping-akma@<FQDN do AF>"` — constante e FQDN de TS 33.535, separador `@` do Stage 3; primeira parte configurável. Diverge só de K.2 c)3). Registro de defeitos (D-C) e Adendo D a atualizar | **decidido** · MVP-3 |
-| DV-7 | `[DIVERGÊNCIA]` TS 29.535 §4.2.2.3.2: 204 *"if the requested AKMA Application Key information for the UE does not exist"*, mas sem K_AKMA a resposta é 403 `K_AKMA_NOT_PRESENT`, e com K_AKMA a K_AF é sempre derivável — não há condição distinta para o 204 | não emitir 204; 403 `K_AKMA_NOT_PRESENT` quando não há K_AKMA. Registrar como defeito candidato (CT3) | **decidido** · MVP-1 |
+| DV-7 | `[DIVERGÊNCIA]` TS 29.535 §4.2.2.3.2: 204 *"if the requested AKMA Application Key information for the UE does not exist"*, mas sem K_AKMA a resposta é 403 `K_AKMA_NOT_PRESENT`, e com K_AKMA a K_AF é sempre derivável — não há condição distinta para o 204 | não emitir 204; 403 `K_AKMA_NOT_PRESENT` quando não há K_AKMA. Registrar como defeito candidato (CT3) | **implementado** (17/10/2026) · MVP-1 |
+| DV-8 | TS 33.501 §13.4.1.1.2 passo 2: o produtor verifica `exp` e `aud` do token. `[FREE5GC]` `oauth.VerifyOAuth` não verifica nenhum dos dois; o NRF v1.4.5 emite `aud` vazio | o AAnF verifica `exp` e aceita `aud` igual ao seu ID ou a `AANF`; tolera `aud` vazio até o *patch* do NRF (D13) | **decidido** e **implementado** (17/10/2026) · MVP-1 |
 
 Não são desvios, e assim serão documentados: identificador Ua\* da faixa privada (TS 33.220 H.2 NOTA 2, ADR-0003); seleção do AAnF por configuração local (TS 33.535 §6.7); autorização do AF por política local em vez de token OAuth2 (TS 33.535 §6.2.1 passo 2; TS 29.535 §5.1.9: OAuth2 *"may"* ser usado); contexto em memória; GPSI não obtido (condicional à política local, §6.2.1 passo 3); A-KID transmitido a cada AF guardado mesmo sem subscrição de *roaming* (§6.2.1 passo 8 só o exige com a subscrição).
 

@@ -2,6 +2,16 @@
 
 ## [Não lançado]
 
+### MVP-1 — AAnF autônomo (17/10/2026)
+- `free5gc/patches/openapi/`: `0001-naanf-akma-models.patch` (`AkmaKeyInfo`, `CtxRemove`, `AkmaAfKeyRequest`, `AkmaAfKeyData`, `ServiceDisableNotif`) e `0002-naanf-akma-client.patch` (cliente `aanf/AKMA`) sobre `free5gc/openapi` v1.2.4; `free5gc/scripts/prepare-openapi.sh`.
+- `free5gc/aanf/`: NF AAnF com a estrutura das NFs do free5GC. Três operações do Naanf_AKMA (TS 29.535); contexto em memória com substituição do par (A-KID, K_AKMA) e K_AF reaproveitada até expirar (TS 33.535 §6.1, §6.2.1, §5.2); política local que associa AF_ID a endereço de origem; OAuth2 com verificação de `exp` e `aud`; erros de TS 29.500; registro e cancelamento no NRF.
+- `free5gc/aanf/tools/seed/`: ferramenta de teste nos papéis do AUSF (`register`) e do AF (`retrieve`), mais `remove` e `discover`.
+- `free5gc/config/aanfcfg.yaml`; `free5gc/scripts/{build-aanf,run-aanf,deploy}.sh`.
+- Verificação na VM do free5GC e a partir da VM do AF: K_AF igual ao vetor `testbed-ue`; 403 para AF fora da política e para AF_ID pedido de outra máquina.
+- Decisões: DV-8 (`aud` vazio tolerado no token, por limitação do NRF do free5GC); D13 (limitações do NRF v1.4.5 — `aanfInfoList` descartado, descoberta de `AANF` recusada, `aud` vazio — a corrigir com *patch* futuro). DV-1, DV-2 e DV-7 implementados.
+- Documentação: `docs/free5gc-side/{aanf,openapi,registro-nrf}.md`; tutorial, parte 3; matriz de rastreabilidade, revisão 3.2.
+- MVP-0: `go test -race` passa em `shared/akma` (critério 1 atendido por inteiro).
+
 ### MVP-0 — biblioteca AKMA comum (16/10/2026)
 - `shared/akma`: KDF de TS 33.220 B.2 com NFKC; SUPI como parâmetro (TS 33.501 A.7.0, só IMSI — DV-3); Routing Indicator, Home Network Domain e A-KID (TS 23.003, TS 29.522); AF_ID nas formas da KDF e de transporte; K_AKMA, A-TID e K_AF (TS 33.535 Anexo A); codecs por camada (ADR-0002).
 - `shared/crosscheck`: comparação com `ueauth.GetKDFValue` do free5GC (`free5gc/util` v1.3.2).
