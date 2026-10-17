@@ -2,9 +2,9 @@
 
 **MVP:** MVP-1 · **Data:** 17 de outubro de 2026 · **Verificado na VM do free5GC** (192.168.16.130) em 17/10/2026
 
-## 1. Nenhum arquivo do NRF é alterado
+## 1. O que muda no NRF
 
-O AAnF usa o NRF do free5GC v4.2.3 (`nrf` v1.4.5) como ele é. A configuração do NRF (`~/free5gc/config/nrfcfg.yaml`) não muda. O NRF, porém, grava estado próprio quando o AAnF se registra; isso está listado na seção 4.
+O registro do AAnF não exige configuração nova no NRF do free5GC v4.2.3 (`nrf` v1.4.5); `~/free5gc/config/nrfcfg.yaml` não muda. O NRF grava estado próprio quando o AAnF se registra (seção 4). Três pontos em que o NRF não seguia TS 29.510 (seção 5) foram corrigidos no MVP-1b com *patches* no código do NRF (`nrf.md`).
 
 ## 2. Perfil publicado
 
@@ -41,13 +41,13 @@ Com `nfInstanceId` aleatório, cada partida do AAnF criaria um certificado novo.
 
 ## 5. Limitações do NRF v1.4.5 encontradas
 
-Nos três casos o AAnF segue a norma; quem não segue é o NRF. Em 17/10/2026, o responsável pelo projeto decidiu **corrigir o NRF com um *patch*, mais adiante**. Até lá:
+Nos três casos o AAnF segue a norma; quem não segue é o NRF. Em 17/10/2026, o responsável pelo projeto decidiu corrigir o NRF. **Corrigidas no mesmo dia (MVP-1b, `nrf.md`)**; sem os *patches*, o comportamento é o da tabela:
 
 | Nº | O que o NRF faz | Onde | Efeito |
 |---|---|---|---|
 | N1 | Descarta `aanfInfoList` ao gravar o perfil: só copia os `*Info` que conhece (`udrInfo`, `udmInfo`, `ausfInfo`…) | `internal/context/management_data.go`, `nnrfNFManagementOption` | o perfil guardado não tem os RIDs; o critério 1 do MVP-1 fica verificado no que o AAnF envia (teste `TestRegisterNFInstanceProfile`), não no que o NRF guarda |
 | N2 | A descoberta recusa `target-nf-type=AANF` com 400 (`Loss mandatory parameter`): a lista de tipos aceitos é fixa e não tem `AANF` | `internal/sbi/processor/nf_discovery.go`, `validateQueryParameters` | AUSF e AF não descobrem o AAnF pelo NRF; usam o endereço configurado, permitido por TS 33.535 §6.7 (*"unless AAnF information is available by other means, e.g. locally configured"*) |
-| N3 | Emite tokens com `aud` vazio: copia `targetNfInstanceId`, que os clientes do free5GC não enviam | `internal/sbi/processor/access_token.go` | o AAnF tolera `aud` vazio (desvio DV-8) |
+| N3 | Emite tokens com `aud` vazio: copia `targetNfInstanceId`, que os clientes do free5GC não enviam | `internal/sbi/processor/access_token.go` | o AAnF tolerava `aud` vazio (desvio DV-8, encerrado); com o AAnF atual, um NRF sem o *patch* 0003 faz `register-anchorkey` e `remove-context` responderem 401 |
 
 ## 6. Como reproduzir numa instalação limpa
 
@@ -61,6 +61,9 @@ Com NRF e AAnF em execução, na máquina do free5GC:
 mongosh --quiet free5gc --eval 'printjson(db.NfProfile.find({nfType: "AANF"}, {_id: 0}).toArray())'
 ```
 
-O resultado deve conter `nfType: 'AANF'`, o serviço `naanf-akma` com `apiVersionInUri: 'v1'` e `ipEndPoints` em `192.168.16.130:8000`; `aanfInfoList` não aparece (N1). No log do AAnF (`~/free5gc/log/aanf/aanf.log`) deve aparecer `OAuth2 setting receive from NRF: true`. Ao parar o AAnF, aparecem `Deregister from NRF successfully` no log e um `NfProfile` sem o AAnF.
+O resultado deve conter `nfType: 'AANF'`, o serviço `naanf-akma` com `apiVersionInUri: 'v1'`, `ipEndPoints` em `192.168.16.130:8000` e, com o NRF corrigido, `aanfInfoList` com os RIDs configurados. Sem o *patch* 0001, `aanfInfoList` não aparece (N1). No log do AAnF (`~/free5gc/log/aanf/aanf.log`) deve aparecer `OAuth2 setting receive from NRF: true`. Ao parar o AAnF, aparecem `Deregister from NRF successfully` no log e um `NfProfile` sem o AAnF.
 
-Resultado em 17/10/2026: perfil conforme a tabela da seção 2, sem `aanfInfoList`. `customInfo.oauth2: true`. `NFDeregister` aceito (204), e `cert/aanf_<id>.pem` apagado pelo NRF. A descoberta respondeu 400 (N2).
+Resultado em 17/10/2026:
+
+- **Com o NRF original:** perfil conforme a seção 2, mas sem `aanfInfoList`. `customInfo.oauth2: true`. `NFDeregister` aceito (204), e `cert/aanf_<id>.pem` apagado pelo NRF. A descoberta respondia 400 (N2).
+- **Com o NRF corrigido:** `aanfInfoList: {'1': {routingIndicators: ['0000']}}`; a descoberta por `routing-indicator` funciona (`nrf.md` §6).

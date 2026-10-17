@@ -2,6 +2,17 @@
 
 ## [Não lançado]
 
+### MVP-1b — correção do NRF do free5GC (17/10/2026)
+- `free5gc/patches/nrf/`: três *patches* com testes sobre o `free5gc/nrf` v1.4.5:
+  - 0001: guarda `aanfInfoList` (TS 29.510 §5.2.2.2.2, Tab. 6.1.6.2.2-1);
+  - 0002: descoberta de `AANF` com filtro por `routing-indicator` sobre `aanfInfoList` (Tab. 6.2.3.2.3.1-1, Tab. 6.1.6.2.73-1);
+  - 0003: `aud` do token com a instância ou o tipo do produtor (Tab. 6.3.5.2.4-1).
+- `free5gc/scripts/patch-nf.sh`: aplica, reverte e informa *patches* de uma NF do free5GC e a recompila, guardando o binário original.
+- AAnF: `aud` passa a ser exigido; DV-8 encerrado. `seed discover` aceita `--routing-indicator`.
+- Aplicado na VM do free5GC. Verificados `aanfInfoList` guardado, descoberta por RID (com o filtro conferido no MongoDB 5.0) e token com `aud`. Regressão parcial com nove NFs; a regressão com UE fica com o responsável (exige `sudo`).
+- Decisões: D13 revista (NRF corrigido agora); D8 (TS 29.505 V19.6.0 incorporada ao baseline); D10 (RID vem do `routingId` do UDR, com comparação ao RID do SUCI em log).
+- Documentação: `docs/free5gc-side/nrf.md`; tutorial, seção 3.3; matriz, revisão 3.3.
+
 ### MVP-1 — AAnF autônomo (17/10/2026)
 - `free5gc/patches/openapi/`: `0001-naanf-akma-models.patch` (`AkmaKeyInfo`, `CtxRemove`, `AkmaAfKeyRequest`, `AkmaAfKeyData`, `ServiceDisableNotif`) e `0002-naanf-akma-client.patch` (cliente `aanf/AKMA`) sobre `free5gc/openapi` v1.2.4; `free5gc/scripts/prepare-openapi.sh`.
 - `free5gc/aanf/`: NF AAnF com a estrutura das NFs do free5GC. Três operações do Naanf_AKMA (TS 29.535); contexto em memória com substituição do par (A-KID, K_AKMA) e K_AF reaproveitada até expirar (TS 33.535 §6.1, §6.2.1, §5.2); política local que associa AF_ID a endereço de origem; OAuth2 com verificação de `exp` e `aud`; erros de TS 29.500; registro e cancelamento no NRF.

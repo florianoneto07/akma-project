@@ -25,7 +25,7 @@ Todas as decisões de implementação deste projeto referem-se às versões abai
 | TS 29.500 | Technical Realization of Service Based Architecture | V19.7.0 | HTTP/2, códigos de estado, cabeçalhos customizados |
 | TS 29.501 | Principles and Guidelines for Services Definition | V19.5.0 | Estrutura de URI, operações customizadas |
 | TS 29.122 | T8 reference point for Northbound APIs | V19.7.0 | `Uri`, `DateTime` |
-| TS 29.505 | Usage of the Unified Data Repository services for Subscription Data; Stage 3 | **a fixar** — norma a obter antes do MVP-2 (plano, D8) | Semântica de `akmaAllowed` e `routingId` no `AuthenticationSubscription` |
+| TS 29.505 | Usage of the Unified Data Repository services for Subscription Data; Stage 3 | V19.6.0 (2026-06) — incorporada em 17/10/2026 (plano, D8) | Semântica de `akmaAllowed` e `routingId` no `AuthenticationSubscription` (Tab. 5.4.2.2-1); fonte do RID no UDM (D10) |
 
 **Nota (16/10/2026):** o baseline de TS 23.502 permanece V19.8.0; a cópia no acervo é a V19.9.0, usada para consulta. Ver [Adendo E](../05-adendo-E-ts23502-v19-9-0.md).
 
@@ -44,6 +44,7 @@ Todas as decisões de implementação deste projeto referem-se às versões abai
 | `TS29510_Nnrf_NFDiscovery.yaml` | — | TS 29.510 |
 | `TS29571_CommonData.yaml` | — | TS 29.571 |
 | `TS29122_CommonData.yaml` | — | TS 29.122 |
+| `TS29505_Subscription_Data.yaml` | `-` (o arquivo não traz versão) | TS 29.505 V19.6.0; `routingId` com padrão `^[0-9]{1,4}$` |
 
 Os arquivos OpenAPI declaram, em `externalDocs`, a versão da TS em que foram alterados pela última vez. Versões heterogêneas entre arquivos da mesma TS são normais e não indicam inconsistência do acervo.
 

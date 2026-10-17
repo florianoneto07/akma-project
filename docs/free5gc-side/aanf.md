@@ -105,7 +105,7 @@ Em memória (`internal/context/akma_context.go`); `[MVP]` perdido ao reiniciar o
 | assinatura RS512 com o certificado do NRF | `oauth.VerifyOAuth` do free5GC |
 | `scope` contém `naanf-akma` | `oauth.VerifyOAuth`; os escopos finos de TS 29.535 Tab. 5.1.9-1 não são exigidos (`[MVP]`; TS 33.501 §13.4.1.0 torna os adicionais opcionais) |
 | `exp` no futuro | AAnF (o `VerifyOAuth` do free5GC não verifica) |
-| `aud` igual ao `nfInstanceId` do AAnF ou a `AANF`; vazio tolerado | AAnF — **DV-8** |
+| `aud` igual ao `nfInstanceId` do AAnF ou a `AANF`; ausente ou vazio → recusado | AAnF. Exige o NRF corrigido (`nrf.md`, N3); até o MVP-1b, `aud` vazio era tolerado (DV-8, encerrado) |
 
 Token ausente ou inválido → 401 com `WWW-Authenticate: Bearer` (ou `Bearer error="invalid_token"`, RFC 6750 §3) e `ProblemDetails`.
 
@@ -153,7 +153,7 @@ free5gc/scripts/build-aanf.sh
 free5gc/scripts/deploy.sh woca@192.168.16.130
 ```
 
-4. Com o NRF em execução (`run.sh` do free5GC, ou só o NRF), iniciar o AAnF:
+4. Corrigir o NRF (`nrf.md` §4); sem isso, os tokens chegam sem `aud` e o AAnF os recusa. Com o NRF em execução (`run.sh` do free5GC, ou só o NRF), iniciar o AAnF:
 
 ```bash
 ssh woca@192.168.16.130 bash -s -- start < free5gc/scripts/run-aanf.sh
@@ -200,7 +200,7 @@ Os erros de protocolo (411, 413, 415, 501…) não foram repetidos pela rede: a 
 
 ## 10. Limitações
 
-- Sem TLS (DV-1); sem subscrição de *roaming* (DV-2); `aud` vazio tolerado (DV-8).
+- Sem TLS (DV-1); sem subscrição de *roaming* (DV-2).
 - Contexto em memória, perdido ao reiniciar.
-- O NRF do free5GC descarta `aanfInfoList` e não descobre `AANF` (`registro-nrf.md` §5); a correção é um *patch* futuro no NRF.
+- Exige o NRF corrigido (`nrf.md`): sem o *patch* 0003, os tokens chegam sem `aud` e `register-anchorkey` e `remove-context` respondem 401. Sem os *patches* 0001 e 0002, o perfil fica sem `aanfInfoList` e o AAnF não pode ser descoberto.
 - O AAnF não entra no `run.sh` do free5GC: alterar esse arquivo fica para quando o AAnF for proposto *upstream*.

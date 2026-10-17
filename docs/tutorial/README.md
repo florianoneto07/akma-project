@@ -1,6 +1,6 @@
 # Tutorial — AKMA sobre o free5GC
 
-Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-1.
+Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-1b.
 
 | Parte | Conteúdo | Disponível |
 |---|---|---|
@@ -113,7 +113,29 @@ Copie `free5gc/config/aanfcfg.yaml` e ajuste:
 - `akma.authorizedAfs`: cada AF que pode pedir K_AF, com o AF_ID (`<FQDN>.<identificador Ua* em 10 hexadecimais>`) e o endereço de origem do AF.
 - `nfInstanceId`: mantenha um UUID fixo. Com OAuth2 ligado no NRF, cada ID novo faz o NRF criar um certificado `cert/aanf_<ID>.pem`.
 
-### 3.3 Instalar e iniciar
+### 3.3 Corrigir o NRF
+
+O NRF do free5GC v4.2.3 tem três falhas em relação a TS 29.510 que afetam o AAnF (`docs/free5gc-side/nrf.md`):
+
+- descarta o `aanfInfoList` do perfil;
+- recusa a descoberta do tipo `AANF`;
+- emite tokens sem `aud`.
+
+O AAnF exige `aud` no token. **Sem esta correção, o registro de chaves responde 401.** Na máquina do free5GC, com o free5GC parado:
+
+```bash
+free5gc/scripts/patch-nf.sh nrf apply
+```
+
+O *script*:
+
+1. aplica os três *patches* de `free5gc/patches/nrf/` em `~/free5gc/NFs/nrf`;
+2. guarda o binário original em `bin/nrf.orig`;
+3. recompila com `make nrf`.
+
+`patch-nf.sh nrf revert` desfaz tudo. Depois de corrigir, confirme que o free5GC continua funcionando como antes: `./run.sh` e o registro do UE do teste de instalação.
+
+### 3.4 Instalar e iniciar
 
 Copie `free5gc/build/bin/aanf` para `~/free5gc/bin/aanf` e a configuração para `~/free5gc/config/aanfcfg.yaml`. Se o repositório está em outra máquina, o *script* do projeto faz isso por SSH e não sobrescreve uma configuração já instalada:
 
@@ -135,20 +157,21 @@ ssh usuario@maquina-do-free5gc bash -s -- start < free5gc/scripts/run-aanf.sh
 
 O log fica em `~/free5gc/log/aanf/aanf.log`. As linhas esperadas são `OAuth2 setting receive from NRF: true` e `Start SBI server (listen on …:8000)`. `run-aanf.sh stop` encerra o AAnF, que antes se descadastra do NRF.
 
-### 3.4 Verificar o registro no NRF
+### 3.5 Verificar o registro e a descoberta no NRF
 
 ```bash
 mongosh --quiet free5gc --eval 'printjson(db.NfProfile.find({nfType: "AANF"}, {_id: 0}).toArray())'
 ```
 
-O perfil deve ter `nfType: 'AANF'` e o serviço `naanf-akma`, versão `v1`, no endereço configurado. Duas limitações do NRF do free5GC v4.2.3 aparecem aqui (`docs/free5gc-side/registro-nrf.md` §5):
+O perfil deve ter `nfType: 'AANF'`, o serviço `naanf-akma` (versão `v1`) no endereço configurado e o `aanfInfoList` com os RIDs. Para conferir a descoberta, rode na máquina do free5GC:
 
-- o perfil guardado não tem `aanfInfoList`;
-- a descoberta `target-nf-type=AANF` é recusada.
+```bash
+seed discover --nrf http://127.0.0.10:8000 --routing-indicator 0000
+```
 
-Por isso, nas próximas partes, o AUSF e o AF recebem o endereço do AAnF por configuração, o que TS 33.535 §6.7 permite.
+O AAnF deve aparecer na lista. Com um RID que ele não atende, a resposta é `null`. É assim que o AUSF vai encontrá-lo na parte 4 (TS 33.535 §6.7).
 
-### 3.5 Testar as três operações
+### 3.6 Testar as três operações
 
 Os valores abaixo são do vetor `testbed-ue` (`shared/akma/testdata/vectors.json`). O `seed` precisa de um *token* OAuth2 para registrar, e o NRF só é alcançável na máquina do free5GC. Para obtê-lo, o `seed` se registra no NRF como um AF temporário e se descadastra ao sair.
 
@@ -172,7 +195,7 @@ Respostas que indicam configuração errada:
 
 | Resposta | Causa provável |
 |---|---|
-| `401` no `register` | sem `--nrf`, ou o `nrfCertPem` do AAnF não é o certificado do NRF em uso |
+| `401` no `register` | sem `--nrf`; o NRF sem a correção da seção 3.3 (token sem `aud`); ou o `nrfCertPem` do AAnF não é o certificado do NRF em uso |
 | `403` sem causa no `retrieve` | o AF_ID não está em `authorizedAfs`, ou o pedido saiu de um endereço que não está na lista daquele AF_ID |
 | `403 (K_AKMA_NOT_PRESENT)` | o A-KID não foi registrado, foi substituído por um registro mais novo do mesmo SUPI ou o AAnF reiniciou (o contexto fica só em memória) |
 

@@ -14,7 +14,7 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-5 | Digest do Ua\* conforme RFC 7616 | aprovado com o plano | MVP-3 |
 | DV-6 | `realm` do Digest conforme TS 33.535 | **decidido** em 16/10/2026 | MVP-3 |
 | DV-7 | Nunca emitir 204 em `retrieve-applicationkey` | **implementado** (MVP-1, 17/10/2026) | MVP-1 |
-| DV-8 | `aud` vazio tolerado no token OAuth2 | **decidido** e **implementado** em 17/10/2026 | MVP-1 |
+| DV-8 | `aud` vazio tolerado no token OAuth2 | **encerrado** em 17/10/2026 (MVP-1b: NRF corrigido, AAnF estrito) | MVP-1 |
 
 ---
 
@@ -123,3 +123,5 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 **Impacto.** Um token emitido para outro produtor, com `aud` vazio e escopo `naanf-akma`, é aceito. Como o NRF só emite escopo `naanf-akma` para os tipos em `allowedNfTypes` do AAnF (AUSF, NEF, AF), o risco fica nesses consumidores. Corrigido quando o *patch* futuro no NRF preencher `aud` (`docs/free5gc-side/registro-nrf.md` §5, N3); então a tolerância sai.
 
 **Implementação (17/10/2026).** `free5gc/aanf/internal/context/context.go` (`VerifyAccessToken`, `audienceAccepted`). Testes: `TestOAuth2` (expirado, sem `exp`, `aud` de outra instância e de outro tipo recusados; `aud` vazio, igual ao ID, igual a `AANF` e em lista aceitos).
+
+**Encerramento (17/10/2026).** A decisão D13 foi revista no mesmo dia: o NRF foi corrigido (MVP-1b, *patch* `free5gc/patches/nrf/0003-access-token-audience.patch`, `docs/free5gc-side/nrf.md`) e passou a preencher `aud` com o tipo de NF do produtor (TS 29.510 Tab. 6.3.5.2.4-1). O AAnF deixou de tolerar `aud` vazio ou ausente. Testes: `TestOAuth2` (`aud` vazio, ausente e lista vazia recusados) e, na VM, `register-anchorkey` aceito com token do NRF corrigido. O desvio deixa de existir; o registro fica como histórico.
