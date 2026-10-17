@@ -85,6 +85,7 @@ func main() {
 					&cli.StringFlag{Name: "nrf", Required: true, Usage: "NRF apiRoot"},
 					&cli.StringFlag{Name: "nf-id", Value: defaultNfInstanceID, Usage: "NF instance ID of the temporary AF profile"},
 					&cli.StringFlag{Name: "requester", Value: "AUSF", Usage: "requester-nf-type"},
+					&cli.StringFlag{Name: "routing-indicator", Usage: "routing-indicator query parameter"},
 				},
 				Action: discover,
 			},
@@ -260,8 +261,14 @@ func discover(c *cli.Context) error {
 	cfg.SetBasePath(c.String("nrf"))
 	target := models.NrfNfManagementNfType_AANF
 	requester := models.NrfNfManagementNfType(strings.ToUpper(c.String("requester")))
-	rsp, err := Nnrf_NFDiscovery.NewAPIClient(cfg).NFInstancesStoreApi.SearchNFInstances(ctx,
-		&Nnrf_NFDiscovery.SearchNFInstancesRequest{TargetNfType: &target, RequesterNfType: &requester})
+	query := &Nnrf_NFDiscovery.SearchNFInstancesRequest{TargetNfType: &target, RequesterNfType: &requester}
+	if ri := c.String("routing-indicator"); ri != "" {
+		if _, err := akid.ParseRID(ri); err != nil {
+			return fmt.Errorf("--routing-indicator: %w", err)
+		}
+		query.RoutingIndicator = &ri
+	}
+	rsp, err := Nnrf_NFDiscovery.NewAPIClient(cfg).NFInstancesStoreApi.SearchNFInstances(ctx, query)
 	if err != nil {
 		return fmt.Errorf("discovery: %w", err)
 	}
