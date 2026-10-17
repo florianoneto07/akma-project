@@ -207,9 +207,9 @@ func (c *AANFContext) AuthorizationCheck(token string, serviceName models.Servic
 // free5GC checks the RS512 signature with the NRF certificate and the scope;
 // the expiration time and the audience are checked here:
 //   - "exp" must be in the future;
-//   - "aud", when present, must be the NF instance ID of this AAnF or the NF
-//     type AANF. The NRF of free5GC v1.4.5 issues tokens with an empty
-//     audience, which is tolerated (deviation DV-8).
+//   - "aud" must contain the NF instance ID of this AAnF or the NF type AANF
+//     (TS 29.510 table 6.3.5.2.4-1). The NRF of free5GC v1.4.5 issues an
+//     empty audience; patches/nrf/0003 makes it fill the claim.
 func VerifyAccessToken(authorization, serviceName, nrfCertPem, nfId string, now time.Time) error {
 	fields := strings.Fields(authorization)
 	if len(fields) != 2 || !strings.EqualFold(fields[0], "Bearer") {
@@ -234,19 +234,14 @@ func VerifyAccessToken(authorization, serviceName, nrfCertPem, nfId string, now 
 
 func audienceAccepted(aud any, nfId string) bool {
 	match := func(s string) bool {
-		return s == "" || s == nfId || strings.EqualFold(s, string(models.NrfNfManagementNfType_AANF))
+		return s != "" && (s == nfId || strings.EqualFold(s, string(models.NrfNfManagementNfType_AANF)))
 	}
 	switch a := aud.(type) {
-	case nil:
-		return true
 	case string:
 		return match(a)
 	case []any:
-		if len(a) == 0 {
-			return true
-		}
 		for _, v := range a {
-			if s, ok := v.(string); ok && s != "" && match(s) {
+			if s, ok := v.(string); ok && match(s) {
 				return true
 			}
 		}

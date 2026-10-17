@@ -620,13 +620,16 @@ func TestOAuth2(t *testing.T) {
 		}
 	})
 	rejected := map[string]string{
-		"other signer":          other.token(t, "naanf-akma", future, ""),
-		"other scope":           ti.token(t, "nausf-auth", future, ""),
-		"expired":               ti.token(t, "naanf-akma", time.Now().Add(-time.Minute), ""),
-		"without exp":           ti.token(t, "naanf-akma", time.Unix(0, 0), ""),
+		"other signer":          other.token(t, "naanf-akma", future, "AANF"),
+		"other scope":           ti.token(t, "nausf-auth", future, "AANF"),
+		"expired":               ti.token(t, "naanf-akma", time.Now().Add(-time.Minute), "AANF"),
+		"without exp":           ti.token(t, "naanf-akma", time.Unix(0, 0), "AANF"),
 		"audience of another":   ti.token(t, "naanf-akma", future, uuid.New().String()),
 		"audience another type": ti.token(t, "naanf-akma", future, "UDM"),
-		"not Bearer":            strings.Replace(ti.token(t, "naanf-akma", future, ""), "Bearer", "Basic", 1),
+		"empty audience":        ti.token(t, "naanf-akma", future, ""),
+		"without audience":      ti.token(t, "naanf-akma", future, nil),
+		"empty audience list":   ti.token(t, "naanf-akma", future, []string{}),
+		"not Bearer":            strings.Replace(ti.token(t, "naanf-akma", future, "AANF"), "Bearer", "Basic", 1),
 	}
 	for name, tok := range rejected {
 		t.Run(name, func(t *testing.T) {
@@ -638,11 +641,10 @@ func TestOAuth2(t *testing.T) {
 		})
 	}
 	accepted := map[string]string{
-		"empty audience (DV-8)": ti.token(t, "naanf-akma", future, ""),
-		"audience NF instance":  ti.token(t, "naanf-akma", future, nfId),
-		"audience NF type":      ti.token(t, "naanf-akma", future, "AANF"),
-		"audience list":         ti.token(t, "naanf-akma", future, []string{uuid.New().String(), nfId}),
-		"several scopes":        ti.token(t, "nausf-auth naanf-akma", future, ""),
+		"audience NF instance": ti.token(t, "naanf-akma", future, nfId),
+		"audience NF type":     ti.token(t, "naanf-akma", future, "AANF"),
+		"audience list":        ti.token(t, "naanf-akma", future, []string{uuid.New().String(), nfId}),
+		"several scopes":       ti.token(t, "nausf-auth naanf-akma", future, "AANF"),
 	}
 	for name, tok := range accepted {
 		t.Run(name, func(t *testing.T) {
