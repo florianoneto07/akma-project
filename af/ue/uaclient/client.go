@@ -59,7 +59,11 @@ type Config struct {
 	KAf         kdf.Key
 	Qop         string // default uastar.QopAuth
 	UserAgent   string // default DefaultUserAgent
-	HTTP        *http.Client
+	// LocalAddr is the source address of the connections, e.g. the address
+	// of the PDU session (uesimtun0), so that the request goes through the
+	// user plane. Empty: chosen by the system.
+	LocalAddr string
+	HTTP      *http.Client
 }
 
 // Result is a successful Application Session Establishment Response.
@@ -90,7 +94,15 @@ func NewSession(cfg Config) (*Session, error) {
 		cfg.UserAgent = DefaultUserAgent
 	}
 	if cfg.HTTP == nil {
-		cfg.HTTP = &http.Client{Timeout: 10 * time.Second}
+		dialer := &net.Dialer{Timeout: 10 * time.Second}
+		if cfg.LocalAddr != "" {
+			ip := net.ParseIP(cfg.LocalAddr)
+			if ip == nil {
+				return nil, fmt.Errorf("uaclient: local address %q is not an IP address", cfg.LocalAddr)
+			}
+			dialer.LocalAddr = &net.TCPAddr{IP: ip}
+		}
+		cfg.HTTP = &http.Client{Timeout: 10 * time.Second, Transport: &http.Transport{DialContext: dialer.DialContext}}
 	}
 	if !strings.HasPrefix(cfg.Path, "/") {
 		return nil, fmt.Errorf("uaclient: path %q must start with /", cfg.Path)

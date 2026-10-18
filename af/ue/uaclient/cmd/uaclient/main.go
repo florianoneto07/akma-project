@@ -1,7 +1,7 @@
 // Command uaclient establishes an application session with the AF over the
-// Ua* protocol of the MVP (docs/af-side/ua-star.md). In MVP-3 the A-KID and
-// K_AF are given on the command line or taken from a shared/akma vector; in
-// MVP-4 they come from the ME of UERANSIM. K_AF is never printed.
+// Ua* protocol of the MVP (docs/af-side/ua-star.md). The A-KID and K_AF come
+// from the ME of UERANSIM through nr-cli (-nr-cli, -ue), from a shared/akma
+// vector (-vector) or from the command line. K_AF is never printed.
 package main
 
 import (
@@ -33,9 +33,18 @@ func main() {
 		qop       = flag.String("qop", "auth", "qop: auth or auth-int")
 		count     = flag.Int("n", 1, "number of requests in the session")
 		userAgent = flag.String("user-agent", uaclient.DefaultUserAgent, "User-Agent")
+		bind      = flag.String("bind", "", "source address, e.g. the address of the PDU session on uesimtun0")
+		nrCli     = flag.String("nr-cli", "", "nr-cli of UERANSIM: take A-KID and K_AF from the ME")
+		ue        = flag.String("ue", "", "UE node name for nr-cli (e.g. imsi-208930000000001)")
+		uaStarID  = flag.String("ua-star-id", "FF00000001", "Ua* security protocol identifier (ADR-0003)")
 	)
 	flag.Parse()
-	if err := run(*fqdn, *connect, *path, *aKid, *kafHex, *kafB64, *vector, *vectors, *qop, *userAgent, *count); err != nil {
+	o := options{
+		fqdn: *fqdn, connect: *connect, path: *path, aKid: *aKid, kafHex: *kafHex, kafB64: *kafB64,
+		vector: *vector, vectors: *vectors, qop: *qop, userAgent: *userAgent, count: *count,
+		bind: *bind, nrCli: *nrCli, ue: *ue, uaStarID: *uaStarID,
+	}
+	if err := run(o); err != nil {
 		msg := err.Error()
 		if !strings.HasPrefix(msg, "uaclient:") {
 			msg = "uaclient: " + msg
@@ -45,18 +54,35 @@ func main() {
 	}
 }
 
-func run(fqdn, connect, path, aKid, kafHex, kafB64, vector, vectors, qop, userAgent string, count int) error {
+type options struct {
+	fqdn, connect, path, aKid, kafHex, kafB64, vector, vectors, qop, userAgent string
+	count                                                                      int
+	bind, nrCli, ue, uaStarID                                                  string
+}
+
+func run(o options) error {
 	var kaf kdf.Key
 	var err error
+	aKid := o.aKid
 	switch {
-	case vector != "":
-		aKid, kaf, err = fromVector(vectors, vector)
-	case kafHex != "":
-		kaf, err = codec.ParseHexKey(kafHex)
-	case kafB64 != "":
-		kaf, err = parseBase64Key(kafB64)
+	case o.nrCli != "":
+		if o.ue == "" {
+			return errors.New("-ue is required with -nr-cli")
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		aKid, kaf, err = uaclient.FromME(ctx, o.nrCli, o.ue, o.fqdn, o.uaStarID)
+		cancel()
+		if err == nil {
+			fmt.Printf("ME: K_AF derived for AF_ID %s.%s\n", o.fqdn, o.uaStarID)
+		}
+	case o.vector != "":
+		aKid, kaf, err = fromVector(o.vectors, o.vector)
+	case o.kafHex != "":
+		kaf, err = codec.ParseHexKey(o.kafHex)
+	case o.kafB64 != "":
+		kaf, err = parseBase64Key(o.kafB64)
 	default:
-		err = errors.New("give -vector, -kaf or -kaf-base64")
+		err = errors.New("give -nr-cli, -vector, -kaf or -kaf-base64")
 	}
 	if err != nil {
 		return err
@@ -65,13 +91,18 @@ func run(fqdn, connect, path, aKid, kafHex, kafB64, vector, vectors, qop, userAg
 		return errors.New("-akid is required")
 	}
 	s, err := uaclient.NewSession(uaclient.Config{
-		FQDN: fqdn, Connect: connect, Path: path, AKID: aKid, KAf: kaf, Qop: qop, UserAgent: userAgent,
+		FQDN: o.fqdn, Connect: o.connect, Path: o.path, AKID: aKid, KAf: kaf, Qop: o.qop, UserAgent: o.userAgent,
+		LocalAddr: o.bind,
 	})
 	if err != nil {
 		return err
 	}
-	fmt.Printf("AF %s at %s, A-KID %s\n", fqdn, connect, aKid)
-	for i := 0; i < count; i++ {
+	from := ""
+	if o.bind != "" {
+		from = " from " + o.bind
+	}
+	fmt.Printf("AF %s at %s%s, A-KID %s\n", o.fqdn, o.connect, from, aKid)
+	for i := 0; i < o.count; i++ {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		r, err := s.Establish(ctx)
 		cancel()
