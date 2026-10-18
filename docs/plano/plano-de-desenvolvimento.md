@@ -1,6 +1,6 @@
 # Plano de desenvolvimento por MVPs
 
-**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026).
+**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026).
 **Data:** 15 de outubro de 2026; revisão 3 em 16 de outubro de 2026; aprovação em 16 de outubro de 2026
 **Base:** documentos `00` a `04`, Adendo E, ADR-0001-R2, ADR-0002, ADR-0003, `docs/baseline/ambiente-verificado.md`, `docs/baseline/conferencia-normativa.md`, `docs/literatura/analise-dos-artigos.md`, `docs/conformidade/desvios.md`
 **Revisão 2 (15/10/2026):** conferido contra as normas do acervo (hoje em `specs/`).
@@ -400,6 +400,26 @@ Diferenças em relação à tabela de arquivos e decisões tomadas na implementa
 ---
 
 ### MVP-3 — AF mínimo e Ua\* simplificado
+
+**Estado (18/10/2026):** implementado e verificado com o AAnF da VM do free5GC. A especificação `docs/af-side/ua-star.md` foi aprovada pelo responsável antes do código; documentação em `docs/af-side/{af,teste-af}.md`.
+
+| Critério | Resultado |
+|---|---|
+| 1 | Atendido: o cliente, com a K_AF do oráculo para o contexto semeado (`testbed-ue`), autentica no AF, que usou a K_AF recebida do AAnF |
+| 2 | Atendido: `TestApplicationKey`; o AAnF registrou `AF_ID af1.akma.example.FF00000001` e o A-KID sem alteração |
+| 3 | Atendido: K_AF certa aceita em três requisições; K_AF errada recebe `401` |
+| 4 | Atendido: `rspauth` conferido pelo cliente; AF sem a K_AF recusado (`TestAFWithoutKaf`) |
+| 5 | Atendido nos testes automáticos, com relógio controlado, nas políticas `refetch` e `reject` |
+| 6 | Atendido: pedido sem `Authorization` recebe o desafio |
+| 7 | Atendido: nenhuma chave nos logs do AF e do AAnF |
+
+Diferenças em relação à tabela de arquivos:
+
+- **Um módulo Go em `af/`**, e não um por programa. O Digest ficou em `af/uastar/`, compartilhado pelo AF (`af/af/`) e pelo cliente (`af/ue/uaclient/`), e não em `af/af/internal/uastar/`.
+- **Cache da K_AF.** Fica em `af/af/internal/server/keys.go`, junto com a política de expiração (`kafExpiry`), e não num pacote `keycache`.
+- **Configuração.** O `afcfg.yaml` fica em `af/config/`.
+- **Vetores do Digest.** `af/uastar/testdata/gen_digest_vectors.py` é uma implementação Python independente; o `reference/` continua só com o oráculo da KDF (D1).
+- **Cliente.** No MVP-3, recebe o A-KID e a K_AF de um vetor de `shared/akma` ou da linha de comando. O AAnF foi semeado com o `seed` do MVP-1.
 
 **Objetivo.** Um AF na VM do AF que serve um Ua\* simplificado (formato do Digest de TS 24.109 K.2, identificador `FF 00 00 00 01`), obtém K_AF do AAnF por `AkmaAfKeyRequest`, a guarda até `expiry` e autentica um cliente que prova possuir K_AF.
 

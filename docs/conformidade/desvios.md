@@ -11,8 +11,8 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-2 | Subscrição de `ROAMING_STATUS` desabilitada | **implementado** (MVP-1, 17/10/2026) — parcial: a etapa não existe; o campo só aceita `false` | MVP-1 |
 | DV-3 | Só SUPI do tipo IMSI | **implementado** (MVP-0, 16/10/2026) | MVP-0 |
 | DV-4 | Sem NFKC no lado UE | aprovado com o plano | MVP-4 |
-| DV-5 | Digest do Ua\* conforme RFC 7616 | aprovado com o plano | MVP-3 |
-| DV-6 | `realm` do Digest conforme TS 33.535 | **decidido** em 16/10/2026 | MVP-3 |
+| DV-5 | Digest do Ua\* conforme RFC 7616 | **implementado** (MVP-3, 18/10/2026) | MVP-3 |
+| DV-6 | `realm` do Digest conforme TS 33.535 | **implementado** (MVP-3, 18/10/2026) | MVP-3 |
 | DV-7 | Nunca emitir 204 em `retrieve-applicationkey` | **implementado** (MVP-1, 17/10/2026) | MVP-1 |
 | DV-8 | `aud` vazio tolerado no token OAuth2 | **encerrado** em 17/10/2026 (MVP-1b: NRF corrigido, AAnF estrito) | MVP-1 |
 
@@ -82,6 +82,8 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 
 **Impacto.** Diverge da referência literal de K.2 c). Candidato a defeito (CT1).
 
+**Implementação (18/10/2026).** `af/uastar/` (`Input.Response`, `Input.RspAuth`): SHA-256, `qop=auth` e `auth-int`, conferidos contra o exemplo de RFC 7616 §3.9.1 e contra os vetores de uma implementação Python independente (`af/uastar/testdata/gen_digest_vectors.py`). O AF recusa `algorithm=MD5` com 400 (`TestRequestChecks`); o cliente recusa resposta sem `rspauth` válido (`TestAFWithoutKaf`). Especificação: `docs/af-side/ua-star.md`.
+
 ---
 
 ## DV-6 — `realm` do Digest conforme TS 33.535
@@ -93,6 +95,8 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 **Por quê.** Três fontes (TS 33.535 B.1.2.2, TS 24.109 K.2 b)2) e a estrutura do GBA) contra uma (K.2 c)3)). A decisão anterior do projeto (registro de defeitos D-C, Adendo D §D.4.1) seguia c)3) com argumento que as duas leituras satisfazem (`docs/baseline/conferencia-normativa.md` §3.10).
 
 **Impacto.** Diverge apenas de TS 24.109 K.2 c)3). Um UE que siga c)3) e verifique a primeira parte do `realm` não interopera — no MVP o cliente é do próprio projeto. O registro de defeitos (D-C) e o Adendo D precisam ser atualizados.
+
+**Implementação (18/10/2026).** O AF desafia com `realm="3GPP-bootstrapping-akma@af1.akma.example"` (`realmPrefix` configurável em `af/config/afcfg.yaml`) e recusa credenciais com outro `realm`. O cliente só aceita desafio cuja primeira parte seja a esperada e cuja segunda parte seja o FQDN que ele usou (`TestChallengeChecks`). Verificado com o AAnF da VM do free5GC (`docs/af-side/teste-af.md`).
 
 ---
 

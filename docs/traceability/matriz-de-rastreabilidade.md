@@ -1,7 +1,7 @@
 # Matriz de rastreabilidade
 
-**Revisão:** 3.5 (MVP-3a: derivação no ME do UERANSIM e mensagens AKMA na tela; D14 a D16 de 18/10/2026)
-**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisão 3.5 em 18 de outubro de 2026
+**Revisão:** 3.6 (MVP-3: AF e Ua\* simplificado; DV-5 e DV-6 implementados)
+**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 e 3.6 em 18 de outubro de 2026
 
 *Nota (16/10/2026):* os caminhos da coluna "Implementação" seguem a estrutura anterior ao plano. A estrutura aprovada (plano §3) é: `akma/` → `shared/akma/`; `NFs/aanf/` → `free5gc/aanf/`; `patches/` → `free5gc/patches/`; `af/` → `af/af/`; `ue/` → `af/ue/`. Os caminhos serão atualizados linha a linha à medida que cada MVP os criar. Os desvios citados como DV-n estão em `docs/conformidade/desvios.md`.
 
@@ -117,9 +117,15 @@ Legenda de estado:
 
 | Requisito | Norma | Cláusula | Implementação | Teste | Estado |
 |---|---|---|---|---|---|
-| Ua* simplificado com id de faixa privada | TS 33.220 H.2 NOTA 2 | — | `af/`, `ue/` | ponta a ponta | Decisão — ADR-0003 |
-| Perfil HTTP Digest — username, senha, realm | TS 24.109 V19.0.0; TS 33.535 V19.0.0 | K.2; B.1.2.2 | `af/` | ponta a ponta | Decisão — DV-5 (RFC 7616), DV-6 (`realm = "3GPP-bootstrapping-akma@<FQDN>"`); defeitos D-C, D-F |
-| Confirmação de chave nos dois sentidos (`rspauth`) | TS 33.535 V19.0.0; RFC 7616 | 4.4.1 | `af/`, `ue/` | ponta a ponta | Especificado — critério do MVP-3 (`docs/literatura/`) |
+| Ua* simplificado com id de faixa privada | TS 33.220 H.2 NOTA 2 | — | `af/uastar/`, `af/af/`, `af/ue/uaclient/`; `docs/af-side/ua-star.md` | `docs/af-side/teste-af.md` | **Implementado** (MVP-3) — ADR-0003 |
+| Perfil HTTP Digest — username, senha, realm | TS 24.109 V19.0.0; TS 33.535 V19.0.0; RFC 7616 | K.2; B.1.2.2; 3.3–3.5 | `af/uastar/` | `TestDigestVectors` (RFC 7616 §3.9.1 e Python independente); integração | **Implementado** (MVP-3) — DV-5 (RFC 7616, SHA-256), DV-6 (`realm = "3GPP-bootstrapping-akma@<FQDN>"`) |
+| Confirmação de chave nos dois sentidos (`rspauth`) | TS 33.535 V19.0.0; RFC 7616 | 4.4.1; 3.5 | `af/af/internal/server/`, `af/ue/uaclient/` | `TestAFWithoutKaf`, `TestWrongKafRejected`; integração | **Implementado** (MVP-3) |
+| *Product token* `3gpp-akma`; o UE verifica o FQDN no `realm` | TS 24.109 V19.0.0; TS 33.535 V19.0.0 | K.2 b) 1), d); B.1.2.2 passos 2 e 4 | `af/ue/uaclient/` | `TestChallengeChecks`, `TestHostAndProductToken` | **Implementado** (MVP-3) |
+| FQDN do AF levado no `Host` e conferido pelo AF | TS 33.220 V19.1.0; TS 33.222 V19.0.0 | 4.5.2 pré-requisito (3); 5.3.0 passo 2 | `af/af/internal/server/` | `TestHostPathMethod`; integração (421) | **Implementado** (MVP-3) — `[INTERPRETAÇÃO]` 421 para outro nome |
+| AF pede K_AF ao AAnF sem contexto ativo; `afId` e `aKId` | TS 33.535 V19.0.0; TS 29.535 V19.5.0 | 6.2.1 passos 2 e 9; 4.2.2.3 | `af/af/internal/aanf/` | `TestApplicationKey`; integração | **Implementado** (MVP-3) |
+| Erro sem o `realm` do desafio quando o AF não obtém K_AF | TS 33.535 V19.0.0 | B.1.2.2 passo 6 | `af/af/internal/server/` | `TestKeyNotAvailable`, `TestAanfUnavailable` | **Implementado** (MVP-3) |
+| Iniciação do AKMA pelo AF | TS 33.535 V19.0.0 | 6.5 | `af/af/internal/server/` (o `401` com desafio) | `TestInitiation`; integração | **Implementado** (MVP-3) |
+| Expiração da K_AF no AF: nunca usada após `expiry`; renovar no AAnF ou recusar | TS 33.535 V19.0.0 | 4.4.0, 4.4.1, 6.4.2 | `af/af/internal/server/keys.go` (`kafExpiry`) | `TestKafExpiryRefetch`, `TestKafExpiryReject`, `TestExpiredOnArrival` | **Implementado** (MVP-3) |
 | Perfil TLS 1.2 PSK | TS 24.109 V19.0.0 | K.3.2 | `af/` | ponta a ponta | Pendente |
 | Perfil TLS 1.3 PSK — `"3GPP-AKMA" ";" A-KID` | TS 24.109 V19.0.0 | K.3.3 | `af/` | ponta a ponta | Pendente — defeito D-E |
 | Ausência de renovação de K_AF | TS 33.535 §6.4.3; TS 24.109 K.2, K.3 | — | — | — | Especificado |

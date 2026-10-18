@@ -2,6 +2,24 @@
 
 ## [Não lançado]
 
+### MVP-3 — AF e Ua\* simplificado (18/10/2026)
+- `docs/af-side/ua-star.md`: especificação do Ua\* simplificado, aprovada antes do código. É o HTTP Digest de TS 24.109 K.2 sem TLS, com:
+  - `username` = A-KID e senha = base64(K_AF);
+  - `realm = "3GPP-bootstrapping-akma@<FQDN>"` (DV-6), SHA-256 (DV-5) e `rspauth` obrigatório;
+  - FQDN conferido no `Host` (TS 33.220 §4.5.2) e iniciação do AKMA pelo desafio (§6.5);
+  - política `refetch` ou `reject` para a K_AF vencida (§6.4.2).
+- `af/`: módulo Go com:
+  - `uastar`: Digest de RFC 7616, compartilhado;
+  - o AF (`af/af`): servidor Ua\*, `Naanf_AKMA_ApplicationKey_Get` pelo cliente do `openapi` corrigido e K_AF guardada até `expiry`;
+  - o cliente Ua\* (`af/ue/uaclient`), que recusa AF sem `rspauth` válido;
+  - `af/config/afcfg.yaml` e `af/scripts/build-af.sh`.
+- `af/uastar/testdata/gen_digest_vectors.py`: implementação Python independente do Digest; reproduz o exemplo de RFC 7616 §3.9.1 e gera os vetores do projeto.
+- Verificação com o AAnF da VM do free5GC e um contexto semeado:
+  - a K_AF do oráculo autentica;
+  - K_AF errada → 401; A-KID desconhecido → 403; outro `Host` → 421; AF_ID fora da política do AAnF → 503;
+  - nenhuma chave nos logs.
+- DV-5 e DV-6 implementados. Documentação: `docs/af-side/{ua-star,af,teste-af}.md`; tutorial, parte 6; matriz, revisão 3.6.
+
 ### MVP-3a — mensagens AKMA na tela e derivação no ME (18/10/2026)
 - Pedido do responsável: acompanhar o AKMA pelas telas do `run.sh` e do UE. Decisões D14 (escopo; derivação no ME antecipada do MVP-4), D15 (`run.sh -aanf`) e D16 (SUPI, A-KID e AF_ID em `info`).
 - `free5gc/patches/udm/0001-*.patch` e `free5gc/patches/ausf/0001-*.patch` regenerados:

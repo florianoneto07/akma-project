@@ -4,7 +4,9 @@ Tudo o que é feito **fora** do núcleo para usar AKMA: o AF de teste, o protoco
 
 | Documento | MVP | Estado |
 |---|---|---|
-| `af.md`, `ua-star.md`, `teste-af.md` | MVP-3 | a escrever |
+| `ua-star.md` — especificação do Ua\* simplificado | MVP-3 | aprovada e implementada (18/10/2026) |
+| `af.md` — o AF de teste: arquivos, configuração, log | MVP-3 | escrito (18/10/2026) |
+| `teste-af.md` — testes, integração com o AAnF e critérios do MVP-3 | MVP-3 | escrito (18/10/2026) |
 | `ue-ueransim.md` — K_AKMA e A-KID no ME do UERANSIM; log | MVP-3a, MVP-4 | derivação e log escritos (18/10/2026); K_AF e `nr-cli` no MVP-4 |
 | `ua-client.md` | MVP-4 | a escrever |
 | `e2e.md` | MVP-5 | a escrever |

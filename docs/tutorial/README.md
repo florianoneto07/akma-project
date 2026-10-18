@@ -1,6 +1,6 @@
 # Tutorial — AKMA sobre o free5GC
 
-Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-3a.
+Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-3.
 
 | Parte | Conteúdo | Disponível |
 |---|---|---|
@@ -9,7 +9,7 @@ Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia of
 | 3 | Instalar o AAnF no free5GC | sim |
 | 4 | Habilitar AKMA no UDM e no AUSF; provisionar um assinante | sim |
 | 5 | Ver o AKMA na tela: free5GC e UERANSIM | sim |
-| 6 | Escrever um AF que usa AKMA | MVP-3 |
+| 6 | Escrever um AF que usa AKMA | sim |
 | 7 | Preparar o UE (UERANSIM) para o Ua\* | MVP-4 |
 | 8 | Executar o fluxo de ponta a ponta | MVP-5 |
 
@@ -355,4 +355,90 @@ grep 'CAT="AKMA"' ~/free5gc/log/<data>/free5gc.log
 ```
 
 Para voltar ao comportamento anterior: `patch-nf.sh run revert` e `patch-ueransim.sh revert`.
+
+---
+
+## 6. Escrever um AF que usa AKMA
+
+Um AF que usa AKMA faz três coisas (TS 33.535 §6.2.1):
+
+- recebe o A-KID do UE;
+- pede ao AAnF a K_AF daquele A-KID para o próprio AF_ID;
+- usa a K_AF para autenticar o UE.
+
+O AF de teste do repositório faz isso com um Ua\* simplificado: o HTTP Digest de TS 24.109 K.2, sem TLS, com o identificador Ua\* `FF00000001` da faixa privada. O protocolo está em `docs/af-side/ua-star.md` e o AF em `docs/af-side/af.md`.
+
+### 6.1 Autorizar o AF no AAnF
+
+O AAnF só entrega K_AF a um AF_ID autorizado, a partir do endereço do AF. No `aanfcfg.yaml` da parte 3 já está:
+
+```yaml
+configuration:
+  akma:
+    authorizedAfs:
+      - afId: af1.akma.example.FF00000001
+        sourceAddresses:
+          - 192.168.16.129
+```
+
+O AF_ID é o FQDN do AF seguido do identificador Ua\* (TS 33.535 A.4). Se mudar o FQDN ou a máquina do AF, mude aqui também.
+
+### 6.2 Compilar e configurar o AF
+
+Na máquina do AF (no laboratório, a VM do AF), com Go 1.26.2:
+
+```bash
+af/scripts/build-af.sh
+```
+
+A configuração fica em `af/config/afcfg.yaml`. Os campos que importam:
+
+- `fqdn`: o nome pelo qual o UE chama o AF. Ele entra na K_AF, e o AF só aceita esse nome no cabeçalho `Host`;
+- `listen`: o endereço em que o AF escuta;
+- `aanfUri`: o endereço do AAnF;
+- `kafExpiry`: o que fazer quando a K_AF vence, `refetch` ou `reject`.
+
+```bash
+af/build/bin/af -c af/config/afcfg.yaml
+```
+
+Na tela, a partida mostra o AF_ID e o `realm`:
+
+```
+[INFO][AF][Main] AF_ID af1.akma.example.FF00000001; realm "3GPP-bootstrapping-akma@af1.akma.example"; ...
+```
+
+### 6.3 Testar sem UE
+
+O UE do UERANSIM só entrega a K_AF a partir da parte 7. Até lá, faça o papel do UE com um vetor do projeto, em dois passos:
+
+1. semeie no AAnF o contexto do vetor `testbed-ue`, como na seção 3.6 (`seed register`);
+2. rode o cliente Ua\* com o mesmo vetor:
+
+   ```bash
+   af/build/bin/uaclient -vector testbed-ue -n 3
+   ```
+
+O cliente pede a sessão, recebe o desafio, responde com o A-KID e a K_AF e confere o `rspauth` do AF:
+
+```
+session established (nc 00000001): AF authenticated by rspauth; K_AF valid until ...
+```
+
+Na tela do AF aparecem `K_AF for A-KID … obtained from the AAnF` e `UE with A-KID … authenticated`. Na do AAnF, `K_AF of imsi-… provided to AF_ID af1.akma.example.FF00000001`.
+
+O que testar a seguir, e o que esperar:
+
+| Caso | Resposta do AF |
+|---|---|
+| K_AF errada (`-kaf` com outro valor) | `401` |
+| A-KID que o AAnF não conhece (`-vector rid-012`) | `403 AKMA_KEY_NOT_AVAILABLE` |
+| outro nome no `Host` (`-fqdn af2.akma.example`) | `421 MISDIRECTED_REQUEST` |
+| AF_ID fora da política do AAnF | `503 AANF_UNAVAILABLE` |
+
+Os resultados do laboratório estão em `docs/af-side/teste-af.md`.
+
+### 6.4 Limitações
+
+Sem TLS, o A-KID e o conteúdo trafegam em claro, e o AF só é autenticado pelo `rspauth` (`docs/af-side/ua-star.md` §10). É um protocolo de laboratório; o perfil normativo, com TLS, fica para depois do MVP.
 

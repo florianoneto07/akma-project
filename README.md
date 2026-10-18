@@ -116,7 +116,7 @@ As fases passaram a MVPs no [plano de desenvolvimento](docs/plano/plano-de-desen
 | F2 | MVP-0 | KDF, A-KID, AF_ID, com validação cruzada Go × Python × KDF do free5GC | **Concluída** em 16/10/2026 (`go test -race` atendido em 17/10/2026) |
 | F3 | MVP-1, MVP-1b | AAnF autônomo — NRF, três *endpoints*, contexto, erros; correção do NRF do free5GC (D13) | **Concluída** em 17/10/2026 |
 | F4 | MVP-2, MVP-3a | Integração AUSF e UDM; mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME (D14) | **Concluída** em 17/10/2026; MVP-3a em 18/10/2026 |
-| F5 | MVP-3 | AF e Ua* simplificado | |
+| F5 | MVP-3 | AF e Ua* simplificado | **Concluída** em 18/10/2026 |
 | F6 | MVP-4 | UE (K_AF no ME do UERANSIM e cliente Ua*) | derivação de K_AKMA e A-KID antecipada no MVP-3a |
 | F7 | MVP-5 | Ponta a ponta e testes negativos — primeiro MVP funcional | |
 | F8+ | MVP-6+ | Acesso anônimo, remoção de contexto, NEF, *roaming*, TLS, desempenho, verificação formal, *upstream* | |
