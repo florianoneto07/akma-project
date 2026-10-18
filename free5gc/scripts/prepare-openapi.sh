@@ -3,14 +3,16 @@
 # client added (patches/openapi/*.patch). The AAnF, and later the AUSF, use it
 # through a "replace" directive in go.mod.
 #
-# Usage: free5gc/scripts/prepare-openapi.sh [destination]
+# Usage: free5gc/scripts/prepare-openapi.sh [destination] [version]
 #   destination defaults to free5gc/build/openapi
+#   version defaults to v1.2.4, the version pinned by the AUSF, UDM and NRF
+#   of free5GC v4.2.3; the test bench of free5GC (~/free5gc/test) pins
+#   v1.2.5-0.20260527003827-02dc71b4d94f and uses free5gc/build/openapi-test.
 set -euo pipefail
-
-OPENAPI_VERSION="v1.2.4"   # version pinned by free5GC v4.2.3 (AUSF, UDM, NRF)
 
 here="$(cd "$(dirname "$0")/.." && pwd)"
 dest="${1:-$here/build/openapi}"
+OPENAPI_VERSION="${2:-v1.2.4}"
 
 command -v go >/dev/null || { echo "go not found in PATH" >&2; exit 1; }
 
