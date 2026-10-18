@@ -8,15 +8,18 @@
 #
 # apply   checks every patch, applies them in order with git apply, keeps a
 #         copy of the original binary as build/nr-ue.orig (once) and rebuilds
-#         nr-ue only, incrementally, in cmake-build-release.
-# revert  reverses the patches in the opposite order and restores
-#         build/nr-ue from build/nr-ue.orig.
+#         nr-ue and nr-akma-selftest only, incrementally, in
+#         cmake-build-release, with the cmake that configured it.
+# revert  reverses the patches in the opposite order, restores build/nr-ue
+#         from build/nr-ue.orig and removes build/nr-akma-selftest.
 # status  tells whether the patches are applied.
+#
+# To move to a newer set of patches, revert with the old set first.
 set -euo pipefail
 
 action="${1:?usage: patch-ueransim.sh apply|revert|status [patch-dir]}"
 here="$(cd "$(dirname "$0")/.." && pwd)"
-patch_dir="${2:-$here/ue/ueransim/patches}"
+patch_dir="$(cd "${2:-$here/ue/ueransim/patches}" && pwd)"
 dir="${UERANSIM_DIR:-$HOME/UERANSIM}"
 bin="$dir/build/nr-ue"
 
@@ -29,22 +32,53 @@ mapfile -t patches < <(find "$patch_dir" -maxdepth 1 -name '*.patch' | sort)
 mapfile -t files < <(for p in "${patches[@]}"; do gitapply --numstat "$p"; done | cut -f3 | sort -u)
 gitstatus() { git -C "$dir" status --porcelain "$@" -- "${files[@]}"; }
 
-applied() {
-    local p
-    for p in "${patches[@]}"; do
-        gitapply --reverse --check "$p" 2>/dev/null || return 1
+# series_ok forward|reverse: dry run of the whole series, in order (or in
+# the opposite order when reversing), on a scratch copy of the files it
+# touches. Later patches of the series depend on earlier ones, so they cannot
+# be checked one by one against the tree.
+series_ok() {
+    local tmp f p rc=0 list=("${patches[@]}") opt=()
+    if [ "$1" = reverse ]; then
+        opt=(--reverse)
+        list=()
+        for ((i=${#patches[@]}-1; i>=0; i--)); do list+=("${patches[$i]}"); done
+    fi
+    tmp="$(mktemp -d)"
+    for f in "${files[@]}"; do
+        if [ -e "$dir/$f" ]; then
+            mkdir -p "$tmp/$(dirname "$f")"
+            cp -p "$dir/$f" "$tmp/$f"
+        fi
     done
+    for p in "${list[@]}"; do
+        (cd "$tmp" && git apply "${opt[@]}" "$p") >/dev/null 2>&1 || { rc=1; break; }
+    done
+    rm -rf "$tmp"
+    return "$rc"
 }
 
+applied() { series_ok reverse; }
+
 build() {
-    if [ -d "$dir/cmake-build-release" ]; then
-        cmake --build "$dir/cmake-build-release" --target nr-ue
+    local cache="$dir/cmake-build-release/CMakeCache.txt" cmake_bin=cmake t targets=(nr-ue)
+    grep -q "nr-akma-selftest" "$dir/CMakeLists.txt" && targets+=(nr-akma-selftest)
+    if [ -f "$cache" ]; then
+        # The cmake that configured the tree (UERANSIM needs 3.17 or later).
+        cmake_bin="$(sed -n 's/^CMAKE_COMMAND:INTERNAL=//p' "$cache")"
+        # One target per run: a changed CMakeLists.txt regenerates the
+        # makefiles during the first one.
+        for t in "${targets[@]}"; do
+            "$cmake_bin" --build "$dir/cmake-build-release" --target "$t"
+        done
     else
         make -C "$dir"
     fi
     # Rename into place: works while an nr-ue is running.
-    cp -p "$dir/cmake-build-release/nr-ue" "$bin.new"
-    mv "$bin.new" "$bin"
+    for t in "${targets[@]}"; do
+        cp -p "$dir/cmake-build-release/$t" "$dir/build/$t.new"
+        mv "$dir/build/$t.new" "$dir/build/$t"
+    done
+    echo "rebuilt: ${targets[*]} in $dir/build"
 }
 
 case "$action" in
@@ -61,7 +95,7 @@ apply)
             gitstatus --untracked-files=no >&2
             exit 1
         fi
-        for p in "${patches[@]}"; do gitapply --check "$p"; done
+        series_ok forward || { echo "the patches do not apply to $dir" >&2; exit 1; }
         for p in "${patches[@]}"; do gitapply "$p"; echo "applied $(basename "$p")"; done
     fi
     if [ -f "$bin" ] && [ ! -f "$bin.orig" ]; then
@@ -69,7 +103,6 @@ apply)
         echo "original binary kept as build/nr-ue.orig"
     fi
     build
-    echo "nr-ue rebuilt: $bin"
     ;;
 revert)
     if applied; then
@@ -85,6 +118,7 @@ revert)
         mv "$bin.new" "$bin"
         echo "build/nr-ue restored from build/nr-ue.orig"
     fi
+    rm -f "$dir/build/nr-akma-selftest"
     ;;
 *)
     echo "unknown action $action" >&2
