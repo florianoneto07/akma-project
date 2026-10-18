@@ -17,6 +17,9 @@ Base de código: free5GC v4.2.3 (`docs/baseline/ambiente-verificado.md`).
 | `openapi.md` — *patches* com os modelos e o cliente do Naanf_AKMA | MVP-1 | escrito (17/10/2026) |
 | `registro-nrf.md` — perfil no NRF, OAuth2, limitações do NRF v1.4.5 | MVP-1 | escrito (17/10/2026) |
 | `nrf.md` — *patches* no NRF: `aanfInfoList`, descoberta de `AANF`, `aud` do token | MVP-1b | escrito (17/10/2026) |
-| `udm.md`, `ausf.md`, `assinatura-akma.md`, `verificacao.md` | MVP-2 | a escrever |
+| `udm.md` — indicação AKMA e Routing Indicator (D10) | MVP-2 | escrito (17/10/2026) |
+| `ausf.md` — K_AKMA, A-KID, descoberta do AAnF e registro (D9) | MVP-2 | escrito (17/10/2026) |
+| `assinatura-akma.md` — `akmaAllowed` e `routingId` no UDR | MVP-2 | escrito (17/10/2026) |
+| `verificacao.md` — banco de testes, regressão e UERANSIM | MVP-2 | escrito (17/10/2026) |
 
 O que é comum aos dois lados — KDF, formatos de identificador, codificação, vetores — fica em `docs/shared/`.

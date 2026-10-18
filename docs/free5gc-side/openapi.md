@@ -31,7 +31,15 @@ O módulo do Go em `~/go/pkg/mod` é somente leitura e compartilhado por todas a
 2. copia o módulo para `free5gc/build/openapi`, fora do controle de versão;
 3. aplica `free5gc/patches/openapi/*.patch` em ordem.
 
-O `go.mod` do AAnF aponta para essa cópia com `replace github.com/free5gc/openapi => ../build/openapi`. O AUSF do MVP-2 usará a mesma cópia. `[MVP]` No trabalho *upstream* os arquivos entram no próprio `free5gc/openapi`, e o `replace` desaparece.
+O `go.mod` do AAnF aponta para essa cópia com `replace github.com/free5gc/openapi => ../build/openapi`. O AUSF corrigido no MVP-2 usa a mesma cópia, por `../../../akma-free5gc/free5gc/build/openapi`.
+
+O banco de testes do free5GC (`~/free5gc/test`) fixa outra versão, `v1.2.5-0.20260527003827-02dc71b4d94f`. Os mesmos *patches* aplicam sobre ela sem mudança. O segundo argumento do *script* escolhe a versão:
+
+```bash
+free5gc/scripts/prepare-openapi.sh free5gc/build/openapi-test v1.2.5-0.20260527003827-02dc71b4d94f
+```
+
+`[MVP]` No trabalho *upstream* os arquivos entram no próprio `free5gc/openapi`, e o `replace` desaparece.
 
 ## 4. Como reproduzir numa instalação limpa
 

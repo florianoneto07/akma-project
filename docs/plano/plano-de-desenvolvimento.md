@@ -1,6 +1,6 @@
 # Plano de desenvolvimento por MVPs
 
-**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026).
+**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026).
 **Data:** 15 de outubro de 2026; revisão 3 em 16 de outubro de 2026; aprovação em 16 de outubro de 2026
 **Base:** documentos `00` a `04`, Adendo E, ADR-0001-R2, ADR-0002, ADR-0003, `docs/baseline/ambiente-verificado.md`, `docs/baseline/conferencia-normativa.md`, `docs/literatura/analise-dos-artigos.md`, `docs/conformidade/desvios.md`
 **Revisão 2 (15/10/2026):** conferido contra as normas do acervo (hoje em `specs/`).
@@ -292,6 +292,28 @@ Configuração (`aanfcfg.yaml`), além dos campos comuns às NFs do free5GC: `ro
 ---
 
 ### MVP-2 — UDM e AUSF: indicação AKMA e AnchorKey_Register
+
+**Estado (17/10/2026):** implementado e verificado na VM do free5GC (`docs/free5gc-side/{udm,ausf,assinatura-akma,verificacao}.md`).
+
+| Critério | Resultado |
+|---|---|
+| 1 | Atendido no banco de testes: `TestAkma5GAKA` (RID `"0000"`) e `TestAkmaEAPAKAPrime` (RID `"012"`) |
+| 2 | Atendido com UERANSIM: `rid0000.atidfTiRYw4XQKRmE8qEUX9JDLIbElNilKMynonfqfxgnjI=@5gc.mnc093.mcc208.3gppnetwork.org` |
+| 3 | Atendido: `TestAkmaWithoutSubscription`; e `TestGenerateAuthDataWithoutAkma` no UDM |
+| 4 | Atendido com UERANSIM: o reinício do UE trouxe A-KID novo, e o AAnF registrou `replaced previous: true` |
+| 5 | Atendido: os quatro testes passam pelo `test.sh` |
+| 6 | Atendido com UERANSIM e o AAnF parado: registro aceito e falha só no log do AUSF |
+| 7 | Atendido: nenhuma cadeia de 64 hexadecimais nos logs |
+
+Diferenças em relação à tabela de arquivos e decisões tomadas na implementação:
+
+- **UDM.** A lógica ficou num arquivo novo, `internal/sbi/processor/akma.go`. A extração do RID do SUCI virou `suci.RoutingIndicator`, usada só na comparação de D10: o RID enviado é sempre o do UDR. Com `akmaAllowed` sem `routingId` válido, o UDM não envia a indicação e registra erro (TS 29.505 exige o `routingId`).
+- **AUSF.** O domínio de origem vem do SUCI. Com SUPI, vem da PLMN única de `plmnSupportList` que prefixa o IMSI (`[INTERPRETAÇÃO]`, TS 23.003 §2.2). O contexto guarda `SupiOrSuci` em vez de `HomeNetwork`.
+- **Configuração.** O `ausfcfg.yaml` é alterado por *patch* (`free5gc/patches/config/0001-ausf-akma.patch`).
+- **Banco de testes.** O *patch* também muda `nfs_setup.go` (AAnF no processo, `akma.enable` no AUSF), `ngsetup_test.go` (sem SMF quando só os testes `TestAkma*` rodam) e `go.mod`. Os testes AKMA rodam sem `sudo`; os do critério 5 continuam pelo `test.sh`.
+- **`openapi` do banco de testes.** O banco fixa `openapi` v1.2.5 (pré-lançamento). `prepare-openapi.sh` ganhou o argumento de versão e gera `free5gc/build/openapi-test`.
+- **`patch-nf.sh`.** Passa a cobrir os alvos `test` e `config`, aplicados a partir da raiz do repositório do free5GC. Arquivos não rastreados não bloqueiam a aplicação.
+- **Local do repositório.** Os `replace` do AUSF e do banco de testes apontam para `~/akma-free5gc`, ao lado de `~/free5gc`.
 
 **Objetivo.** Depois de uma autenticação primária bem-sucedida (5G-AKA e EAP-AKA') de um assinante com assinatura AKMA, o UDM indica `akmaInd` e `routingId`, e o AUSF deriva K_AKMA, A-TID e A-KID e os registra no AAnF descoberto via NRF.
 

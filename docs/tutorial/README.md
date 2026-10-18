@@ -1,13 +1,13 @@
 # Tutorial — AKMA sobre o free5GC
 
-Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-1b.
+Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-2.
 
 | Parte | Conteúdo | Disponível |
 |---|---|---|
 | 1 | Pré-requisitos | sim |
 | 2 | Conferir as derivações de chave | sim |
 | 3 | Instalar o AAnF no free5GC | sim |
-| 4 | Habilitar AKMA no UDM e no AUSF; provisionar um assinante | MVP-2 |
+| 4 | Habilitar AKMA no UDM e no AUSF; provisionar um assinante | sim |
 | 5 | Escrever um AF que usa AKMA | MVP-3 |
 | 6 | Preparar o UE (UERANSIM) | MVP-4 |
 | 7 | Executar o fluxo de ponta a ponta | MVP-5 |
@@ -200,3 +200,81 @@ Respostas que indicam configuração errada:
 | `403 (K_AKMA_NOT_PRESENT)` | o A-KID não foi registrado, foi substituído por um registro mais novo do mesmo SUPI ou o AAnF reiniciou (o contexto fica só em memória) |
 
 Por fim, para remover o contexto: `seed remove --nrf http://127.0.0.10:8000 --supi imsi-208930000000001`.
+
+---
+
+## 4. Habilitar AKMA no UDM e no AUSF; provisionar um assinante
+
+Depois de uma autenticação primária bem-sucedida de um assinante com assinatura AKMA:
+
+- o UDM diz ao AUSF que o UE usa AKMA e qual é o seu Routing Indicator;
+- o AUSF deriva K_AKMA e o A-KID da K_AUSF e os entrega ao AAnF da parte 3 (TS 33.535 §6.1).
+
+Esta parte altera o UDM e o AUSF do free5GC com *patches* do repositório (`docs/free5gc-side/udm.md`, `ausf.md`).
+
+### 4.1 Onde fica o repositório
+
+O AUSF corrigido depende de código deste repositório: da biblioteca `shared/akma` e da cópia do `openapi` da parte 3. Os `go.mod` corrigidos apontam para `~/akma-free5gc` por caminho relativo. **Clone o repositório nesse local, ao lado de `~/free5gc`**, na máquina do free5GC, e prepare as duas cópias do `openapi`: a das NFs e a do banco de testes do free5GC.
+
+```bash
+~/akma-free5gc/free5gc/scripts/prepare-openapi.sh
+```
+
+```bash
+~/akma-free5gc/free5gc/scripts/prepare-openapi.sh ~/akma-free5gc/free5gc/build/openapi-test v1.2.5-0.20260527003827-02dc71b4d94f
+```
+
+### 4.2 Aplicar os *patches*
+
+Com o free5GC parado, aplique os *patches* do UDM e do AUSF. O *script* guarda os binários originais em `bin/udm.orig` e `bin/ausf.orig` e recompila.
+
+```bash
+~/akma-free5gc/free5gc/scripts/patch-nf.sh udm apply
+```
+
+```bash
+~/akma-free5gc/free5gc/scripts/patch-nf.sh ausf apply
+```
+
+Ligue o AKMA na configuração do AUSF. O *patch* acrescenta `akma.enable: true` ao `ausfcfg.yaml`:
+
+```bash
+~/akma-free5gc/free5gc/scripts/patch-nf.sh config apply
+```
+
+Sem `akma.aanfUri`, o AUSF encontra o AAnF no NRF pelo Routing Indicator, o que exige o NRF corrigido da seção 3.3. Para usar um endereço fixo, descomente `aanfUri` no `ausfcfg.yaml`.
+
+Para usar os testes AKMA do banco de testes (seção 4.4), aplique também:
+
+```bash
+~/akma-free5gc/free5gc/scripts/patch-nf.sh test apply
+```
+
+Qualquer um desses passos se desfaz com `revert` no lugar de `apply`.
+
+### 4.3 Provisionar um assinante
+
+A assinatura AKMA são dois atributos do assinante no UDR (TS 29.505): `akmaAllowed` e `routingId`. O `routingId` é o Routing Indicator do SUCI do UE, como cadeia: `"0000"` no UERANSIM do testbed. A *webconsole* não tem esses campos e os apaga quando o assinante é editado. Provisione pelo *script* (`docs/free5gc-side/assinatura-akma.md`):
+
+```bash
+~/akma-free5gc/free5gc/scripts/provision-akma-subscriber.sh imsi-208930000000001 0000
+```
+
+### 4.4 Verificar
+
+**Pelo banco de testes do free5GC**, com o free5GC parado e sem `sudo`:
+
+```bash
+cd ~/free5gc/test && go test -v -count=1 -run TestAkma .
+```
+
+Três testes devem passar:
+
+- `TestAkma5GAKA` e `TestAkmaEAPAKAPrime`: o UE de teste deriva a K_AF da própria K_AUSF, e ela é igual à que o AAnF entrega;
+- `TestAkmaWithoutSubscription`: sem assinatura, nada é registrado.
+
+**Pelo UERANSIM.** Inicie o free5GC (`./run.sh`), o AAnF (`run-aanf.sh start`), o gNB e o UE. No log do free5GC deve aparecer `AKMA key material of imsi-208930000000001 registered at the AAnF`. Com o AAnF em `logger.level: debug`, o log dele (`~/free5gc/log/aanf/aanf.log`) mostra o A-KID guardado, da forma `rid0000.atid<44 caracteres>@5gc.mnc093.mcc208.3gppnetwork.org`.
+
+Se o UE do UERANSIM ficar em `MM-DEREGISTERED/LIMITED-SERVICE` logo depois de iniciar, reinicie o UE. É uma corrida da seleção de célula do UERANSIM ("no SI"), sem relação com o AKMA.
+
+Se o AAnF estiver parado, o UE se registra mesmo assim. O AUSF só registra a falha no log: o AKMA não interfere na autenticação primária.

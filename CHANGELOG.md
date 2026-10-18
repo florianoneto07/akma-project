@@ -2,6 +2,15 @@
 
 ## [Não lançado]
 
+### MVP-2 — UDM e AUSF (17/10/2026)
+- `free5gc/patches/udm/0001-akma-indication-and-routing-id.patch`: o UDM preenche `akmaInd` e `routingId` (TS 33.501 §6.1.3.1 e §6.1.3.2.0; TS 29.503 Tab. 6.3.6.2.3-1) a partir de `akmaAllowed` e `routingId` do UDR (TS 29.505 Tab. 5.4.2.2-1). Compara com o RID do SUCI e registra divergências (D10).
+- `free5gc/patches/ausf/0001-akma-anchor-key-register.patch`: depois do 5G AKA ou do EAP-AKA' bem-sucedido, o AUSF deriva K_AKMA e o A-KID e os registra no AAnF (TS 33.535 §6.1), sem bloquear a autenticação (D9). O AAnF é descoberto no NRF pelo Routing Indicator ou configurado (`akma.aanfUri`).
+- `free5gc/patches/config/0001-ausf-akma.patch`: `akma.enable` no `ausfcfg.yaml`.
+- `free5gc/patches/test/0001-akma-tests.patch`: AAnF no banco de testes do free5GC; testes `TestAkma5GAKA`, `TestAkmaEAPAKAPrime` e `TestAkmaWithoutSubscription`, que rodam sem `sudo`.
+- `free5gc/scripts/provision-akma-subscriber.sh`; `prepare-openapi.sh` com argumento de versão; `patch-nf.sh` com os alvos `test` e `config`.
+- Verificação: K_AF do AAnF igual à derivada pelo UE de teste nos dois métodos; A-KID `rid0000…@5gc.mnc093.mcc208.3gppnetwork.org` com UERANSIM; reautenticação substitui o contexto; AAnF parado não impede o registro; `TestRegistration`, `TestGUTIRegistration`, `TestReSynchronization` e `TestEAPAKAPrimeAuthentication` continuam passando.
+- Documentação: `docs/free5gc-side/{udm,ausf,assinatura-akma,verificacao}.md`; tutorial, parte 4; matriz, revisão 3.4.
+
 ### MVP-1b — correção do NRF do free5GC (17/10/2026)
 - `free5gc/patches/nrf/`: três *patches* com testes sobre o `free5gc/nrf` v1.4.5:
   - 0001: guarda `aanfInfoList` (TS 29.510 §5.2.2.2.2, Tab. 6.1.6.2.2-1);

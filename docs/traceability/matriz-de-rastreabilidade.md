@@ -1,7 +1,7 @@
 # Matriz de rastreabilidade
 
-**Revisão:** 3.3 (MVP-1b: NRF corrigido; D8, D10 e D13 de 17/10/2026; DV-8 encerrado)
-**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 e 3.3 em 17 de outubro de 2026
+**Revisão:** 3.4 (MVP-2: UDM e AUSF; MVP-1b: NRF corrigido; D8, D10 e D13 de 17/10/2026; DV-8 encerrado)
+**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026
 
 *Nota (16/10/2026):* os caminhos da coluna "Implementação" seguem a estrutura anterior ao plano. A estrutura aprovada (plano §3) é: `akma/` → `shared/akma/`; `NFs/aanf/` → `free5gc/aanf/`; `patches/` → `free5gc/patches/`; `af/` → `af/af/`; `ue/` → `af/ue/`. Os caminhos serão atualizados linha a linha à medida que cada MVP os criar. Os desvios citados como DV-n estão em `docs/conformidade/desvios.md`.
 
@@ -77,20 +77,21 @@ Legenda de estado:
 | NRF guarda `aanfInfoList` | TS 29.510 V19.7.0 | 5.2.2.2.2; Tab. 6.1.6.2.2-1 | `free5gc/patches/nrf/0001-store-aanf-info-list.patch` | `TestNnrfNFManagementDataModelKeepsAanfInfoList`; VM | **Implementado** (MVP-1b) |
 | NRF descobre `AANF` por `routing-indicator` | TS 29.510 V19.7.0 | Tab. 6.2.3.2.3.1-1, Tab. 6.1.6.2.73-1 | `free5gc/patches/nrf/0002-discover-aanf-by-routing-indicator.patch` | `TestValidateQueryParametersNfTypes`, `TestBuildFilterAanfRoutingIndicator`; VM (MongoDB 5.0, quatro perfis sintéticos) | **Implementado** (MVP-1b); `complexQuery` fora do escopo |
 | NRF preenche `aud` do token | TS 29.510 V19.7.0; TS 33.501 V19.7.0 | Tab. 6.3.5.2.4-1; 13.4.1.1.2 | `free5gc/patches/nrf/0003-access-token-audience.patch` | `TestAccessTokenAudience`; VM | **Implementado** (MVP-1b) |
-| Descoberta do AAnF pelo AUSF, por `routing-indicator` | TS 29.510 V19.7.0; TS 33.535 §6.7 | — | `free5gc/patches/ausf/` (consumidor) | integração | Especificado — lado NRF pronto (MVP-1b); consumidor no MVP-2, com configuração local como alternativa |
+| Descoberta do AAnF pelo AUSF, por `routing-indicator` | TS 29.510 V19.7.0; TS 33.535 §6.7 | — | `free5gc/patches/ausf/` (`aanfUri`) | `TestRegisterAkmaDiscoversAanf`; UERANSIM (`routing-indicator=0000`, 200) | **Implementado** (MVP-2) — `akma.aanfUri` como alternativa |
 | Endereço do AAnF alcançável a partir da VM do AF | ADR-0001-R2 §5.2 | — | `free5gc/config/aanfcfg.yaml` | VM, 17/10/2026 | **Implementado** (MVP-1) |
 
 ## Integração AUSF e UDM
 
 | Requisito | Norma | Cláusula | Implementação | Teste | Estado |
 |---|---|---|---|---|---|
-| `akmaInd` e `routingId` na resposta do UDM | TS 33.501 V19.7.0 + TS 29.503 §6.3.6.2.3 | — | `patches/udm/`, `patches/openapi/` | integração | Especificado |
-| Fonte do RID no UDM: `routingId` do `AuthenticationSubscription` no UDR; comparação com o RID do SUCI, quando houver, com divergência em log | TS 29.505 V19.6.0; TS 29.503 V19.7.0; TS 33.535 §6.1 | Tab. 5.4.2.2-1; Tab. 6.3.6.2.3-1 | `free5gc/patches/udm/` | integração | Decisão — D10 (17/10/2026) |
-| Assinatura AKMA no perfil do assinante | TS 33.535 V19.0.0 | 4.2.5 | `patches/udm/`, *webconsole* | integração | Especificado |
-| Acionamento do AKMA no AUSF — 5G-AKA | TS 33.535 V19.0.0 | 6.1 passo 3 | `patches/ausf/` — `Auth5gAkaComfirmRequestProcedure` | integração | Especificado |
-| Acionamento do AKMA no AUSF — EAP-AKA' | TS 33.535 V19.0.0 | 6.1 passo 3 | `patches/ausf/` — `EapAuthComfirmRequestProcedure` | integração | Especificado |
-| Registro no AAnF sem bloquear a resposta ao AMF; falha no AAnF não altera a autenticação | TS 33.535 V19.0.0 | 6.1 passo 3 | `patches/ausf/` | integração | Decisão — D9 do plano |
-| Consumidor `Naanf_AKMA` no AUSF | TS 29.535 V19.5.0 | 4.2.2.2 | `patches/ausf/internal/sbi/consumer/` | integração | Especificado |
+| `akmaInd` e `routingId` na resposta do UDM | TS 33.501 V19.7.0; TS 29.503 V19.7.0 | 6.1.3.1 passo 2, 6.1.3.2.0 passo 2; Tab. 6.3.6.2.3-1 | `free5gc/patches/udm/` (`internal/sbi/processor/akma.go`) | `TestSetAkmaIndication`, `TestGenerateAuthDataAkma`, `TestGenerateAuthDataWithoutAkma`; banco de testes | **Implementado** (MVP-2) |
+| Fonte do RID no UDM: `routingId` do `AuthenticationSubscription` no UDR; comparação com o RID do SUCI, quando houver, com divergência em log | TS 29.505 V19.6.0; TS 29.503 V19.7.0; TS 33.535 §6.1 | Tab. 5.4.2.2-1; Tab. 6.3.6.2.3-1 | `free5gc/patches/udm/` (`suci.RoutingIndicator`, `setAkmaIndication`) | `TestRoutingIndicator`, `TestSetAkmaIndication`; UERANSIM | **Implementado** (MVP-2) — D10 |
+| Assinatura AKMA no perfil do assinante (`akmaAllowed`, `routingId`) | TS 33.535 V19.0.0; TS 29.505 V19.6.0 | 3.1, 4.2.5; Tab. 5.4.2.2-1 | `free5gc/scripts/provision-akma-subscriber.sh` (a *webconsole* não tem os campos) | VM (MongoDB) | **Implementado** (MVP-2) |
+| Acionamento do AKMA no AUSF — 5G-AKA | TS 33.535 V19.0.0; TS 33.501 V19.7.0 | 6.1 passo 3; 6.1.3.2.0 passo 11 | `free5gc/patches/ausf/` — `Auth5gAkaComfirmRequestProcedure` | `TestAkma5GAKA`; UERANSIM | **Implementado** (MVP-2) |
+| Acionamento do AKMA no AUSF — EAP-AKA' | TS 33.535 V19.0.0; TS 33.501 V19.7.0 | 6.1 passo 3; 6.1.3.1 passo 10 | `free5gc/patches/ausf/` — `EapAuthComfirmRequestProcedure` | `TestAkmaEAPAKAPrime` | **Implementado** (MVP-2) |
+| Domínio de origem do A-KID: MCC e MNC do SUCI; com SUPI, da PLMN única de `plmnSupportList` | TS 33.535 V19.0.0; TS 23.003 V19.7.0 | 6.1; 2.2, 28.2 | `free5gc/patches/ausf/` (`homeNetwork`) | `TestHomeNetworkFromSuci`, `TestBuildAkmaKeyInfoMatchesOracle` | **Implementado** (MVP-2) — `[INTERPRETAÇÃO]` |
+| Registro no AAnF sem bloquear a resposta ao AMF; falha no AAnF não altera a autenticação | TS 33.535 V19.0.0 | 6.1 passo 3 | `free5gc/patches/ausf/` (`startAkma`) | `TestStartAkmaDoesNotBlock`; UERANSIM com AAnF parado | **Implementado** (MVP-2) — D9 |
+| Consumidor `Naanf_AKMA` no AUSF | TS 29.535 V19.5.0 | 4.2.2.2 | `free5gc/patches/ausf/` (`internal/sbi/consumer/aanf_service.go`) | `TestRegisterAkmaDiscoversAanf`, `TestRegisterAkmaConfiguredUri`; banco de testes; UERANSIM | **Implementado** (MVP-2) |
 | GPSI via `GET /{ueId}/id-translation-result` | TS 29.503 V19.7.0 | 5.2.2.2.10 | — | — | Pendente — política local |
 | Subscrição `ROAMING_STATUS` com `immediateFlag` | TS 29.503 V19.7.0 | 5.5.2.2.2, 6.4.6.2.8 | — | — | Decisão — DV-2 (configurável, desabilitada) |
 | `POST /{ueId}/registrations/trigger-auth` | TS 33.501 §14.2.6; TS 29.503 §5.3.2.16 | — | — | — | Pendente — defeito D-B |
