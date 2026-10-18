@@ -1,0 +1,204 @@
+// Package config reads the configuration of the AF (afcfg.yaml), whose
+// fields are those of docs/af-side/ua-star.md cl. 11.
+package config
+
+import (
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"net"
+	"net/url"
+	"os"
+	"strings"
+	"time"
+
+	"gopkg.in/yaml.v2"
+
+	"github.com/florianoneto07/akma-free5gc/af/uastar"
+	"github.com/florianoneto07/akma-free5gc/shared/akma/afid"
+)
+
+// KafExpiry is the policy of the AF when a K_AF expires (TS 33.535
+// cl. 6.4.2: "based on its policy").
+type KafExpiry string
+
+const (
+	// KafExpiryRefetch requests the K_AF again from the AAnF.
+	KafExpiryRefetch KafExpiry = "refetch"
+	// KafExpiryReject rejects the UE with the cause KAF_EXPIRED.
+	KafExpiryReject KafExpiry = "reject"
+)
+
+// Defaults of docs/af-side/ua-star.md cl. 11.
+const (
+	DefaultPath          = "/ua/v1/session"
+	DefaultNonceLifetime = 300 * time.Second
+	DefaultAanfTimeout   = 5 * time.Second
+)
+
+// Config is the content of afcfg.yaml.
+type Config struct {
+	Configuration Configuration `yaml:"configuration"`
+	Logger        Logger        `yaml:"logger"`
+}
+
+// Configuration holds the AF parameters.
+type Configuration struct {
+	// FQDN of the AF: the only name accepted in the Host header field, the
+	// second part of the realm and the FQDN of the AF_ID.
+	FQDN string `yaml:"fqdn"`
+	// UaStarID is the Ua* security protocol identifier, ten hexadecimal
+	// digits (ADR-0003: FF00000001).
+	UaStarID string `yaml:"uaStarId"`
+	// Listen is the address of the Ua* server.
+	Listen string `yaml:"listen"`
+	// Path of the protected resource.
+	Path string `yaml:"path,omitempty"`
+	// RealmPrefix is the first part of the realm (deviation DV-6).
+	RealmPrefix string `yaml:"realmPrefix,omitempty"`
+	// Qop lists the qop values offered in the challenge.
+	Qop []string `yaml:"qop,omitempty"`
+	// NonceLifetime is a Go duration ("300s").
+	NonceLifetime string `yaml:"nonceLifetime,omitempty"`
+	// KafExpiry is "refetch" or "reject".
+	KafExpiry KafExpiry `yaml:"kafExpiry,omitempty"`
+	// AanfURI is the apiRoot of the AAnF, locally configured (TS 33.535
+	// cl. 6.7).
+	AanfURI string `yaml:"aanfUri"`
+}
+
+// Logger holds the log settings, as in the free5GC configurations.
+type Logger struct {
+	Enable       bool   `yaml:"enable"`
+	Level        string `yaml:"level"`
+	ReportCaller bool   `yaml:"reportCaller"`
+}
+
+// Settings is the validated configuration.
+type Settings struct {
+	AfID          afid.AfID
+	FQDN          string
+	Listen        string
+	Path          string
+	Realm         string
+	Qop           []string
+	NonceLifetime time.Duration
+	KafExpiry     KafExpiry
+	AanfURI       string
+	Logger        Logger
+}
+
+// Load reads and validates path.
+func Load(path string) (*Settings, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var c Config
+	if err := yaml.UnmarshalStrict(raw, &c); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	return c.Settings()
+}
+
+// Settings validates the configuration and applies the defaults.
+func (c Config) Settings() (*Settings, error) {
+	cf := c.Configuration
+	var errs []error
+
+	ua, err := parseUaStarID(cf.UaStarID)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	if !isHostname(cf.FQDN) {
+		errs = append(errs, fmt.Errorf("fqdn: %q is not a DNS name", cf.FQDN))
+	}
+	id, err := afid.New(cf.FQDN, ua)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("fqdn: %w", err))
+	}
+	if _, _, err := net.SplitHostPort(cf.Listen); err != nil {
+		errs = append(errs, fmt.Errorf("listen: %w", err))
+	}
+	if u, err := url.Parse(cf.AanfURI); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		errs = append(errs, fmt.Errorf("aanfUri: %q is not an http(s) apiRoot", cf.AanfURI))
+	}
+
+	s := &Settings{
+		AfID: id, FQDN: cf.FQDN, Listen: cf.Listen, Path: cf.Path, Qop: cf.Qop,
+		NonceLifetime: DefaultNonceLifetime, KafExpiry: cf.KafExpiry, AanfURI: strings.TrimRight(cf.AanfURI, "/"),
+		Logger: c.Logger,
+	}
+	if s.Path == "" {
+		s.Path = DefaultPath
+	}
+	if !strings.HasPrefix(s.Path, "/") {
+		errs = append(errs, fmt.Errorf("path: %q must start with /", s.Path))
+	}
+	prefix := cf.RealmPrefix
+	if prefix == "" {
+		prefix = uastar.RealmPrefix
+	}
+	if strings.ContainsAny(prefix, "@\"") {
+		errs = append(errs, fmt.Errorf("realmPrefix: %q must not contain @ or \"", prefix))
+	}
+	s.Realm = uastar.Realm(prefix, cf.FQDN)
+	if len(s.Qop) == 0 {
+		s.Qop = []string{uastar.QopAuth}
+	}
+	for _, q := range s.Qop {
+		if q != uastar.QopAuth && q != uastar.QopAuthInt {
+			errs = append(errs, fmt.Errorf("qop: %q is neither auth nor auth-int", q))
+		}
+	}
+	if cf.NonceLifetime != "" {
+		d, err := time.ParseDuration(cf.NonceLifetime)
+		if err != nil || d <= 0 {
+			errs = append(errs, fmt.Errorf("nonceLifetime: %q is not a positive duration", cf.NonceLifetime))
+		}
+		s.NonceLifetime = d
+	}
+	switch s.KafExpiry {
+	case "":
+		s.KafExpiry = KafExpiryRefetch
+	case KafExpiryRefetch, KafExpiryReject:
+	default:
+		errs = append(errs, fmt.Errorf("kafExpiry: %q is neither refetch nor reject", s.KafExpiry))
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+func parseUaStarID(s string) (afid.UaStarID, error) {
+	var id afid.UaStarID
+	b, err := hex.DecodeString(s)
+	if err != nil || len(b) != len(id) {
+		return id, fmt.Errorf("uaStarId: %q is not ten hexadecimal digits", s)
+	}
+	copy(id[:], b)
+	return id, nil
+}
+
+// isHostname reports whether s is an ASCII DNS name: dot-separated labels of
+// letters, digits and hyphens, 1 to 63 characters each, not starting or
+// ending with a hyphen. The FQDN is compared with the Host header field, so
+// it carries no port (TS 33.220 cl. 4.5.2 prerequisite (3)).
+func isHostname(s string) bool {
+	if s == "" || len(s) > 253 {
+		return false
+	}
+	for _, label := range strings.Split(s, ".") {
+		if len(label) == 0 || len(label) > 63 || label[0] == '-' || label[len(label)-1] == '-' {
+			return false
+		}
+		for i := 0; i < len(label); i++ {
+			c := label[i]
+			if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '-') {
+				return false
+			}
+		}
+	}
+	return true
+}
