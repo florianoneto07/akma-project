@@ -33,6 +33,7 @@ Com `akmaAllowed: true` e `routingId` ausente ou fora do padrão, o dado viola T
 | `internal/sbi/processor/akma.go` (novo) | `setAkmaIndication`: preenche `akmaInd` e `routingId` e faz a comparação de D10 |
 | `internal/sbi/processor/generate_auth_data.go` | chama `setAkmaIndication` antes de responder, nos dois métodos de autenticação |
 | `internal/sbi/processor/akma_test.go` (novo) | casos da função; procedimento completo com UDR simulado, com e sem `akmaAllowed` |
+| `internal/logger/logger.go` | categoria `AKMA` (MVP-3a): as mensagens AKMA do UDM saem como `[UDM][AKMA]`; até o MVP-2 saíam como `[UDM][UEAU]` |
 
 ## 4. Como reproduzir numa instalação limpa
 
@@ -50,6 +51,6 @@ Aplica o *patch*, guarda `bin/udm.orig` e recompila. Para desfazer, use `patch-n
 cd ~/free5gc/NFs/udm && go test ./internal/sbi/processor/ ./pkg/suci/
 ```
 
-Com o banco de testes: `TestAkma5GAKA`, `TestAkmaEAPAKAPrime` e `TestAkmaWithoutSubscription` (`verificacao.md`). No log do free5GC, a ausência de `Routing Indicator of the SUCI ... differs` confirma que o RID do SUCI e o do UDR coincidem.
+Com o banco de testes: `TestAkma5GAKA`, `TestAkmaEAPAKAPrime` e `TestAkmaWithoutSubscription` (`verificacao.md`). No log do free5GC, `[UDM][AKMA] AKMA indication sent to the AUSF for imsi-…, Routing Indicator …` confirma o envio (MVP-3a, `logs-akma.md`). A ausência de `Routing Indicator of the SUCI ... differs` confirma que o RID do SUCI e o do UDR coincidem.
 
 Resultado em 17/10/2026: os testes do UDM passam. Com UERANSIM (SUCI `suci-0-208-93-0000-…`), o UDR tinha `routingId: "0000"` e não houve divergência registrada.

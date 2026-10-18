@@ -5,7 +5,8 @@ Tudo o que é feito **fora** do núcleo para usar AKMA: o AF de teste, o protoco
 | Documento | MVP | Estado |
 |---|---|---|
 | `af.md`, `ua-star.md`, `teste-af.md` | MVP-3 | a escrever |
-| `ue-ueransim.md`, `ua-client.md` | MVP-4 | a escrever |
+| `ue-ueransim.md` — K_AKMA e A-KID no ME do UERANSIM; log | MVP-3a, MVP-4 | derivação e log escritos (18/10/2026); K_AF e `nr-cli` no MVP-4 |
+| `ua-client.md` | MVP-4 | a escrever |
 | `e2e.md` | MVP-5 | a escrever |
 
 O que é comum aos dois lados — KDF, formatos de identificador, codificação, vetores — fica em `docs/shared/`.

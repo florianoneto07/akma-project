@@ -1,6 +1,6 @@
 # Plano de desenvolvimento por MVPs
 
-**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026).
+**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026).
 **Data:** 15 de outubro de 2026; revisão 3 em 16 de outubro de 2026; aprovação em 16 de outubro de 2026
 **Base:** documentos `00` a `04`, Adendo E, ADR-0001-R2, ADR-0002, ADR-0003, `docs/baseline/ambiente-verificado.md`, `docs/baseline/conferencia-normativa.md`, `docs/literatura/analise-dos-artigos.md`, `docs/conformidade/desvios.md`
 **Revisão 2 (15/10/2026):** conferido contra as normas do acervo (hoje em `specs/`).
@@ -27,6 +27,9 @@ Estado em 16/10/2026. "Aprovada" = recomendação aprovada com o plano; "decidid
 | D9 | Momento do registro no AAnF e efeito de falha | `[3GPP]` TS 33.535 §6.1 passo 3: K_AKMA e A-TID são gerados *"after the primary authentication procedure is successfully completed"*; a norma não condiciona a autenticação primária ao registro. `[INTERPRETAÇÃO]` O AUSF responde ao AMF normalmente e faz `AnchorKey_Register` em seguida, sem bloquear; falha no AAnF é registrada em log e não altera o resultado da autenticação | **decidida** em 16/10/2026 | MVP-2 |
 | D12 | Versão de TS 23.502 | O baseline permanece **V19.8.0**; a cópia do acervo é a V19.9.0 e o projeto segue com ela para consulta. Registrado no Adendo E e em `especificacoes.md` | **decidida** em 16/10/2026 | registro do baseline |
 | D13 | Limitações do NRF do free5GC v1.4.5 encontradas no MVP-1: descarta `aanfInfoList` (N1), recusa descoberta de `AANF` (N2), emite token com `aud` vazio (N3) — `docs/free5gc-side/registro-nrf.md` §5 | Corrigir o NRF com três *patches*, **agora**, numa unidade própria (MVP-1b) antes do MVP-2. Primeira decisão (17/10/2026): "mais adiante"; revista no mesmo dia, depois da conferência com TS 29.510, por recomendação do projeto aceita pelo responsável. Com o NRF corrigido, o AUSF do MVP-2 descobre o AAnF pelo NRF, com configuração local como alternativa (TS 33.535 §6.7), e o DV-8 é encerrado | **decidida** e **executada** em 17/10/2026 (MVP-1b) | MVP-1b, MVP-2 |
+| D14 | Escopo do MVP-3a, pedido pelo responsável em 18/10/2026: as mensagens AKMA principais aparecem na tela do free5GC e do UERANSIM, no formato e nos níveis de log de cada um | `[FREE5GC]` O UERANSIM não tem nada de AKMA, e não há o que registrar sem derivação. A derivação de K_AKMA, A-TID e A-KID no ME, com a opção `akma` na configuração do UE, sai do MVP-4 e entra no MVP-3a; K_AF, o comando do `nr-cli`, o autoteste com os vetores e o cliente Ua\* ficam no MVP-4 | **decidida** em 18/10/2026 | MVP-3a, MVP-4 |
+| D15 | Como o AAnF aparece na tela do free5GC | Opção `-aanf` no `run.sh`, no molde do `-bsf`, e `aanf` na lista do `force_kill.sh`, por *patch* (`free5gc/patches/run/`). O `run-aanf.sh` continua para uso avulso | **decidida** em 18/10/2026 | MVP-3a |
+| D16 | Nível dos identificadores no log | `[MVP]` SUPI, A-KID e AF_ID em `info`, na categoria `AKMA` de UDM, AUSF e AAnF; chaves nunca, em nível algum. O free5GC já registra o SUPI em `info`, e o A-KID vai em claro no Ua\*. Até o MVP-2, o AUSF e o AAnF só mostravam os identificadores em `debug` | **decidida** em 18/10/2026 | MVP-3a |
 
 Decisão que dependia de norma até então fora do acervo:
 
@@ -60,6 +63,7 @@ MVP-0  biblioteca comum: KDF, SUPI, A-KID, AF_ID, codecs
   │
   ├── MVP-1  AAnF autônomo + modelos Naanf_AKMA no openapi
   │     ├── MVP-2  UDM + AUSF → AnchorKey_Register     (verificado pelo banco de testes Go)
+  │     │     └── MVP-3a  mensagens AKMA na tela + derivação no ME (UERANSIM)   (D14)
   │     └── MVP-3  AF + Ua* simplificado              (verificado com contexto semeado)
   │
   └── MVP-4  lado UE: ME no UERANSIM + cliente Ua*     (requer D5 e MVP-3)
@@ -357,6 +361,44 @@ Diferenças em relação à tabela de arquivos e decisões tomadas na implementa
 
 ---
 
+### MVP-3a — Mensagens AKMA na tela do free5GC e do UERANSIM
+
+**Estado (18/10/2026):** implementado; verificação na VM do free5GC em `docs/free5gc-side/verificacao.md`, seção 4.
+
+**Objetivo.** Pedido do responsável (D14): acompanhar o AKMA pelas telas do `run.sh` e do UE, sem abrir arquivos de log, com as mensagens principais no formato e nos níveis de cada ferramenta.
+
+**Pré-requisitos.** MVP-2; aviso antes de aplicar *patches* no UERANSIM, no `run.sh` e no `force_kill.sh` da VM do free5GC.
+
+**Cláusulas.** Nenhuma cláusula 3GPP trata de log. A derivação antecipada no ME segue TS 33.535 §6.1 (*"before initiating communication with an AKMA Application Function"*), A.2, A.3 · TS 33.501 A.7.0 · TS 23.003 §2.2B, §28.2 · TS 29.522 Tab. 5.14.5.4.2-1.
+
+**Arquivos.**
+
+| Lado | Caminho | Conteúdo |
+|---|---|---|
+| free5GC | `free5gc/patches/udm/0001-*.patch` (regenerado) | categoria `AKMA`; indicação enviada em `info` |
+| free5GC | `free5gc/patches/ausf/0001-*.patch` (regenerado) | indicação recebida, derivação com A-KID, AAnF selecionado, registro, AKMA desligado — em `info` |
+| free5GC | `free5gc/aanf/` | identificadores em `info` (D16); linha de partida com RIDs, tempo de vida da K_AF e AF_ID autorizados |
+| free5GC | `free5gc/patches/run/0001-aanf-option.patch` (novo) | `run.sh -aanf` e `aanf` no `force_kill.sh` (D15) |
+| free5GC | `free5gc/scripts/{patch-nf,run-aanf}.sh` | alvo `run`; checagem só nos arquivos tocados; `GIN_MODE=release` |
+| AF/UE | `af/ue/ueransim/patches/0001-akma-key-derivation.patch` | K_AKMA, A-TID e A-KID no ME; `[nas] [info]` com o A-KID |
+| AF/UE | `af/ue/ueransim/patches/0002-free5gc-ue-akma.patch` | `akma: true` no `free5gc-ue.yaml` |
+| AF/UE | `af/scripts/patch-ueransim.sh` | aplica, reverte e recompila só o `nr-ue` |
+| docs | `docs/free5gc-side/logs-akma.md`, `docs/af-side/ue-ueransim.md` | catálogo, formato, verificação |
+
+**Critério de aceitação.**
+1. Com `./run.sh -aanf`, o AAnF sobe com as outras NFs, escreve no mesmo terminal e no mesmo `free5gc.log`, e para com elas no Ctrl-C.
+2. No registro de um UE com assinatura AKMA, a tela do `run.sh` mostra, em `info` e na categoria `AKMA`: a indicação enviada pelo UDM; no AUSF, a indicação recebida, a derivação, o AAnF selecionado e o registro; no AAnF, o contexto registrado.
+3. A tela do UE mostra `AKMA key material derived, A-KID[…]`, e esse A-KID é idêntico, caractere a caractere, ao do AUSF e ao do AAnF.
+4. Sem `akma` na configuração do UE, o `nr-ue` se comporta como o original: nenhuma linha AKMA.
+5. Nenhuma chave nas telas nem nos logs.
+6. Os testes do UDM, do AUSF, do AAnF e os `TestAkma*` do banco de testes continuam passando.
+
+**Riscos.** Duas instâncias do AAnF (pelo `run.sh -aanf` e pelo `run-aanf.sh`) disputam a mesma porta: documentado. A derivação no UE sem a conferência da K_AKMA, que só vem no MVP-4 (`ue-ueransim.md` §8).
+
+**O tutorial ganha.** "Ver o AKMA na tela": `run.sh -aanf`, o UE com `akma: true` e o que procurar em cada terminal.
+
+---
+
 ### MVP-3 — AF mínimo e Ua\* simplificado
 
 **Objetivo.** Um AF na VM do AF que serve um Ua\* simplificado (formato do Digest de TS 24.109 K.2, identificador `FF 00 00 00 01`), obtém K_AF do AAnF por `AkmaAfKeyRequest`, a guarda até `expiry` e autentica um cliente que prova possuir K_AF.
@@ -402,6 +444,8 @@ Diferenças em relação à tabela de arquivos e decisões tomadas na implementa
 ### MVP-4 — Lado UE: derivação no ME e envio do A-KID
 
 **Objetivo.** O `nr-ue` deriva K_AKMA, A-TID e A-KID após a autenticação primária e K_AF sob demanda; o cliente Ua\* usa o A-KID e a K_AF para autenticar-se no AF, e as chaves do UE e da rede coincidem.
+
+**Antecipado no MVP-3a (D14).** A derivação de K_AKMA, A-TID e A-KID, a opção `akma` e o log já estão em `af/ue/ueransim/patches/0001-akma-key-derivation.patch` e `0002-free5gc-ue-akma.patch`. O MVP-4 acrescenta um `0003` com a K_AF, o comando do `nr-cli` e o autoteste com os vetores. O critério 1 (A-KID do UE igual ao do AAnF) já é verificável pela tela.
 
 **Pré-requisitos.** MVP-0, MVP-3; D5; compilação do UERANSIM no local escolhido.
 

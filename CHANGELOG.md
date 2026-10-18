@@ -2,6 +2,18 @@
 
 ## [Não lançado]
 
+### MVP-3a — mensagens AKMA na tela e derivação no ME (18/10/2026)
+- Pedido do responsável: acompanhar o AKMA pelas telas do `run.sh` e do UE. Decisões D14 (escopo; derivação no ME antecipada do MVP-4), D15 (`run.sh -aanf`) e D16 (SUPI, A-KID e AF_ID em `info`).
+- `free5gc/patches/udm/0001-*.patch` e `free5gc/patches/ausf/0001-*.patch` regenerados:
+  - categoria `AKMA` no UDM;
+  - no UDM, a indicação enviada em `info`;
+  - no AUSF, em `info`: indicação recebida, K_AKMA e A-KID derivados (com o A-KID), AAnF selecionado e registro.
+- AAnF: identificadores em `info` e uma linha de partida com RIDs, tempo de vida da K_AF e AF_ID autorizados.
+- `free5gc/patches/run/0001-aanf-option.patch`: opção `-aanf` no `run.sh` e `aanf` no `force_kill.sh`. `patch-nf.sh` ganha o alvo `run` e passa a checar alterações locais só nos arquivos que os *patches* tocam. `run-aanf.sh` exporta `GIN_MODE=release`.
+- `af/ue/ueransim/patches/`: o `nr-ue` deriva K_AKMA, A-TID e A-KID (TS 33.535 §6.1, A.2, A.3) ao ativar o contexto de segurança da autenticação primária, com a opção `akma`, e mostra o A-KID em `[nas] [info]`. `af/scripts/patch-ueransim.sh` aplica, reverte e recompila só o `nr-ue`.
+- Verificação na VM: o A-KID do UE é igual ao do AUSF e do AAnF em duas autenticações. Sem `akma`, o UE não deriva nada. Não há chave nos logs nem nas telas. Os testes `TestAkma*` continuam passando.
+- Documentação: `docs/free5gc-side/logs-akma.md`, `docs/af-side/ue-ueransim.md`, `verificacao.md` §4; tutorial, parte 5 (as seguintes renumeradas); matriz, revisão 3.5.
+
 ### MVP-2 — UDM e AUSF (17/10/2026)
 - `free5gc/patches/udm/0001-akma-indication-and-routing-id.patch`: o UDM preenche `akmaInd` e `routingId` (TS 33.501 §6.1.3.1 e §6.1.3.2.0; TS 29.503 Tab. 6.3.6.2.3-1) a partir de `akmaAllowed` e `routingId` do UDR (TS 29.505 Tab. 5.4.2.2-1). Compara com o RID do SUCI e registra divergências (D10).
 - `free5gc/patches/ausf/0001-akma-anchor-key-register.patch`: depois do 5G AKA ou do EAP-AKA' bem-sucedido, o AUSF deriva K_AKMA e o A-KID e os registra no AAnF (TS 33.535 §6.1), sem bloquear a autenticação (D9). O AAnF é descoberto no NRF pelo Routing Indicator ou configurado (`akma.aanfUri`).

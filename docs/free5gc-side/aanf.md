@@ -27,7 +27,7 @@
 |---|---|
 | `~/free5gc/bin/aanf` | arquivo novo (binário estático) |
 | `~/free5gc/config/aanfcfg.yaml` | arquivo novo |
-| `~/free5gc/log/aanf/` | criado pelo `run-aanf.sh` (log, saída, pid) |
+| `~/free5gc/log/aanf/` | criado pelo `run-aanf.sh` (log, saída, pid). Com `./run.sh -aanf` (MVP-3a, `logs-akma.md` §5), o log vai para o `free5gc.log` das outras NFs |
 | `~/free5gc/cert/aanf.pem`, `cert/aanf_<id>.pem` | criados pelo NRF (`registro-nrf.md` §4) |
 
 Dependências: `free5gc/openapi` v1.2.4 com os *patches* do projeto (`openapi.md`), `free5gc/util` v1.3.2, `shared/akma` (MVP-0).
@@ -133,7 +133,7 @@ Também cobertos: **501** para métodos diferentes de `POST`, porque nenhum recu
 
 ## 7. Logs
 
-Nenhuma chave aparece em log, em nível algum. SUPI, A-KID e AF_ID só aparecem em nível `debug`; em `info` aparecem apenas o evento e o código HTTP. Teste: `TestNoKeyInLogs`, em nível `trace`, procura K_AKMA e K_AF (hexadecimal e base64) no log. Na VM, em 17/10/2026: zero ocorrências de K_AKMA e K_AF em `aanf.log` e `aanf.out` depois do fluxo completo.
+Nenhuma chave aparece em log, em nível algum. Desde o MVP-3a (decisão D16), SUPI, A-KID e AF_ID aparecem em `info`, na categoria `AKMA`; até o MVP-2 só apareciam em `debug`. O catálogo das mensagens está em `logs-akma.md`. Teste: `TestNoKeyInLogs`, em nível `trace`, procura K_AKMA e K_AF (hexadecimal e base64) no log. Na VM, em 17/10/2026: zero ocorrências de K_AKMA e K_AF em `aanf.log` e `aanf.out` depois do fluxo completo.
 
 ## 8. Como reproduzir numa instalação limpa
 

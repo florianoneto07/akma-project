@@ -1,6 +1,6 @@
-# Verificação do MVP-2: UDM, AUSF e AAnF juntos
+# Verificação do MVP-2 e do MVP-3a: UDM, AUSF e AAnF juntos
 
-**Data:** 17 de outubro de 2026 · VM do free5GC (192.168.16.130)
+**Data:** 17 de outubro de 2026 (seções 1 a 3, MVP-2) e 18 de outubro de 2026 (seção 4, MVP-3a) · VM do free5GC (192.168.16.130)
 
 ## 1. Banco de testes do free5GC (critérios 1, 3 e 7)
 
@@ -56,7 +56,62 @@ Assinante `imsi-208930000000001` provisionado com `routingId` `"0000"` (`assinat
 
 Depois da verificação, o `aanfcfg.yaml` voltou a `logger.level: info`, igual ao do repositório.
 
-## 4. Observações de operação
+## 4. Mensagens AKMA na tela (MVP-3a)
+
+Pré-requisitos:
+
+- *patches* do UDM e do AUSF regenerados e o alvo `run` aplicado (`logs-akma.md` §7);
+- AAnF recompilado;
+- UERANSIM com `af/scripts/patch-ueransim.sh apply` (`docs/af-side/ue-ueransim.md`);
+- assinante `imsi-208930000000001` com `routingId` `"0000"`.
+
+A sequência:
+
+1. iniciar o free5GC com `./run.sh -aanf`, sem o AAnF do `run-aanf.sh`;
+2. iniciar o gNB e o UE do UERANSIM, como na seção 3;
+3. pedir a K_AF da VM do AF com o `seed retrieve`, para o AF autorizado e para um AF_ID fora da política;
+4. parar o UE e rodar o `nr-ue` duas vezes: com uma cópia da configuração sem `akma` e com a configuração normal;
+5. parar tudo com Ctrl-C no `run.sh`.
+
+Os testes `TestAkma*` do banco de testes (seção 1) rodaram antes, com o free5GC parado. Passaram, e a saída deles já mostra as mesmas mensagens, nos dois métodos de autenticação.
+
+Na tela do UE, às 08:33:01.451:
+
+```
+[nas] [debug] Security Mode Command received
+[nas] [debug] Selected integrity[2] ciphering[0]
+[nas] [info] AKMA key material derived, A-KID[rid0000.atidXlyySARFJ4fb/dIvhrDFIw9s87pSbkajjuuB41NTr0Q=@5gc.mnc093.mcc208.3gppnetwork.org]
+[nas] [debug] Registration accept received
+```
+
+Na tela do `run.sh`, filtrando a categoria `AKMA` (horário, NF, mensagem):
+
+```
+08:32:20.956 [INFO][AANF][AKMA] Routing Indicators [0000]; K_AF lifetime 1h0m0s; AF_IDs authorized by local policy: [af1.akma.example.FF00000001]
+08:33:01.412 [INFO][UDM][AKMA]  AKMA indication sent to the AUSF for imsi-208930000000001, Routing Indicator 0000
+08:33:01.414 [INFO][AUSF][AKMA] AKMA indication received from the UDM for imsi-208930000000001, Routing Indicator 0000
+08:33:01.448 [INFO][AUSF][AKMA] K_AKMA and A-KID derived for imsi-208930000000001: A-KID rid0000.atidXlyySARFJ4fb/dIvhrDFIw9s87pSbkajjuuB41NTr0Q=@5gc.mnc093.mcc208.3gppnetwork.org
+08:33:01.480 [INFO][AUSF][AKMA] AAnF for Routing Indicator 0000: http://192.168.16.130:8000 (discovered at the NRF)
+08:33:01.494 [INFO][AANF][AKMA] AKMA context of imsi-208930000000001 registered, A-KID rid0000.atidXlyySARFJ4fb/dIvhrDFIw9s87pSbkajjuuB41NTr0Q=@5gc.mnc093.mcc208.3gppnetwork.org
+08:33:01.494 [INFO][AUSF][AKMA] AKMA key material of imsi-208930000000001 registered at the AAnF
+08:35:31.055 [INFO][AANF][AKMA] K_AF of imsi-208930000000001 provided to AF_ID af1.akma.example.FF00000001 for A-KID rid0000.atidXlyy…=@…, expires 2026-10-18T16:35:31Z
+08:35:31.073 [WARN][AANF][AKMA] AF at 192.168.16.129 not authorized for AF_ID af2.akma.example.FF00000001
+```
+
+O UE registra a derivação 3 ms depois do AUSF. O AUSF deriva depois do 5G AKA confirmado (`5g-aka-confirmation`, 200), e o UE deriva ao aceitar o *Security Mode Command* que vem em seguida.
+
+| Critério | Verificação | Resultado em 18/10/2026 |
+|---|---|---|
+| 1 | AAnF sobe com `./run.sh -aanf`, escreve na mesma tela e no mesmo `free5gc.log`, para no Ctrl-C | sobe depois do CHF e registra no NRF (201). As linhas `[AANF]` vão para a tela e para o `free5gc.log` da execução. No Ctrl-C (08:50:21), para o servidor SBI e se descadastra: o NRF registra `NfDeregister Success: AANF [b6f417f0-…]` (204), e o AAnF termina com `AANF App is terminated`. Nenhuma NF fica em execução, e o `cert/aanf_<id>.pem` é apagado pelo NRF |
+| 2 | sequência UDM → AUSF → AAnF em `info`, categoria `AKMA` | a sequência acima, sem nenhuma linha AKMA fora de `info`, salvo o `warning` do AF não autorizado, que é o esperado |
+| 3 | A-KID do UE igual ao do AUSF e do AAnF | igual, caractere a caractere, nas duas autenticações com `akma: true`: `rid0000.atidXlyySARFJ4fb…` às 08:33 e `rid0000.atidmwKSp6kqYpxe72jqwHTlTnnU1n1dnq9wuGWXpvIOmgU=@…` às 08:36 |
+| 4 | sem `akma`, o `nr-ue` age como o original | às 08:36:23, nenhuma linha AKMA no UE. A rede seguiu a assinatura: AUSF e AAnF registraram o A-KID `rid0000.atidOpP7…` `(previous context replaced)`. Às 08:36:32, com `akma: true`, o UE voltou a derivar, com A-KID igual ao da rede |
+| 5 | nenhuma chave nas telas e nos logs | zero cadeias de 64 hexadecimais no `free5gc.log` e na tela do UE; a K_AF entregue, procurada em base64, também não aparece no log |
+| 6 | testes continuam passando | UDM (`processor`, `suci`), AUSF (`processor`) e AAnF (todos os pacotes) localmente; `TestAkma5GAKA`, `TestAkmaEAPAKAPrime` e `TestAkmaWithoutSubscription` na VM |
+
+As duas execuções do critério 4 rodaram sem `sudo`, com `timeout`: o registro e a derivação acontecem antes de o UE precisar do TUN. O `TUN interface could not be setup` que aparece em seguida é esperado.
+
+## 5. Observações de operação
 
 - **UE em `LIMITED-SERVICE`.** O UE do UERANSIM às vezes fica em `MM-DEREGISTERED/LIMITED-SERVICE` na primeira partida, por uma corrida na seleção de célula ("no SI"). Basta reiniciá-lo; não tem relação com o AKMA.
 - **Gatilho de nova autenticação.** O critério 4 foi verificado reiniciando o UE. O `nr-cli` (`UERANSIM/build/nr-cli`) consulta o UE sem `sudo`. O `deregister normal` dele, como gatilho alternativo, não foi verificado: na tentativa, o UE estava sendo reiniciado (`No node found`).

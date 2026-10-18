@@ -57,7 +57,7 @@ O token OAuth2 tem escopo `naanf-akma` e destino `AANF`. O NRF corrigido preench
 | `internal/sbi/consumer/aanf_service.go` (novo), `consumer.go` | descoberta do AAnF, token, `register-anchorkey` |
 | `config/ausfcfg.yaml` | `akma: { enable: true }` |
 
-Logs: o AUSF registra em `info` que o material de um SUPI foi registrado, e o A-KID só em `debug`. K_AUSF e K_AKMA nunca aparecem.
+Logs (categoria `AKMA`): desde o MVP-3a, o AUSF registra em `info` cinco eventos: a indicação recebida do UDM, a derivação com o A-KID, o AAnF selecionado, o registro aceito e, se for o caso, a indicação ignorada por `akma.enable: false`. Falhas vão em `error`. K_AUSF e K_AKMA nunca aparecem. Catálogo em `logs-akma.md`.
 
 ## 6. Como reproduzir numa instalação limpa
 
@@ -81,7 +81,7 @@ cd ~/free5gc/NFs/ausf && go test ./internal/sbi/processor/
 
 Depois de registrar um UE com assinatura AKMA, o log do free5GC deve ter:
 
-- `AKMA key material of imsi-… registered at the AAnF` (categoria `AKMA`, NF `AUSF`);
+- `[AUSF][AKMA]`, nesta ordem: `AKMA indication received from the UDM`, `K_AKMA and A-KID derived`, `AAnF for Routing Indicator … (discovered at the NRF)` e `AKMA key material of imsi-… registered at the AAnF`;
 - no NRF, a descoberta `target-nf-type=AANF` com `routing-indicator`, respondida com 200.
 
 O fluxo completo está em `verificacao.md`.

@@ -1,7 +1,7 @@
 # Matriz de rastreabilidade
 
-**Revisão:** 3.4 (MVP-2: UDM e AUSF; MVP-1b: NRF corrigido; D8, D10 e D13 de 17/10/2026; DV-8 encerrado)
-**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026
+**Revisão:** 3.5 (MVP-3a: derivação no ME do UERANSIM e mensagens AKMA na tela; D14 a D16 de 18/10/2026)
+**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisão 3.5 em 18 de outubro de 2026
 
 *Nota (16/10/2026):* os caminhos da coluna "Implementação" seguem a estrutura anterior ao plano. A estrutura aprovada (plano §3) é: `akma/` → `shared/akma/`; `NFs/aanf/` → `free5gc/aanf/`; `patches/` → `free5gc/patches/`; `af/` → `af/af/`; `ue/` → `af/ue/`. Os caminhos serão atualizados linha a linha à medida que cada MVP os criar. Os desvios citados como DV-n estão em `docs/conformidade/desvios.md`.
 
@@ -95,6 +95,23 @@ Legenda de estado:
 | GPSI via `GET /{ueId}/id-translation-result` | TS 29.503 V19.7.0 | 5.2.2.2.10 | — | — | Pendente — política local |
 | Subscrição `ROAMING_STATUS` com `immediateFlag` | TS 29.503 V19.7.0 | 5.5.2.2.2, 6.4.6.2.8 | — | — | Decisão — DV-2 (configurável, desabilitada) |
 | `POST /{ueId}/registrations/trigger-auth` | TS 33.501 §14.2.6; TS 29.503 §5.3.2.16 | — | — | — | Pendente — defeito D-B |
+
+## Lado UE (ME)
+
+| Requisito | Norma | Cláusula | Implementação | Teste | Estado |
+|---|---|---|---|---|---|
+| ME deriva K_AKMA e A-KID da K_AUSF antes de comunicar com um AF | TS 33.535 V19.0.0 | 6.1; 6.2.1 passo 1 | `af/ue/ueransim/patches/0001-akma-key-derivation.patch` (`NasMm::deriveAkmaKeys`) | VM: A-KID do UE igual ao do AUSF e do AAnF | **Implementado** (MVP-3a, D14); instante da derivação `[INTERPRETAÇÃO]` (`docs/af-side/ue-ueransim.md` §2) |
+| K_AKMA (FC `0x80`) e A-TID (FC `0x81`) no ME; SUPI = IMSI | TS 33.535 V19.0.0; TS 33.501 V19.7.0 | A.2, A.3; A.7.0 | idem (`keys::CalculateKAkma`, `keys::CalculateATid`) | A-TID: VM (A-KID igual ao da rede). K_AKMA: vetores e K_AF no MVP-4 | **Parcial** — K_AKMA ainda não conferida |
+| A-KID no ME: RID do SUCI, A-TID em base64, domínio com MNC de três dígitos | TS 33.535 V19.0.0; TS 29.522 V19.7.0; TS 23.003 V19.7.0 | 6.1; Tab. 5.14.5.4.2-1; 2.2B, 28.2 | idem (`keys::ConstructAKid`) | VM, RID `"0000"` | **Implementado** (MVP-3a) |
+| Opção `akma` na configuração do UE | — | — | idem; `0002-free5gc-ue-akma.patch` | VM: sem a opção, nenhuma derivação | **Implementado** (MVP-3a) — decisão do plano |
+
+## Logs
+
+| Requisito | Origem | Implementação | Teste | Estado |
+|---|---|---|---|---|
+| Nenhuma chave em log, em nível algum | plano, critério de todos os MVPs | UDM, AUSF, AAnF, UERANSIM | `TestNoKeyInLogs` (AAnF); VM: nenhuma cadeia de 64 hexadecimais nos logs e na tela do UE | **Verificado** em 18/10/2026 |
+| Eventos AKMA em `info`, categoria `AKMA`, com SUPI, A-KID e AF_ID | D16 | `free5gc/patches/{udm,ausf}/`, `free5gc/aanf/` | VM (`docs/free5gc-side/verificacao.md` §4) | **Implementado** (MVP-3a) |
+| AAnF na tela do `run.sh` (`-aanf`) | D15 | `free5gc/patches/run/0001-aanf-option.patch` | VM | **Implementado** (MVP-3a) |
 
 ## Ponto de referência Ua*
 

@@ -1,6 +1,6 @@
 # Tutorial — AKMA sobre o free5GC
 
-Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-2.
+Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-3a.
 
 | Parte | Conteúdo | Disponível |
 |---|---|---|
@@ -8,9 +8,10 @@ Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia of
 | 2 | Conferir as derivações de chave | sim |
 | 3 | Instalar o AAnF no free5GC | sim |
 | 4 | Habilitar AKMA no UDM e no AUSF; provisionar um assinante | sim |
-| 5 | Escrever um AF que usa AKMA | MVP-3 |
-| 6 | Preparar o UE (UERANSIM) | MVP-4 |
-| 7 | Executar o fluxo de ponta a ponta | MVP-5 |
+| 5 | Ver o AKMA na tela: free5GC e UERANSIM | sim |
+| 6 | Escrever um AF que usa AKMA | MVP-3 |
+| 7 | Preparar o UE (UERANSIM) para o Ua\* | MVP-4 |
+| 8 | Executar o fluxo de ponta a ponta | MVP-5 |
 
 ---
 
@@ -21,7 +22,7 @@ Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia of
 | free5GC | v4.2.3, instalado pelo guia oficial, com `TestRegistration` passando |
 | Go | 1.26.2 — a mesma do free5GC |
 | Python | 3.10 ou mais recente (para o oráculo de referência) |
-| UERANSIM | v3.2.6 (a partir da parte 6) |
+| UERANSIM | v3.2.6 (a partir da parte 4; com *patch* a partir da parte 5) |
 
 Topologia de referência (ADR-0001-R2): o free5GC e o AAnF numa máquina; o AF e este repositório em outra. Uma única máquina também serve para as partes 1 e 2.
 
@@ -273,8 +274,85 @@ Três testes devem passar:
 - `TestAkma5GAKA` e `TestAkmaEAPAKAPrime`: o UE de teste deriva a K_AF da própria K_AUSF, e ela é igual à que o AAnF entrega;
 - `TestAkmaWithoutSubscription`: sem assinatura, nada é registrado.
 
-**Pelo UERANSIM.** Inicie o free5GC (`./run.sh`), o AAnF (`run-aanf.sh start`), o gNB e o UE. No log do free5GC deve aparecer `AKMA key material of imsi-208930000000001 registered at the AAnF`. Com o AAnF em `logger.level: debug`, o log dele (`~/free5gc/log/aanf/aanf.log`) mostra o A-KID guardado, da forma `rid0000.atid<44 caracteres>@5gc.mnc093.mcc208.3gppnetwork.org`.
+**Pelo UERANSIM.** Inicie o free5GC (`./run.sh`), o AAnF (`run-aanf.sh start`), o gNB e o UE. No log do free5GC deve aparecer `AKMA key material of imsi-208930000000001 registered at the AAnF`. O log do AAnF (`~/free5gc/log/aanf/aanf.log`) mostra o A-KID guardado, da forma `rid0000.atid<44 caracteres>@5gc.mnc093.mcc208.3gppnetwork.org`. A parte 5 põe tudo isso numa tela só.
 
 Se o UE do UERANSIM ficar em `MM-DEREGISTERED/LIMITED-SERVICE` logo depois de iniciar, reinicie o UE. É uma corrida da seleção de célula do UERANSIM ("no SI"), sem relação com o AKMA.
 
 Se o AAnF estiver parado, o UE se registra mesmo assim. O AUSF só registra a falha no log: o AKMA não interfere na autenticação primária.
+
+---
+
+## 5. Ver o AKMA na tela: free5GC e UERANSIM
+
+Até aqui, o AKMA só aparecia no log de arquivo. Esta parte faz duas coisas:
+
+- os eventos principais aparecem no terminal do `run.sh`, no formato das outras NFs, com o AAnF no mesmo terminal;
+- o UE do UERANSIM passa a derivar K_AKMA e o A-KID e mostra o A-KID na tela.
+
+Assim dá para acompanhar o mesmo UE nas duas telas. O catálogo das mensagens está em `docs/free5gc-side/logs-akma.md`, e o lado do UE em `docs/af-side/ue-ueransim.md`.
+
+### 5.1 free5GC
+
+Os *patches* do UDM e do AUSF da parte 4 já trazem as mensagens. Falta a opção `-aanf` do `run.sh`, com o free5GC parado:
+
+```bash
+~/akma-free5gc/free5gc/scripts/patch-nf.sh run apply
+```
+
+Se o AAnF estiver rodando pelo `run-aanf.sh`, pare-o: os dois usariam a mesma porta.
+
+```bash
+~/akma-free5gc/free5gc/scripts/run-aanf.sh stop
+```
+
+Daqui em diante, inicie o free5GC assim:
+
+```bash
+cd ~/free5gc && ./run.sh -aanf
+```
+
+O AAnF aparece na mesma tela, com uma linha de partida que mostra o que ele atende:
+
+```
+[INFO][AANF][AKMA] Routing Indicators [0000]; K_AF lifetime 1h0m0s; AF_IDs authorized by local policy: [af1.akma.example.FF00000001]
+```
+
+### 5.2 UERANSIM
+
+Na máquina do UERANSIM, aplique os *patches* do UE. O *script* guarda `build/nr-ue.orig` e recompila só o `nr-ue`; na primeira vez, leva alguns minutos.
+
+```bash
+~/akma-free5gc/af/scripts/patch-ueransim.sh apply
+```
+
+O *patch* liga a opção `akma: true` no `config/free5gc-ue.yaml`. Se você usa outro arquivo de configuração, acrescente essa linha a ele.
+
+### 5.3 O que procurar
+
+Inicie o gNB e o UE como na parte 4. Na tela do UE, logo depois do `Security Mode Command received`:
+
+```
+[nas] [info] AKMA key material derived, A-KID[rid0000.atid<44 caracteres>@5gc.mnc093.mcc208.3gppnetwork.org]
+```
+
+Na tela do `run.sh`, as linhas com `[AKMA]`, nesta ordem:
+
+1. `[UDM][AKMA] AKMA indication sent to the AUSF for imsi-…, Routing Indicator 0000`;
+2. `[AUSF][AKMA] AKMA indication received from the UDM …`;
+3. `[AUSF][AKMA] K_AKMA and A-KID derived for imsi-…: A-KID …`;
+4. `[AUSF][AKMA] AAnF for Routing Indicator 0000: http://… (discovered at the NRF)`;
+5. `[AANF][AKMA] AKMA context of imsi-… registered, A-KID …`;
+6. `[AUSF][AKMA] AKMA key material of imsi-… registered at the AAnF`.
+
+O A-KID tem de ser o mesmo, caractere a caractere, na tela do UE, na linha 3 e na linha 5. A cada nova autenticação, o UE e a rede trocam de A-KID juntos, e o AAnF acrescenta `(previous context replaced)`.
+
+Quando um AF pedir a K_AF (parte 6), o AAnF mostra `K_AF of imsi-… provided to AF_ID … for A-KID …, expires …`. Um AF fora da política aparece em `WARN`.
+
+Nenhuma chave aparece, em nenhuma das telas. No arquivo de log, as mesmas mensagens estão no formato `chave=valor`; para filtrá-las:
+
+```bash
+grep 'CAT="AKMA"' ~/free5gc/log/<data>/free5gc.log
+```
+
+Para voltar ao comportamento anterior: `patch-nf.sh run revert` e `patch-ueransim.sh revert`.
+
