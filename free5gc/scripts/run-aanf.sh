@@ -12,6 +12,7 @@ set -euo pipefail
 dir="${FREE5GC_DIR:-$HOME/free5gc}"
 logdir="$dir/log/aanf"
 pidfile="$logdir/aanf.pid"
+export GIN_MODE=release   # as run.sh: no gin debug lines on the console
 cmd=(./bin/aanf -c ./config/aanfcfg.yaml -l "$logdir/aanf.log")
 
 running() {

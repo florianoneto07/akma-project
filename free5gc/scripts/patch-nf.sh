@@ -4,15 +4,16 @@
 #
 # Usage: patch-nf.sh <nf> apply|revert|status [patch-dir]
 #   <nf>        directory under $FREE5GC_DIR/NFs (e.g. nrf, ausf, udm),
-#               "test" for the Go test bench in $FREE5GC_DIR/test, or
-#               "config" for the configuration files in $FREE5GC_DIR/config
+#               "test" for the Go test bench in $FREE5GC_DIR/test,
+#               "config" for the configuration files in $FREE5GC_DIR/config, or
+#               "run" for run.sh and force_kill.sh in $FREE5GC_DIR
 #   patch-dir   default: the patches/<nf> directory next to this script's
 #               parent (free5gc/patches/<nf> in the repository)
 #   FREE5GC_DIR free5GC directory (default: ~/free5gc)
 #
 # apply   checks every patch, applies them in order with git apply, keeps a
 #         copy of the original binary as bin/<nf>.orig (once) and runs
-#         "make <nf>" (nothing is built for "test" and "config").
+#         "make <nf>" (nothing is built for "test", "config" and "run").
 # revert  reverses the patches in the opposite order and restores
 #         bin/<nf> from bin/<nf>.orig.
 # status  tells whether the patches are applied.
@@ -23,11 +24,11 @@ action="${2:?usage: patch-nf.sh <nf> apply|revert|status [patch-dir]}"
 here="$(cd "$(dirname "$0")/.." && pwd)"
 patch_dir="${3:-$here/patches/$nf}"
 dir="${FREE5GC_DIR:-$HOME/free5gc}"
-if [ "$nf" = test ] || [ "$nf" = config ]; then
-    src="$dir/$nf"
-else
-    src="$dir/NFs/$nf"
-fi
+case "$nf" in
+test | config) src="$dir/$nf"; build=false ;;
+run) src="$dir"; build=false ;;
+*) src="$dir/NFs/$nf"; build=true ;;
+esac
 bin="$dir/bin/$nf"
 
 if ! command -v go >/dev/null && [ -x /usr/local/go/bin/go ]; then
@@ -39,9 +40,12 @@ fi
 root="$(git -C "$src" rev-parse --show-toplevel 2>/dev/null)" || { echo "$src is not in a git checkout" >&2; exit 1; }
 prefix="$(git -C "$src" rev-parse --show-prefix)"
 gitapply() { git -C "$root" apply ${prefix:+--directory="$prefix"} "$@"; }
-gitstatus() { git -C "$root" status --porcelain "$@" -- "${prefix:-.}"; }
 mapfile -t patches < <(find "$patch_dir" -maxdepth 1 -name '*.patch' | sort)
 [ "${#patches[@]}" -gt 0 ] || { echo "no patch in $patch_dir" >&2; exit 1; }
+# Files touched by the patches, relative to the top level; only they are
+# checked for local changes.
+mapfile -t files < <(for p in "${patches[@]}"; do gitapply --numstat "$p"; done | cut -f3 | sort -u)
+gitstatus() { git -C "$root" status --porcelain "$@" -- "${files[@]}"; }
 
 applied() {
     local p
@@ -59,7 +63,6 @@ apply)
     if applied; then
         echo "$nf: patches already applied"
     else
-        # Untracked files (e.g. config/aanfcfg.yaml) do not block a patch.
         if [ -n "$(gitstatus --untracked-files=no)" ]; then
             echo "$src has local changes; not applying" >&2
             gitstatus --untracked-files=no >&2
@@ -68,7 +71,7 @@ apply)
         for p in "${patches[@]}"; do gitapply --check "$p"; done
         for p in "${patches[@]}"; do gitapply "$p"; echo "applied $(basename "$p")"; done
     fi
-    if [ "$nf" = test ] || [ "$nf" = config ]; then
+    if [ "$build" = false ]; then
         echo "$nf patched; nothing to build"
         exit 0
     fi
