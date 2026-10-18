@@ -62,7 +62,7 @@ func New(s *config.Settings, p KeyProvider) *Server {
 		nonces: newNonceStore(s.NonceLifetime),
 		keys:   newKeyCache(p, s.KafExpiry),
 		akid:   akid.DefaultOptions(),
-		now:    time.Now,
+		now:    func() time.Time { return time.Now().Add(s.ClockOffset) },
 	}
 }
 

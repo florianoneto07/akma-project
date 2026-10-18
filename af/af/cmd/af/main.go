@@ -51,6 +51,9 @@ func run(cfgPath, logPath string) error {
 	}
 	logger.MainLog.Infof("AF_ID %s; realm %q; qop %v; nonce lifetime %s; K_AF expiry policy %s; AAnF %s",
 		s.AfID.Transport(), s.Realm, s.Qop, s.NonceLifetime, s.KafExpiry, s.AanfURI)
+	if s.ClockOffset != 0 {
+		logger.MainLog.Warnf("Clock offset %s (test only): K_AF expiry is judged on a shifted clock", s.ClockOffset)
+	}
 
 	srv := &http.Server{
 		Addr:              s.Listen,

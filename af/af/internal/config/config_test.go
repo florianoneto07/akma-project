@@ -40,6 +40,7 @@ func TestInvalid(t *testing.T) {
 		"kafExpiry":           func(c *Configuration) { c.KafExpiry = "renew" },
 		"realmPrefix with @":  func(c *Configuration) { c.RealmPrefix = "a@b" },
 		"path":                func(c *Configuration) { c.Path = "ua" },
+		"clockOffset":         func(c *Configuration) { c.ClockOffset = "two hours" },
 	} {
 		t.Run(name, func(t *testing.T) {
 			c := base()
@@ -52,6 +53,15 @@ func TestInvalid(t *testing.T) {
 }
 
 // TestSampleConfig loads the configuration of the laboratory.
+func TestClockOffset(t *testing.T) {
+	c := base()
+	c.Configuration.ClockOffset = "-2h"
+	s, err := c.Settings()
+	if err != nil || s.ClockOffset != -2*time.Hour {
+		t.Fatalf("settings %+v, %v", s, err)
+	}
+}
+
 func TestSampleConfig(t *testing.T) {
 	s, err := Load("../../../config/afcfg.yaml")
 	if err != nil {

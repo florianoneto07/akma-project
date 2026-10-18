@@ -65,6 +65,10 @@ type Configuration struct {
 	// AanfURI is the apiRoot of the AAnF, locally configured (TS 33.535
 	// cl. 6.7).
 	AanfURI string `yaml:"aanfUri"`
+	// ClockOffset shifts the clock of the AF, a Go duration ("2h", "-2h").
+	// Test only: it simulates an AF whose clock disagrees with the AAnF's
+	// (MVP-5 negative tests).
+	ClockOffset string `yaml:"clockOffset,omitempty"`
 }
 
 // Logger holds the log settings, as in the free5GC configurations.
@@ -85,6 +89,7 @@ type Settings struct {
 	NonceLifetime time.Duration
 	KafExpiry     KafExpiry
 	AanfURI       string
+	ClockOffset   time.Duration
 	Logger        Logger
 }
 
@@ -157,6 +162,13 @@ func (c Config) Settings() (*Settings, error) {
 			errs = append(errs, fmt.Errorf("nonceLifetime: %q is not a positive duration", cf.NonceLifetime))
 		}
 		s.NonceLifetime = d
+	}
+	if cf.ClockOffset != "" {
+		d, err := time.ParseDuration(cf.ClockOffset)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("clockOffset: %q is not a duration", cf.ClockOffset))
+		}
+		s.ClockOffset = d
 	}
 	switch s.KafExpiry {
 	case "":

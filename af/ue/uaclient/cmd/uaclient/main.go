@@ -28,6 +28,7 @@ func main() {
 		aKid      = flag.String("akid", "", "A-KID")
 		kafHex    = flag.String("kaf", "", "K_AF, 64 hexadecimal characters")
 		kafB64    = flag.String("kaf-base64", "", "K_AF in base64")
+		kafFile   = flag.String("kaf-file", "", "file holding K_AF, 64 hexadecimal characters")
 		vector    = flag.String("vector", "", "take A-KID and K_AF from this vector of -vectors")
 		vectors   = flag.String("vectors", "shared/akma/testdata/vectors.json", "vectors file of shared/akma")
 		qop       = flag.String("qop", "auth", "qop: auth or auth-int")
@@ -40,7 +41,7 @@ func main() {
 	)
 	flag.Parse()
 	o := options{
-		fqdn: *fqdn, connect: *connect, path: *path, aKid: *aKid, kafHex: *kafHex, kafB64: *kafB64,
+		fqdn: *fqdn, connect: *connect, path: *path, aKid: *aKid, kafHex: *kafHex, kafB64: *kafB64, kafFile: *kafFile,
 		vector: *vector, vectors: *vectors, qop: *qop, userAgent: *userAgent, count: *count,
 		bind: *bind, nrCli: *nrCli, ue: *ue, uaStarID: *uaStarID,
 	}
@@ -55,16 +56,29 @@ func main() {
 }
 
 type options struct {
-	fqdn, connect, path, aKid, kafHex, kafB64, vector, vectors, qop, userAgent string
-	count                                                                      int
-	bind, nrCli, ue, uaStarID                                                  string
+	fqdn, connect, path, aKid, kafHex, kafB64, kafFile, vector, vectors, qop, userAgent string
+	count                                                                               int
+	bind, nrCli, ue, uaStarID                                                           string
 }
 
 func run(o options) error {
 	var kaf kdf.Key
 	var err error
 	aKid := o.aKid
+	// An explicit key or vector takes precedence over the ME, so that a test
+	// can present an earlier A-KID and K_AF from the namespace of the UE.
 	switch {
+	case o.kafHex != "":
+		kaf, err = codec.ParseHexKey(o.kafHex)
+	case o.kafB64 != "":
+		kaf, err = parseBase64Key(o.kafB64)
+	case o.kafFile != "":
+		var raw []byte
+		if raw, err = os.ReadFile(o.kafFile); err == nil {
+			kaf, err = codec.ParseHexKey(strings.TrimSpace(string(raw)))
+		}
+	case o.vector != "":
+		aKid, kaf, err = fromVector(o.vectors, o.vector)
 	case o.nrCli != "":
 		if o.ue == "" {
 			return errors.New("-ue is required with -nr-cli")
@@ -75,14 +89,8 @@ func run(o options) error {
 		if err == nil {
 			fmt.Printf("ME: K_AF derived for AF_ID %s.%s\n", o.fqdn, o.uaStarID)
 		}
-	case o.vector != "":
-		aKid, kaf, err = fromVector(o.vectors, o.vector)
-	case o.kafHex != "":
-		kaf, err = codec.ParseHexKey(o.kafHex)
-	case o.kafB64 != "":
-		kaf, err = parseBase64Key(o.kafB64)
 	default:
-		err = errors.New("give -nr-cli, -vector, -kaf or -kaf-base64")
+		err = errors.New("give -nr-cli, -vector, -kaf, -kaf-base64 or -kaf-file")
 	}
 	if err != nil {
 		return err
