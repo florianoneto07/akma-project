@@ -1,6 +1,6 @@
 # Plano de desenvolvimento por MVPs
 
-**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026).
+**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026).
 **Data:** 15 de outubro de 2026; revisão 3 em 16 de outubro de 2026; aprovação em 16 de outubro de 2026
 **Base:** documentos `00` a `04`, Adendo E, ADR-0001-R2, ADR-0002, ADR-0003, `docs/baseline/ambiente-verificado.md`, `docs/baseline/conferencia-normativa.md`, `docs/literatura/analise-dos-artigos.md`, `docs/conformidade/desvios.md`
 **Revisão 2 (15/10/2026):** conferido contra as normas do acervo (hoje em `specs/`).
@@ -462,6 +462,30 @@ Diferenças em relação à tabela de arquivos:
 ---
 
 ### MVP-4 — Lado UE: derivação no ME e envio do A-KID
+
+**Estado (18/10/2026):** implementado e verificado na VM do free5GC, com o UE no próprio *namespace* e o cliente Ua\* indo ao AF pelo plano de usuário. Documentação em `docs/af-side/{ue-ueransim,ua-client,teste-ue}.md` e `docs/free5gc-side/plano-de-usuario.md`.
+
+| Critério | Resultado |
+|---|---|
+| 1 | Atendido: o A-KID do UE é igual ao do AUSF, ao do AAnF e ao do AF, em duas autenticações |
+| 2 | Atendido: três sessões Ua\* com a K_AF do ME, a partir de 10.60.0.1, com `rspauth` conferido |
+| 3 | Atendido: `nr-akma-selftest` com 5 vetores conferidos e 3 de NFKC recusados na K_AF (DV-4), com K_AKMA e A-KID conferidos |
+| 4 | Atendido: depois de `deregister normal` e novo registro, A-KID novo aceito; o antigo recebe `403 K_AKMA_NOT_PRESENT` do AAnF |
+| 5 | Atendido: nenhum comando do `nr-cli` mostra a K_AKMA |
+
+Diferenças em relação à tabela de arquivos e decisões tomadas na implementação:
+
+- **Antecipação (D14).** K_AKMA, A-TID, A-KID e a opção `akma` entraram no MVP-3a (*patches* 0001 e 0002). O MVP-4 acrescentou o 0003 (K_AF, comando `akma-kaf` do `nr-cli`, `nr-akma-selftest`) e o 0004 (`gnbSearchList` no `veth`).
+- **Um comando só.** O `akma-kaf <af-fqdn> [<id Ua*>]` devolve A-KID, AF_ID e K_AF.
+- **Autoteste.** É um executável separado (`nr-akma-selftest`), que lê o `vectors.json` com o *parser* YAML do UERANSIM.
+- **Cliente.** Ele mesmo chama o `nr-cli` (`-nr-cli`, `-ue`), e a K_AF nunca passa por linha de comando. `-bind` põe o endereço da sessão como origem.
+- **Script.** `af/scripts/ue-netns.sh` (`up`, `ue`, `cli`, `ua`), no lugar de `ue-ua.sh`, também cria o *namespace* do UE.
+- **Plano de usuário.** As falhas desde o MVP-1 tinham duas causas:
+  - o UE rodava no *namespace* do host, onde o endereço da sessão é local e o kernel descarta os pacotes que saem da `upfgtp`;
+  - faltava o NAT do N6.
+
+  Correções: UE no *namespace* `ueransim-ue`, com `veth` e `linkIp: 10.100.0.1` no gNB (mudança manual), e `free5gc/scripts/n6-nat.sh`. Nada disso é persistente.
+- **`patch-ueransim.sh`.** Confere a série numa cópia temporária, porque o 0003 depende do 0001, e compila um alvo por vez com o `cmake` 3.31 que configurou a árvore.
 
 **Objetivo.** O `nr-ue` deriva K_AKMA, A-TID e A-KID após a autenticação primária e K_AF sob demanda; o cliente Ua\* usa o A-KID e a K_AF para autenticar-se no AF, e as chaves do UE e da rede coincidem.
 

@@ -1,6 +1,6 @@
 # Tutorial — AKMA sobre o free5GC
 
-Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-3.
+Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-4.
 
 | Parte | Conteúdo | Disponível |
 |---|---|---|
@@ -10,7 +10,7 @@ Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia of
 | 4 | Habilitar AKMA no UDM e no AUSF; provisionar um assinante | sim |
 | 5 | Ver o AKMA na tela: free5GC e UERANSIM | sim |
 | 6 | Escrever um AF que usa AKMA | sim |
-| 7 | Preparar o UE (UERANSIM) para o Ua\* | MVP-4 |
+| 7 | Preparar o UE (UERANSIM) para o Ua\* | sim |
 | 8 | Executar o fluxo de ponta a ponta | MVP-5 |
 
 ---
@@ -319,17 +319,38 @@ O AAnF aparece na mesma tela, com uma linha de partida que mostra o que ele aten
 
 ### 5.2 UERANSIM
 
-Na máquina do UERANSIM, aplique os *patches* do UE. O *script* guarda `build/nr-ue.orig` e recompila só o `nr-ue`; na primeira vez, leva alguns minutos.
+Na máquina do UERANSIM, aplique os *patches* do UE. O *script* guarda `build/nr-ue.orig` e recompila o `nr-ue` e o autoteste `nr-akma-selftest`; na primeira vez, leva alguns minutos.
 
 ```bash
 ~/akma-free5gc/af/scripts/patch-ueransim.sh apply
 ```
 
-O *patch* liga a opção `akma: true` no `config/free5gc-ue.yaml`. Se você usa outro arquivo de configuração, acrescente essa linha a ele.
+Os *patches* mudam duas coisas no `config/free5gc-ue.yaml`:
+
+- ligam a opção `akma: true`;
+- fazem o UE procurar o gNB em 10.100.0.1.
+
+Se você usa outro arquivo de configuração, faça o mesmo nele.
+
+O endereço 10.100.0.1 é o lado do host de um par `veth` que liga o host ao *namespace* de rede do UE. Com o UERANSIM e o free5GC na mesma máquina, o UE precisa desse *namespace* para que a sessão PDU funcione (parte 7; `docs/af-side/ue-ueransim.md` §5). Faça o gNB escutar nesse endereço e crie o *namespace*, uma vez por inicialização da máquina:
+
+```bash
+sed -i 's/^linkIp: 127.0.0.1 /linkIp: 10.100.0.1 /' ~/UERANSIM/config/free5gc-gnb.yaml
+```
+
+```bash
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh up
+```
+
+Daqui em diante, o UE roda no *namespace*:
+
+```bash
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh ue
+```
 
 ### 5.3 O que procurar
 
-Inicie o gNB e o UE como na parte 4. Na tela do UE, logo depois do `Security Mode Command received`:
+Inicie o gNB como na parte 4 e o UE com `ue-netns.sh ue`. Na tela do UE, logo depois do `Security Mode Command received`:
 
 ```
 [nas] [info] AKMA key material derived, A-KID[rid0000.atid<44 caracteres>@5gc.mnc093.mcc208.3gppnetwork.org]
@@ -410,7 +431,7 @@ Na tela, a partida mostra o AF_ID e o `realm`:
 
 ### 6.3 Testar sem UE
 
-O UE do UERANSIM só entrega a K_AF a partir da parte 7. Até lá, faça o papel do UE com um vetor do projeto, em dois passos:
+O UE do UERANSIM só entrega a K_AF na parte 7. Antes disso, faça o papel do UE com um vetor do projeto, em dois passos:
 
 1. semeie no AAnF o contexto do vetor `testbed-ue`, como na seção 3.6 (`seed register`);
 2. rode o cliente Ua\* com o mesmo vetor:
@@ -441,4 +462,77 @@ Os resultados do laboratório estão em `docs/af-side/teste-af.md`.
 ### 6.4 Limitações
 
 Sem TLS, o A-KID e o conteúdo trafegam em claro, e o AF só é autenticado pelo `rspauth` (`docs/af-side/ua-star.md` §10). É um protocolo de laboratório; o perfil normativo, com TLS, fica para depois do MVP.
+
+---
+
+## 7. Preparar o UE (UERANSIM) para o Ua\*
+
+Na parte 5, o UE passou a derivar K_AKMA e o A-KID. Agora ele deriva também a K_AF de um AF e a entrega a uma aplicação, que vai ao AF pela sessão PDU (TS 33.535 §6.2.1 passo 1). O lado UE está em `docs/af-side/ue-ueransim.md` e o cliente em `docs/af-side/ua-client.md`.
+
+### 7.1 Abrir o plano de usuário
+
+Com o UE no *namespace* da parte 5, falta o NAT do N6 na máquina do free5GC. Ele faz a resposta do AF, ou da Internet, voltar ao UE (`docs/free5gc-side/plano-de-usuario.md`). Não é persistente: repita depois de reiniciar a máquina.
+
+```bash
+sudo ~/akma-free5gc/free5gc/scripts/n6-nat.sh apply
+```
+
+Com o free5GC, o gNB e o UE no ar, o UE deve alcançar o AF e a Internet pelo `uesimtun0`:
+
+```bash
+sudo ip netns exec ueransim-ue ping -I uesimtun0 -c 3 192.168.16.129
+```
+
+### 7.2 Conferir as derivações do UE
+
+O autoteste compara as derivações do UE com os vetores do projeto, os mesmos da parte 2:
+
+```bash
+~/UERANSIM/build/nr-akma-selftest ~/akma-free5gc/shared/akma/testdata/vectors.json
+```
+
+O resultado esperado é `5 passed, 3 refused (DV-4), 0 failed`. Os três recusados têm FQDN não ASCII, que o UE não deriva, porque não aplica NFKC.
+
+### 7.3 Autenticar no AF a partir do UE
+
+Na máquina do free5GC, compile o cliente Ua\* com `~/akma-free5gc/af/scripts/build-af.sh`, ou copie o `af/build/bin/uaclient` da máquina do AF para o mesmo lugar. Com o AF da parte 6 no ar:
+
+```bash
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -n 3
+```
+
+O cliente roda no *namespace* do UE, com o seu usuário:
+
+- pede ao UE, pelo `nr-cli`, o A-KID e a K_AF de `af1.akma.example`;
+- vai ao AF a partir do endereço da sessão PDU;
+- confere o `rspauth`.
+
+```
+ME: K_AF derived for AF_ID af1.akma.example.FF00000001
+AF af1.akma.example at 192.168.16.129:8080 from 10.60.0.1, A-KID rid0000.atid…
+session established (nc 00000001): AF authenticated by rspauth; K_AF valid until …
+```
+
+O mesmo A-KID aparece nas telas do UE, do free5GC (AUSF e AAnF) e do AF. Na tela do UE aparece ainda `[app] [info] AKMA K_AF derived for AF_ID[af1.akma.example.FF00000001], …`.
+
+### 7.4 Nova autenticação
+
+Force uma nova autenticação primária:
+
+```bash
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh cli imsi-208930000000001 -e "deregister normal"
+```
+
+O UE volta a se registrar sozinho, com autenticação nova. O que muda:
+
+- o UE e a rede derivam um A-KID novo;
+- o AAnF registra `(previous context replaced)`;
+- o cliente Ua\* passa a usar o A-KID novo;
+- um pedido de K_AF com o A-KID antigo recebe `403 K_AKMA_NOT_PRESENT` do AAnF.
+
+A sequência completa e os resultados do laboratório estão em `docs/af-side/teste-ue.md`.
+
+### 7.5 Limitações
+
+O `nr-cli` é uma interface de teste: entrega a K_AF de qualquer AF a qualquer processo local da máquina. A K_AKMA nunca sai do UE (TS 33.535 §4.4.3).
 

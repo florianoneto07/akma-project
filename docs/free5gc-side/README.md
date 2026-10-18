@@ -22,5 +22,6 @@ Base de código: free5GC v4.2.3 (`docs/baseline/ambiente-verificado.md`).
 | `assinatura-akma.md` — `akmaAllowed` e `routingId` no UDR | MVP-2 | escrito (17/10/2026) |
 | `verificacao.md` — banco de testes, regressão e UERANSIM | MVP-2, MVP-3a | escrito (17/10/2026); seção 4 em 18/10/2026 |
 | `logs-akma.md` — mensagens AKMA na tela do `run.sh`; opção `-aanf` | MVP-3a | escrito (18/10/2026) |
+| `plano-de-usuario.md` — do UE ao AF pelo N6: diagnóstico e NAT | MVP-4 | escrito (18/10/2026) |
 
 O que é comum aos dois lados — KDF, formatos de identificador, codificação, vetores — fica em `docs/shared/`.

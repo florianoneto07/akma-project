@@ -1,7 +1,7 @@
 # Matriz de rastreabilidade
 
-**Revisão:** 3.6 (MVP-3: AF e Ua\* simplificado; DV-5 e DV-6 implementados)
-**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 e 3.6 em 18 de outubro de 2026
+**Revisão:** 3.7 (MVP-4: K_AF no ME do UERANSIM, `nr-cli`, autoteste, cliente Ua\* no UE pelo plano de usuário; DV-4 implementado)
+**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 a 3.7 em 18 de outubro de 2026
 
 *Nota (16/10/2026):* os caminhos da coluna "Implementação" seguem a estrutura anterior ao plano. A estrutura aprovada (plano §3) é: `akma/` → `shared/akma/`; `NFs/aanf/` → `free5gc/aanf/`; `patches/` → `free5gc/patches/`; `af/` → `af/af/`; `ue/` → `af/ue/`. Os caminhos serão atualizados linha a linha à medida que cada MVP os criar. Os desvios citados como DV-n estão em `docs/conformidade/desvios.md`.
 
@@ -101,9 +101,13 @@ Legenda de estado:
 | Requisito | Norma | Cláusula | Implementação | Teste | Estado |
 |---|---|---|---|---|---|
 | ME deriva K_AKMA e A-KID da K_AUSF antes de comunicar com um AF | TS 33.535 V19.0.0 | 6.1; 6.2.1 passo 1 | `af/ue/ueransim/patches/0001-akma-key-derivation.patch` (`NasMm::deriveAkmaKeys`) | VM: A-KID do UE igual ao do AUSF e do AAnF | **Implementado** (MVP-3a, D14); instante da derivação `[INTERPRETAÇÃO]` (`docs/af-side/ue-ueransim.md` §2) |
-| K_AKMA (FC `0x80`) e A-TID (FC `0x81`) no ME; SUPI = IMSI | TS 33.535 V19.0.0; TS 33.501 V19.7.0 | A.2, A.3; A.7.0 | idem (`keys::CalculateKAkma`, `keys::CalculateATid`) | A-TID: VM (A-KID igual ao da rede). K_AKMA: vetores e K_AF no MVP-4 | **Parcial** — K_AKMA ainda não conferida |
+| K_AKMA (FC `0x80`) e A-TID (FC `0x81`) no ME; SUPI = IMSI | TS 33.535 V19.0.0; TS 33.501 V19.7.0 | A.2, A.3; A.7.0 | `af/ue/ueransim/patches/0001-akma-key-derivation.patch` (`keys::CalculateKAkma`, `keys::CalculateATid`) | `nr-akma-selftest` (8 vetores do MVP-0); VM (A-KID igual ao da rede) | **Implementado** (MVP-3a; conferido no MVP-4) |
 | A-KID no ME: RID do SUCI, A-TID em base64, domínio com MNC de três dígitos | TS 33.535 V19.0.0; TS 29.522 V19.7.0; TS 23.003 V19.7.0 | 6.1; Tab. 5.14.5.4.2-1; 2.2B, 28.2 | idem (`keys::ConstructAKid`) | VM, RID `"0000"` | **Implementado** (MVP-3a) |
 | Opção `akma` na configuração do UE | — | — | idem; `0002-free5gc-ue-akma.patch` | VM: sem a opção, nenhuma derivação | **Implementado** (MVP-3a) — decisão do plano |
+| K_AF no ME, sob demanda, para um AF_ID | TS 33.535 V19.0.0; TS 33.220 V19.1.0 | 6.2.1 passo 1; A.4; Anexo H | `0003-akma-kaf-nr-cli-selftest.patch` (`keys::CalculateKAf`) | `nr-akma-selftest`; Ua\* com a K_AF do UE (`docs/af-side/teste-ue.md`) | **Implementado** (MVP-4) |
+| Aplicações do UE sem acesso à K_AKMA | TS 33.535 V19.0.0 | 4.4.3 | comando `akma-kaf` do `nr-cli`: só A-KID e K_AF | `teste-ue.md` §4 | **Implementado** (MVP-4) — `nr-cli` é interface de teste: entrega K_AF a qualquer processo local |
+| FQDN do AF em UTF-8 com NFKC na K_AF | TS 33.220 V19.1.0 | B.2.1.2 | ME recusa FQDN não ASCII | `nr-akma-selftest` (vetores de NFKC) | **Implementado** (MVP-4) — DV-4 |
+| Cliente Ua\* do UE pelo plano de usuário | TS 33.535 V19.0.0 | 6.2.1 passo 1 | `af/ue/uaclient/` (`-nr-cli`, `-bind`), `af/scripts/ue-netns.sh` | `teste-ue.md` §2 e §3 | **Implementado** (MVP-4) — D5 |
 
 ## Logs
 
@@ -136,4 +140,5 @@ Legenda de estado:
 |---|---|---|---|
 | Sincronização NTP entre a VM do AF e a do free5GC (par AAnF↔AF) | ADR-0001-R2 §5.3 | `timedatectl` nas duas VMs | Especificado |
 | AF alcança a porta do AAnF | ADR-0001-R2 §5.1, §5.2 | requisição a partir de `192.168.16.129` | **Verificado** em 17/10/2026 (MVP-1) |
+| UE alcança o AF pelo plano de usuário (`uesimtun0` → UPF → N6) | D5; `docs/free5gc-side/plano-de-usuario.md` | `ping` e Ua\* a partir do `uesimtun0` no *namespace* do UE; contadores da `upfgtp` | **Verificado** em 18/10/2026 (MVP-4): UE no próprio *namespace*, NAT no N6 |
 | Proteção das interfaces SBI | TS 33.535 §4.4.0; TS 33.501 §13.1.0 | TLS habilitado | Decisão — DV-1; TLS no MVP-6+ |

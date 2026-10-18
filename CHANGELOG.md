@@ -2,6 +2,25 @@
 
 ## [Não lançado]
 
+### MVP-4 — lado UE: K_AF no ME e Ua\* pelo plano de usuário (18/10/2026)
+- `af/ue/ueransim/patches/0003-akma-kaf-nr-cli-selftest.patch`:
+  - o `nr-ue` deriva a K_AF sob demanda (TS 33.535 A.4, §6.2.1 passo 1) e a entrega, com o A-KID, pelo comando `akma-kaf` do `nr-cli`; a K_AKMA nunca sai do ME (§4.4.3);
+  - FQDN não ASCII é recusado (DV-4);
+  - `nr-akma-selftest` confere K_AKMA, A-KID e K_AF contra os vetores do MVP-0.
+- `0004-free5gc-ue-gnb-on-veth.patch`: o UE procura o gNB no `veth` do seu *namespace*.
+- `af/scripts/ue-netns.sh`: *namespace* do UE (D5), com `up`, `ue`, `cli`, `ua` e `down`.
+- `af/scripts/patch-ueransim.sh`: confere a série numa cópia temporária, compila um alvo por vez com o `cmake` que configurou a árvore e também compila o autoteste.
+- Cliente Ua\*: obtém A-KID e K_AF do ME pelo `nr-cli` (`-nr-cli`, `-ue`) e liga as conexões ao endereço da sessão PDU (`-bind`).
+- Plano de usuário corrigido. O UE passou a rodar no próprio *namespace*, porque no do host o endereço da sessão é local e o kernel descartava os pacotes que saíam da `upfgtp`. `free5gc/scripts/n6-nat.sh` aplica o encaminhamento e o NAT do N6.
+- Verificação na VM:
+  - autoteste com 5 vetores aprovados e 3 de NFKC recusados (DV-4);
+  - UE alcança 8.8.8.8 e o AF pelo `uesimtun0`;
+  - A-KID igual no UE, no AUSF, no AAnF e no AF; Ua\* com a K_AF do UE, pelo plano de usuário;
+  - nova autenticação troca o A-KID, e o antigo recebe 403 do AAnF.
+- DV-4 implementado. Documentação:
+  - `docs/af-side/{ue-ueransim,ua-client,teste-ue}.md` e `docs/free5gc-side/plano-de-usuario.md`;
+  - tutorial, partes 5 (*namespace*) e 7; matriz, revisão 3.7.
+
 ### MVP-3 — AF e Ua\* simplificado (18/10/2026)
 - `docs/af-side/ua-star.md`: especificação do Ua\* simplificado, aprovada antes do código. É o HTTP Digest de TS 24.109 K.2 sem TLS, com:
   - `username` = A-KID e senha = base64(K_AF);

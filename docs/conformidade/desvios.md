@@ -10,7 +10,7 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-1 | SBI sem TLS (h2c) | **implementado** (MVP-1, 17/10/2026) | MVP-1 |
 | DV-2 | Subscrição de `ROAMING_STATUS` desabilitada | **implementado** (MVP-1, 17/10/2026) — parcial: a etapa não existe; o campo só aceita `false` | MVP-1 |
 | DV-3 | Só SUPI do tipo IMSI | **implementado** (MVP-0, 16/10/2026) | MVP-0 |
-| DV-4 | Sem NFKC no lado UE | aprovado com o plano | MVP-4 |
+| DV-4 | Sem NFKC no lado UE | **implementado** (MVP-4, 18/10/2026) | MVP-4 |
 | DV-5 | Digest do Ua\* conforme RFC 7616 | **implementado** (MVP-3, 18/10/2026) | MVP-3 |
 | DV-6 | `realm` do Digest conforme TS 33.535 | **implementado** (MVP-3, 18/10/2026) | MVP-3 |
 | DV-7 | Nunca emitir 204 em `retrieve-applicationkey` | **implementado** (MVP-1, 17/10/2026) | MVP-1 |
@@ -69,6 +69,8 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 **Por quê.** O UERANSIM não tem biblioteca de normalização Unicode.
 
 **Impacto.** Nenhum para FQDN ASCII (invariante sob NFKC); AF com FQDN internacionalizado não é suportado no lado UE.
+
+**Implementação (18/10/2026).** `af/ue/ueransim/patches/0003-akma-kaf-nr-cli-selftest.patch`: `keys::IsValidAfFqdn` aceita só nome DNS ASCII. `CalculateKAf` e o comando `akma-kaf` do `nr-cli` recusam qualquer outro. O `nr-akma-selftest` confere a recusa nos três vetores de NFKC do MVP-0 (`docs/af-side/teste-ue.md` §1).
 
 ---
 
