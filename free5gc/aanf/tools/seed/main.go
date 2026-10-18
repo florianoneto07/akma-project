@@ -64,6 +64,9 @@ func main() {
 					&cli.StringFlag{Name: "rid", Required: true, Usage: "Routing Indicator, 1 to 4 digits"},
 					&cli.StringFlag{Name: "mcc", Required: true},
 					&cli.StringFlag{Name: "mnc", Required: true},
+					// Negative tests (MVP-5): the AAnF must reject these.
+					&cli.StringFlag{Name: "gpsi", Usage: "also send this gpsi (test: AKMA_GPSI_Support is not supported)"},
+					&cli.StringFlag{Name: "k-akma", Usage: "send this kAkma instead of the derived one (test)"},
 				}, nrfFlags...),
 				Action: register,
 			},
@@ -206,8 +209,12 @@ func register(c *cli.Context) error {
 	}
 	defer cleanup()
 
+	info := models.AkmaKeyInfo{Supi: c.String("supi"), AKId: aKId, KAkma: codec.HexKey(kAkma), Gpsi: c.String("gpsi")}
+	if c.IsSet("k-akma") {
+		info.KAkma = c.String("k-akma")
+	}
 	req := &Naanf_AKMA.RegisterAKMAKeyRequest{}
-	req.SetAkmaKeyInfo(models.AkmaKeyInfo{Supi: c.String("supi"), AKId: aKId, KAkma: codec.HexKey(kAkma)})
+	req.SetAkmaKeyInfo(info)
 	if _, err := akmaClient(c.String("aanf")).RegisterTheAKMARelatedKeyMaterialApi.RegisterAKMAKey(ctx, req); err != nil {
 		return describe(err)
 	}
