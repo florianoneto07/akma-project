@@ -16,6 +16,19 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-7 | Nunca emitir 204 em `retrieve-applicationkey` | **implementado** (MVP-1, 17/10/2026) | MVP-1 |
 | DV-8 | `aud` vazio tolerado no token OAuth2 | **encerrado** em 17/10/2026 (MVP-1b: NRF corrigido, AAnF estrito) | MVP-1 |
 
+**Consolidação (MVP-5, 18/10/2026).** Nenhum desvio novo surgiu no MVP-5. Estado e evidência de cada um no roteiro ponta a ponta (`docs/af-side/e2e.md`, execução `20261018-171510`):
+
+| Nº | Estado final | Evidência no laboratório |
+|---|---|---|
+| DV-1 | implementado | SBI em h2c e HTTP/1.1 sem TLS; o AF fora da política é recusado pelo endereço de origem [N03] |
+| DV-2 | implementado, parcial | nenhuma subscrição de *roaming*; o fluxo completo funciona sem ela [R2], [R3] |
+| DV-3 | implementado | só SUPI IMSI no AUSF, no AAnF e no ME |
+| DV-4 | implementado | o ME recusa FQDN não ASCII na K_AF [S1] |
+| DV-5 | implementado | Digest SHA-256 com `rspauth` em todo Ua\* [R2.ua] |
+| DV-6 | implementado | `realm="3GPP-bootstrapping-akma@af1.akma.example"` no desafio do AF |
+| DV-7 | implementado | nenhuma resposta 204 nos testes da API [N01] a [N16] |
+| DV-8 | encerrado | `aud` exigido pelo AAnF com o NRF corrigido; sem *token*, 401 [N15], [N16] |
+
 ---
 
 ## DV-1 — SBI sem TLS

@@ -10,6 +10,6 @@ Tudo o que é feito **fora** do núcleo para usar AKMA: o AF de teste, o protoco
 | `ue-ueransim.md` — K_AKMA, A-KID e K_AF no ME do UERANSIM; `nr-cli`; autoteste; *namespace* do UE; log | MVP-3a, MVP-4 | escrito (18/10/2026) |
 | `ua-client.md` — cliente Ua\* do UE, com a K_AF do ME e pelo plano de usuário | MVP-3, MVP-4 | escrito (18/10/2026) |
 | `teste-ue.md` — autoteste, ponta a ponta, nova autenticação e critérios do MVP-4 | MVP-4 | escrito (18/10/2026) |
-| `e2e.md` | MVP-5 | a escrever |
+| `e2e.md` — roteiro ponta a ponta, testes negativos e resultado | MVP-5 | escrito (18/10/2026) |
 
 O que é comum aos dois lados — KDF, formatos de identificador, codificação, vetores — fica em `docs/shared/`.

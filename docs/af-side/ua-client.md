@@ -55,7 +55,10 @@ O AF vê a requisição vindo de 192.168.16.130, o endereço da VM do free5GC, p
 | `-qop` | `auth` | ou `auth-int` |
 | `-n` | 1 | requisições na mesma sessão Digest, com `nc` crescente |
 | `-bind` | — | endereço de origem |
+| `-kaf-file` | — | arquivo com a K_AF em hexadecimal (teste: K_AF anterior a uma nova autenticação, MVP-5) |
 | `-user-agent` | `akma-uaclient/0.1 3gpp-akma` | |
+
+Uma K_AF dada explicitamente (`-kaf`, `-kaf-base64`, `-kaf-file`) ou um vetor têm precedência sobre `-nr-cli`. Isso permite, no *namespace* do UE, apresentar um A-KID e uma K_AF anteriores.
 
 ## 5. Arquivos
 

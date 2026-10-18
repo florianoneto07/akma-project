@@ -111,7 +111,22 @@ O UE registra a derivação 3 ms depois do AUSF. O AUSF deriva depois do 5G AKA 
 
 As duas execuções do critério 4 rodaram sem `sudo`, com `timeout`: o registro e a derivação acontecem antes de o UE precisar do TUN. O `TUN interface could not be setup` que aparece em seguida é esperado.
 
-## 5. Observações de operação
+## 5. Ponta a ponta (MVP-5)
+
+O roteiro `af/scripts/e2e.sh` (`docs/af-side/e2e.md`) refaz, de uma vez, as verificações das seções 3 e 4 e as do lado UE, e acrescenta os testes negativos. Do lado free5GC:
+
+- free5GC com `run.sh -aanf`;
+- A-KID igual no UE, no AUSF e no AAnF;
+- substituição do contexto numa nova autenticação;
+- AAnF parado durante a autenticação (D9);
+- assinante sem assinatura AKMA;
+- `remove-context`;
+- os códigos de erro da API do AAnF a partir da máquina do AF;
+- nenhuma chave nos logs.
+
+Resultado em 18/10/2026: 63 verificações e nenhuma falha.
+
+## 6. Observações de operação
 
 - **UE em `LIMITED-SERVICE`.** O UE do UERANSIM às vezes fica em `MM-DEREGISTERED/LIMITED-SERVICE` na primeira partida, por uma corrida na seleção de célula ("no SI"). Basta reiniciá-lo; não tem relação com o AKMA.
 - **Gatilho de nova autenticação.** O critério 4 foi verificado reiniciando o UE. O `nr-cli` (`UERANSIM/build/nr-cli`) consulta o UE sem `sudo`. O `deregister normal` dele, como gatilho alternativo, não foi verificado: na tentativa, o UE estava sendo reiniciado (`No node found`).

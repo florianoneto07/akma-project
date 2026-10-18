@@ -118,7 +118,7 @@ As fases passaram a MVPs no [plano de desenvolvimento](docs/plano/plano-de-desen
 | F4 | MVP-2, MVP-3a | Integração AUSF e UDM; mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME (D14) | **Concluída** em 17/10/2026; MVP-3a em 18/10/2026 |
 | F5 | MVP-3 | AF e Ua* simplificado | **Concluída** em 18/10/2026 |
 | F6 | MVP-4 | UE (K_AF no ME do UERANSIM e cliente Ua*) | **Concluída** em 18/10/2026 (derivação de K_AKMA e A-KID antecipada no MVP-3a) |
-| F7 | MVP-5 | Ponta a ponta e testes negativos — primeiro MVP funcional | |
+| F7 | MVP-5 | Ponta a ponta e testes negativos — primeiro MVP funcional | **Concluída** em 18/10/2026 (63 verificações; reprodução em instalação limpa pendente) |
 | F8+ | MVP-6+ | Acesso anônimo, remoção de contexto, NEF, *roaming*, TLS, desempenho, verificação formal, *upstream* | |
 
 ---

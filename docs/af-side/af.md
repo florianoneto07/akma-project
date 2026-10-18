@@ -47,6 +47,8 @@ Os campos e os padrões estão em `ua-star.md` §11. No laboratório:
 
 O AF_ID resultante, `af1.akma.example.FF00000001`, precisa estar em `akma.authorizedAfs` do `aanfcfg.yaml`, com o endereço do AF (`docs/free5gc-side/aanf.md` §2).
 
+`[MVP]` A opção `clockOffset` (duração Go, como `2h` ou `-2h`) desloca o relógio do AF. É só de teste: simula um AF cujo relógio discorda do relógio do AAnF (MVP-5, `e2e.md` §4). Com ela, o AF registra um `warn` na partida.
+
 ## 4. Log
 
 Mesmo formato das NFs do free5GC (MVP-3a), na categoria `UA` para o Ua\* e `Consumer` para o pedido ao AAnF:

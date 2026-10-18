@@ -1,6 +1,6 @@
 # Plano de desenvolvimento por MVPs
 
-**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026).
+**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026).
 **Data:** 15 de outubro de 2026; revisão 3 em 16 de outubro de 2026; aprovação em 16 de outubro de 2026
 **Base:** documentos `00` a `04`, Adendo E, ADR-0001-R2, ADR-0002, ADR-0003, `docs/baseline/ambiente-verificado.md`, `docs/baseline/conferencia-normativa.md`, `docs/literatura/analise-dos-artigos.md`, `docs/conformidade/desvios.md`
 **Revisão 2 (15/10/2026):** conferido contra as normas do acervo (hoje em `specs/`).
@@ -523,6 +523,22 @@ Diferenças em relação à tabela de arquivos e decisões tomadas na implementa
 
 ### MVP-5 — Ponta a ponta e testes negativos (primeiro MVP funcional)
 
+**Estado (18/10/2026):** implementado e executado no laboratório (`docs/af-side/e2e.md`): `af/scripts/e2e.sh` terminou com código 0, 63 verificações e nenhuma falha.
+
+| Critério | Resultado |
+|---|---|
+| 1 | Atendido. O relatório mostra quatro coisas: o registro do UE; o contexto no AAnF com o A-KID igual ao do UE; a K_AF entregue ao AF com `expiry`; a autenticação Ua\* |
+| 2 | Atendido: todos os testes negativos da lista com o resultado esperado (`e2e.md` §4) |
+| 3 | Atendido: matriz revisão 4, com as etapas de TS 33.535 §6.1 e §6.2.1 ligadas a verificações do roteiro. A "tabela de etapas mínimas" do material de partida não está no repositório (I17, I23) e foi reconstruída a partir do texto da norma |
+| 4 | **Não verificado**: exige uma VM com o free5GC v4.2.3 recém-instalado ou um *snapshot* anterior aos *patches* |
+
+Diferenças em relação à tabela de arquivos:
+
+- **Execução remota.** A parte da máquina do free5GC ficou em `af/scripts/e2e-remote.sh`. Ela roda numa única sessão `ssh -t`, com uma senha de `sudo`, e sincroniza com a máquina do AF por arquivos-marcadores.
+- **Negativos da API.** Os testes da API do AAnF estão em `af/scripts/negative/aanf_api.py`, em HTTP/1.1 cru. Os do `register-anchorkey` usam o `seed` com as opções novas `--gpsi` e `--k-akma`.
+- **Opções de teste.** O AF ganhou `clockOffset`, para o desvio deliberado de relógio. O cliente Ua\* ganhou `-kaf-file`, para apresentar a K_AF anterior depois de uma nova autenticação.
+- **Sem `free5gc/scripts/` novo.** O roteiro usa os *scripts* existentes.
+
 **Objetivo.** Executar todo o fluxo obrigatório da tabela de etapas mínimas de forma roteirizada e reprodutível, com o plano de testes negativos.
 
 **Pré-requisitos.** MVP-2, MVP-3, MVP-4.
@@ -658,8 +674,8 @@ ADR-0002 e ADR-0003 passaram ao estado "Aceito" com a aprovação deste plano.
 
 | Parte da pergunta | Evidência | MVP |
 |---|---|---|
-| fluxo básico num free5GC modificado | autenticação primária real (UERANSIM e banco de testes Go) seguida de `AnchorKey_Register` | MVP-2, MVP-5 |
-| derivação correta conforme o 3GPP | concordância octeto a octeto entre Python, Go, C++ e a KDF do free5GC; A-KID igual no UE e no AAnF | MVP-0, MVP-4 |
-| aplicação obtém K_AF pelo AAnF | AF recebe K_AF com `expiry` e autentica o UE pelo Ua\* | MVP-3, MVP-5 |
+| fluxo básico num free5GC modificado | autenticação primária real (UERANSIM e banco de testes Go) seguida de `AnchorKey_Register` — **respondido** em 18/10/2026 ([R2] a [R6] de `docs/af-side/e2e.md`) | MVP-2, MVP-5 |
+| derivação correta conforme o 3GPP | concordância octeto a octeto entre Python, Go, C++ e a KDF do free5GC; A-KID igual no UE e no AAnF — **respondido** (vetores do MVP-0, [S1], [R2.akid-aanf]) | MVP-0, MVP-4 |
+| aplicação obtém K_AF pelo AAnF | AF recebe K_AF com `expiry` e autentica o UE pelo Ua\* — **respondido** ([R2.ua], [N01b]) | MVP-3, MVP-5 |
 
 Nenhuma etapa obrigatória da tabela de etapas mínimas é removida. A única etapa de estado aberto (`ROAMING_STATUS`) segue a orientação já dada e entra como desvio registrado (DV-2).

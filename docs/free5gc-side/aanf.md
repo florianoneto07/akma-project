@@ -19,7 +19,7 @@
 | `free5gc/aanf/internal/sbi/processor/` | as três operações |
 | `free5gc/aanf/internal/sbi/consumer/` | Nnrf_NFManagement |
 | `free5gc/aanf/internal/util/problem.go` | `ProblemDetails` |
-| `free5gc/aanf/tools/seed/` | ferramenta de teste: papel do AUSF e do AF |
+| `free5gc/aanf/tools/seed/` | ferramenta de teste: papel do AUSF e do AF. Desde o MVP-5, `register` aceita `--gpsi` e `--k-akma`, para os testes negativos do `register-anchorkey` (`docs/af-side/e2e.md` §4) |
 | `free5gc/config/aanfcfg.yaml` | configuração de exemplo do laboratório |
 | `free5gc/scripts/{prepare-openapi,build-aanf,run-aanf,deploy}.sh` | preparação, compilação, execução, implantação |
 

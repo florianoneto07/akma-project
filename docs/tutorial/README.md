@@ -1,6 +1,6 @@
 # Tutorial — AKMA sobre o free5GC
 
-Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-4.
+Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-5, o primeiro MVP funcional.
 
 | Parte | Conteúdo | Disponível |
 |---|---|---|
@@ -11,7 +11,7 @@ Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia of
 | 5 | Ver o AKMA na tela: free5GC e UERANSIM | sim |
 | 6 | Escrever um AF que usa AKMA | sim |
 | 7 | Preparar o UE (UERANSIM) para o Ua\* | sim |
-| 8 | Executar o fluxo de ponta a ponta | MVP-5 |
+| 8 | Executar o fluxo de ponta a ponta | sim |
 
 ---
 
@@ -535,4 +535,63 @@ A sequência completa e os resultados do laboratório estão em `docs/af-side/te
 ### 7.5 Limitações
 
 O `nr-cli` é uma interface de teste: entrega a K_AF de qualquer AF a qualquer processo local da máquina. A K_AKMA nunca sai do UE (TS 33.535 §4.4.3).
+
+---
+
+## 8. Executar o fluxo de ponta a ponta
+
+Com as partes 3 a 7 feitas, um único roteiro executa o AKMA inteiro e os testes negativos, nas duas máquinas, e escreve um relatório (`docs/af-side/e2e.md`).
+
+### 8.1 Preparar
+
+Na máquina do AF:
+
+```bash
+af/scripts/build-af.sh
+```
+
+```bash
+free5gc/scripts/build-aanf.sh
+```
+
+A máquina do AF precisa de acesso SSH por chave à do free5GC. Na do free5GC, o roteiro espera o que as partes anteriores deixaram:
+
+- o repositório em `~/akma-free5gc`;
+- os *patches* aplicados, o AAnF implantado e o `seed` em `~/akma-tools/`;
+- o UERANSIM com os *patches* e o `linkIp: 10.100.0.1`;
+- o `uaclient` em `~/akma-free5gc/af/build/bin/`.
+
+O free5GC deve estar parado: o roteiro o inicia.
+
+### 8.2 Rodar
+
+```bash
+af/scripts/e2e.sh
+```
+
+O roteiro pede a senha de `sudo` da máquina do free5GC uma vez e leva cerca de dois minutos. Ele:
+
+- aplica o NAT do N6 e cria o *namespace* do UE;
+- sobe o free5GC com o AAnF, o gNB e o UE;
+- autentica no AF a partir do UE;
+- força novas autenticações primárias: com o AAnF parado, sem assinatura AKMA e com a assinatura restaurada;
+- roda os testes negativos;
+- encerra tudo.
+
+Cada verificação aparece como `PASS` ou `FAIL`, e o fim mostra o total:
+
+```
+report: …/af/build/e2e/<data-hora>/report.md
+63 passed, 0 failed
+```
+
+### 8.3 Ler o relatório
+
+O `report.md` traz o A-KID de cada autenticação, a tabela de verificações e as linhas AKMA do free5GC, do UE e do AF. Ali dá para seguir a pergunta-guia do projeto de ponta a ponta:
+
+1. **Autenticação primária e registro.** O UE se autentica; o UDM indica AKMA; o AUSF deriva o A-KID e o registra no AAnF.
+2. **A-KID igual.** O UE derivou o mesmo A-KID.
+3. **Ua\*.** O AF pede a K_AF ao AAnF e autentica o UE com ela, e o UE confere o `rspauth` do AF.
+
+Os testes negativos e o que cada um prova estão em `docs/af-side/e2e.md` §4. A rastreabilidade de cada etapa de TS 33.535 §6.1 e §6.2.1 até a verificação correspondente está na matriz, revisão 4.
 

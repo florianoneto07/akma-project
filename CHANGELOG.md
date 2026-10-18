@@ -2,6 +2,19 @@
 
 ## [Não lançado]
 
+### MVP-5 — ponta a ponta e testes negativos (18/10/2026)
+- `af/scripts/e2e.sh` e `af/scripts/e2e-remote.sh`: o fluxo AKMA inteiro, nas duas máquinas, com uma senha de `sudo`. A sequência:
+  - autoteste do ME;
+  - free5GC com o AAnF, gNB e UE no *namespace*;
+  - A-KID igual no UE, no AUSF e no AAnF; Ua\* pelo plano de usuário;
+  - nova autenticação; AAnF parado (D9); assinante sem AKMA; `remove-context`.
+  O relatório vai para `af/build/e2e/`.
+- `af/scripts/negative/aanf_api.py`: testes negativos da API do AAnF em HTTP/1.1 cru (400, 401, 403, 404, 411, 413, 415, 501; nunca 204).
+- `seed register --gpsi` e `--k-akma`; AF com `clockOffset` (teste de relógio); `uaclient -kaf-file`, com as chaves explícitas tendo precedência sobre o ME.
+- Execução de 18/10/2026: 63 verificações, nenhuma falha.
+- Matriz de rastreabilidade revisão 4, com as etapas de TS 33.535 §6.1 e §6.2.1 ligadas a evidências; desvios consolidados; tutorial, parte 8; `docs/af-side/e2e.md`. A pergunta-guia está respondida.
+- Não verificado: a reprodução do tutorial numa instalação limpa do free5GC v4.2.3 (critério 4).
+
 ### MVP-4 — lado UE: K_AF no ME e Ua\* pelo plano de usuário (18/10/2026)
 - `af/ue/ueransim/patches/0003-akma-kaf-nr-cli-selftest.patch`:
   - o `nr-ue` deriva a K_AF sob demanda (TS 33.535 A.4, §6.2.1 passo 1) e a entrega, com o A-KID, pelo comando `akma-kaf` do `nr-cli`; a K_AKMA nunca sai do ME (§4.4.3);

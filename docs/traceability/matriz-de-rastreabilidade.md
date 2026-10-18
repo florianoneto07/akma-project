@@ -1,7 +1,7 @@
 # Matriz de rastreabilidade
 
-**Revisão:** 3.7 (MVP-4: K_AF no ME do UERANSIM, `nr-cli`, autoteste, cliente Ua\* no UE pelo plano de usuário; DV-4 implementado)
-**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 a 3.7 em 18 de outubro de 2026
+**Revisão:** 4 (MVP-5: etapas mínimas do fluxo ligadas a evidências do roteiro ponta a ponta)
+**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 a 3.7 e 4 em 18 de outubro de 2026
 
 *Nota (16/10/2026):* os caminhos da coluna "Implementação" seguem a estrutura anterior ao plano. A estrutura aprovada (plano §3) é: `akma/` → `shared/akma/`; `NFs/aanf/` → `free5gc/aanf/`; `patches/` → `free5gc/patches/`; `af/` → `af/af/`; `ue/` → `af/ue/`. Os caminhos serão atualizados linha a linha à medida que cada MVP os criar. Os desvios citados como DV-n estão em `docs/conformidade/desvios.md`.
 
@@ -12,6 +12,37 @@ Legenda de estado:
 - **Decisão** — determinado por decisão do projeto, registrada em ADR ou no registro de defeitos
 - **Pendente** — fora do escopo do MVP ou aguardando decisão
 - **Implementado** — código e testes no repositório, com o MVP indicado
+
+## Etapas mínimas do fluxo e evidências (revisão 4)
+
+`[LACUNA]` O plano (MVP-5, critério 3) liga cada linha da "tabela de etapas mínimas" do material de partida a uma evidência. Esse material nunca entrou no repositório (plano §8, I17 e I23). `[INTERPRETAÇÃO]` A tabela abaixo o reconstrói a partir do texto de TS 33.535 V19.0.0, passo a passo: §6.1 (registro após a autenticação primária) e §6.2.1 (K_AF para um AF na rede do operador), com as cláusulas que eles invocam.
+
+Evidências: os identificadores entre colchetes são verificações da execução `20261018-171510` de `af/scripts/e2e.sh` (`docs/af-side/e2e.md`): R na máquina do free5GC; S, N, B, C e L na do AF. Os demais são testes do repositório.
+
+| Etapa | Cláusula | Implementação | Evidência | Estado |
+|---|---|---|---|---|
+| AUSF obtém do UDM os dados de autenticação (`Nudm_UEAuthentication_Get`) | 6.1 passo 1 | free5GC (sem alteração) | [R1.ue], [R2.registration] | **Verificado** |
+| UDM inclui a indicação AKMA e o RID | 6.1 passo 2; TS 33.501 6.1.3.x passo 2; TS 29.503 Tab. 6.3.6.2.3-1 | `free5gc/patches/udm/` | log `[UDM][AKMA] AKMA indication sent … Routing Indicator 0000` em [R2]; ausente sem assinatura [R5.no-indication] | **Verificado** |
+| AUSF gera K_AKMA e A-KID após a autenticação bem-sucedida, com o RID do UDM | 6.1 passo 3; A.2, A.3 | `free5gc/patches/ausf/` | [R2.akid-ausf]; `TestAkma5GAKA`, `TestAkmaEAPAKAPrime` | **Verificado** |
+| UE gera K_AKMA e A-KID antes de comunicar com um AF | 6.1 passo 3; 6.2.1 passo 1 | `af/ue/ueransim/patches/0001` | A-KID do UE igual ao do AUSF e do AAnF [R2.akid-ausf], [R2.akid-aanf]; [S1] | **Verificado** |
+| AUSF seleciona o AAnF | 6.1 passo 4; 6.7 | `free5gc/patches/ausf/`, `free5gc/patches/nrf/0002` | log `AAnF for Routing Indicator 0000 … (discovered at the NRF)` em [R2]; sem AAnF registrado, `no uri for naanf-akma` [R4.ausf-error] | **Verificado** |
+| AUSF envia A-KID, K_AKMA e SUPI (`Naanf_AKMA_AnchorKey_Register`); AAnF guarda o mais recente | 6.1 passo 4 e NOTA 1a | `free5gc/patches/ausf/`, `free5gc/aanf/` | [R2.akid-aanf]; substituição [R3.replaced]; A-KID anterior recusado [B1] | **Verificado** |
+| AAnF responde ao AUSF | 6.1 passo 5 | `free5gc/aanf/` | log `AKMA key material … registered at the AAnF` em [R2] | **Verificado** |
+| Autenticação primária não depende do AAnF | 6.1 passo 3 (D9) | `free5gc/patches/ausf/` (`startAkma`) | [R4.registration], [R4.ausf-error] | **Verificado** — D9 |
+| UE inclui o A-KID no pedido de sessão; K_AF derivada pelo ME | 6.2.1 passo 1; A.4 | `0003-akma-kaf-nr-cli-selftest.patch`; `af/ue/uaclient/` | [R2.ua], [R3.ua-new], [R5.ua-restored] | **Verificado** |
+| AF sem contexto ativo pede a K_AF ao AAnF com A-KID e AF_ID | 6.2.1 passo 2; 6.7 (configuração local) | `af/af/internal/aanf/` | log do AF `K_AF … obtained from the AAnF`; `TestApplicationKey` | **Verificado** |
+| AAnF verifica a política local para o AF | 6.2.1 passo 2 | `free5gc/aanf/` (`AfPolicy`) | [N03] (403); o AF fora da política recebe 503 (MVP-3) | **Verificado** — DV-1 |
+| AAnF verifica a presença da K_AKMA | 6.2.1 passo 2 | `free5gc/aanf/` | [N06], [B1], [C1], [N21] (403 `K_AKMA_NOT_PRESENT`) | **Verificado** — DV-7 |
+| GPSI pelo UDM | 6.2.1 passos 3 e 4 | — | — | Não aplicável: a política local do MVP não pede GPSI |
+| Subscrição de `ROAMING_STATUS` | 6.2.1 passos 5 e 6 | — | — | **Desvio DV-2**: etapa desabilitada |
+| AAnF deriva a K_AF se ainda não a tem e guarda o `expiry` | 6.2.1 passo 7; A.4; 5.2 | `free5gc/aanf/` | [N01b]; a mesma `expiry` em pedidos seguintes (log do AAnF em [R2] e [N01]) | **Verificado** |
+| AAnF responde com SUPI, K_AF e `expiry` | 6.2.1 passo 8 | `free5gc/aanf/` | [N01b] | **Verificado** |
+| AF responde ao UE; com falha, recusa com causa | 6.2.1 passo 9 | `af/af/internal/server/` | 200 [R2.ua]; `403 AKMA_KEY_NOT_AVAILABLE` [R5.ua]; `503 AANF_UNAVAILABLE` [R4.ua] | **Verificado** |
+| Iniciação do AKMA pelo AF | 6.5 | `af/af/internal/server/` | `AKMA initiation: challenge sent` no log do AF em cada Ua\*; `TestInitiation` | **Verificado** |
+| K_AF vencida no AF; K_AF anterior válida até o `expiry` | 6.4.2; 5.2; 4.4.0 | `af/af/internal/server/keys.go` | [R3.ua-old]; [N22], [N23]; `TestKafExpiry*` | **Verificado** |
+| Remoção do contexto AKMA | 6.6 | `free5gc/aanf/` | [R6.removed], [R6.not-found], [C1] | **Verificado** |
+| Aplicações do UE sem acesso à K_AKMA | 4.4.3 | `0003-…` (`akma-kaf`) | `docs/af-side/teste-ue.md` §4 | **Verificado** |
+| Nenhuma chave em log | plano, todos os MVPs | todos | [R7.no-key-*], [L1]; `TestNoKeyInLogs` | **Verificado** |
 
 ## Derivação criptográfica
 
