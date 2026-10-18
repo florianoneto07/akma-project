@@ -60,10 +60,10 @@ index 29d0098..850fd2d 100644
  }
 diff --git a/internal/sbi/processor/akma.go b/internal/sbi/processor/akma.go
 new file mode 100644
-index 0000000..0496cd9
+index 0000000..7214788
 --- /dev/null
 +++ b/internal/sbi/processor/akma.go
-@@ -0,0 +1,42 @@
+@@ -0,0 +1,44 @@
 +package processor
 +
 +import (
@@ -91,20 +91,22 @@ index 0000000..0496cd9
 +	subs *models.AuthenticationSubscription, supiOrSuci, supi string,
 +) {
 +	if !subs.AkmaAllowed {
++		logger.AkmaLog.Debugf("No AKMA subscription for %s", supi)
 +		return
 +	}
 +	rid := subs.RoutingId
 +	if !routingIdPattern.MatchString(rid) {
-+		logger.UeauLog.Errorf("AKMA allowed for %s, but the stored routingId %q is not a Routing Indicator: "+
++		logger.AkmaLog.Errorf("AKMA allowed for %s, but the stored routingId %q is not a Routing Indicator: "+
 +			"AKMA indication not sent", supi, rid)
 +		return
 +	}
 +	if suciRid, ok := suci.RoutingIndicator(supiOrSuci); ok && suciRid != rid {
-+		logger.UeauLog.Warnf("Routing Indicator of the SUCI (%s) differs from the stored routingId (%s) for %s",
++		logger.AkmaLog.Warnf("Routing Indicator of the SUCI (%s) differs from the stored routingId (%s) for %s",
 +			suciRid, rid, supi)
 +	}
 +	rsp.AkmaInd = true
 +	rsp.RoutingId = rid
++	logger.AkmaLog.Infof("AKMA indication sent to the AUSF for %s, Routing Indicator %s", supi, rid)
 +}
 diff --git a/internal/sbi/processor/akma_test.go b/internal/sbi/processor/akma_test.go
 new file mode 100644
@@ -233,3 +235,21 @@ index 0000000..9cc99f2
 +	require.NotContains(t, raw, "akmaInd")
 +	require.NotContains(t, raw, "routingId")
 +}
+diff --git a/internal/logger/logger.go b/internal/logger/logger.go
+index 7d6b18a..0e216fe 100644
+--- a/internal/logger/logger.go
++++ b/internal/logger/logger.go
+@@ -26,6 +26,7 @@ var (
+ 	SuciLog     *logrus.Entry
+ 	CallbackLog *logrus.Entry
+ 	ProcLog     *logrus.Entry
++	AkmaLog     *logrus.Entry
+ )
+ 
+ func init() {
+@@ -53,4 +54,5 @@ func init() {
+ 	UtilLog = NfLog.WithField(logger_util.FieldCategory, "Util")
+ 	SuciLog = NfLog.WithField(logger_util.FieldCategory, "Suci")
+ 	CallbackLog = NfLog.WithField(logger_util.FieldCategory, "Callback")
++	AkmaLog = NfLog.WithField(logger_util.FieldCategory, "AKMA")
+ }
