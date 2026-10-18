@@ -21,11 +21,10 @@ func (p *Processor) RemoveContext(c *gin.Context, req *models.CtxRemove) {
 		return
 	}
 	if !p.Context().Store.Remove(req.Supi) {
-		logger.AkmaLog.Infof("AKMA context to remove not found")
+		logger.AkmaLog.Infof("AKMA context of %s to remove not found", req.Supi)
 		util.WriteProblem(c, util.Problem(http.StatusNotFound, util.CauseAkmaContextNotFound, ""))
 		return
 	}
-	logger.AkmaLog.Infof("AKMA context removed")
-	logger.AkmaLog.Debugf("AKMA context removed for %s", req.Supi)
+	logger.AkmaLog.Infof("AKMA context of %s removed", req.Supi)
 	c.Status(http.StatusNoContent)
 }

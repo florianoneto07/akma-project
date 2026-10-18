@@ -45,8 +45,7 @@ func (p *Processor) RetrieveApplicationKey(c *gin.Context, req *models.AkmaAfKey
 	// the procedure. No application error is defined for this case
 	// (TS 29.535 table 5.1.7.3-1): 403 without cause.
 	if !aanfCtx.AfPolicy.Authorize(af, remote) {
-		logger.AkmaLog.Warnf("AF not authorized for the requested AF_ID (source %s)", remote)
-		logger.AkmaLog.Debugf("AF_ID %s rejected for source %s", af.Transport(), remote)
+		logger.AkmaLog.Warnf("AF at %s not authorized for AF_ID %s", remote, af.Transport())
 		util.WriteProblem(c, util.Problem(http.StatusForbidden, "", "AF not authorized by local policy"))
 		return
 	}
@@ -57,8 +56,7 @@ func (p *Processor) RetrieveApplicationKey(c *gin.Context, req *models.AkmaAfKey
 	// either (deviation DV-7).
 	supi, kaf, expiry, err := aanfCtx.Store.ApplicationKey(id, af, aanfCtx.KafLifetime)
 	if errors.Is(err, aanf_context.ErrKAkmaNotPresent) {
-		logger.AkmaLog.Infof("K_AKMA not present for the A-KID")
-		logger.AkmaLog.Debugf("K_AKMA not present for A-KID %s", req.AKId)
+		logger.AkmaLog.Infof("K_AKMA not present for A-KID %s, requested by AF_ID %s", req.AKId, af.Transport())
 		util.WriteProblem(c, util.Problem(http.StatusForbidden, util.CauseKAkmaNotPresent, ""))
 		return
 	}
@@ -79,8 +77,8 @@ func (p *Processor) RetrieveApplicationKey(c *gin.Context, req *models.AkmaAfKey
 	if !req.AnonInd {
 		rsp.Supi = supi
 	}
-	logger.AkmaLog.Infof("K_AF provided, expires %s", exp.Format(time.RFC3339))
-	logger.AkmaLog.Debugf("K_AF provided to %s for %s", af.Transport(), supi)
+	logger.AkmaLog.Infof("K_AF of %s provided to AF_ID %s for A-KID %s, expires %s",
+		supi, af.Transport(), req.AKId, exp.Format(time.RFC3339))
 	util.WriteJSON(c, http.StatusOK, rsp)
 }
 

@@ -6,8 +6,8 @@ import (
 	logger_util "github.com/free5gc/util/logger"
 )
 
-// Log entries never carry key material; identifiers (SUPI, A-KID) are logged
-// only at debug level.
+// Log entries never carry key material. Identifiers (SUPI, A-KID, AF_ID) are
+// logged at info level, as the other NFs of free5GC log the SUPI.
 var (
 	Log         *logrus.Logger
 	NfLog       *logrus.Entry

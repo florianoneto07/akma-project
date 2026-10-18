@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/netip"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -62,6 +63,8 @@ func Init(cfg *factory.Config) error {
 		return err
 	}
 	self = c
+	logger.AkmaLog.Infof("Routing Indicators %v; K_AF lifetime %s; AF_IDs authorized by local policy: %v",
+		c.RoutingIndicators, c.KafLifetime, c.AfPolicy.AfIds())
 	return nil
 }
 
@@ -281,6 +284,16 @@ func NewAfPolicy(afs []factory.AuthorizedAf) (*AfPolicy, error) {
 		}
 	}
 	return p, nil
+}
+
+// AfIds returns the authorized AF_IDs, in transport form, sorted.
+func (p *AfPolicy) AfIds() []string {
+	ids := make([]string, 0, len(p.sources))
+	for id := range p.sources {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	return ids
 }
 
 // Authorize reports whether the AF at remote may obtain K_AF for id.

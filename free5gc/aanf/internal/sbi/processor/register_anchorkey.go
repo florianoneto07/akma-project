@@ -36,8 +36,12 @@ func (p *Processor) RegisterAnchorKey(c *gin.Context, req *models.AkmaKeyInfo) {
 	}
 
 	replaced := aanfCtx.Store.Register(req.Supi, id, req.AKId, kAkma)
-	logger.AkmaLog.Infof("AKMA context registered (replaced previous: %v)", replaced)
-	logger.AkmaLog.Debugf("AKMA context registered for %s, A-KID %s", req.Supi, req.AKId)
+	if replaced {
+		logger.AkmaLog.Infof("AKMA context of %s registered, A-KID %s (previous context replaced)",
+			req.Supi, req.AKId)
+	} else {
+		logger.AkmaLog.Infof("AKMA context of %s registered, A-KID %s", req.Supi, req.AKId)
+	}
 
 	rsp := models.AkmaKeyInfo{
 		Supi:     req.Supi,
