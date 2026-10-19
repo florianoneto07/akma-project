@@ -126,6 +126,36 @@ O roteiro `af/scripts/e2e.sh` (`docs/af-side/e2e.md`) refaz, de uma vez, as veri
 
 Resultado em 18/10/2026: 63 verificações e nenhuma falha.
 
+### 5.1 Instalação limpa (critério 4 do MVP-5)
+
+Em 19/10/2026, as partes 3 a 5 do tutorial foram seguidas do início numa VM nova, 192.168.16.131 (Ubuntu 18.04.6, kernel 5.4.0-150-generic). A VM tinha só o que o guia oficial instala:
+
+- free5GC v4.2.3;
+- gtp5g v0.9.14;
+- MongoDB 5.0.34;
+- a *webconsole* com o assinante padrão;
+- o UERANSIM `85a0fbf`;
+- `TestRegistration` passando.
+
+As adaptações do guia ao Ubuntu 18.04 estão no tutorial, seção 1.1.
+
+| Parte | Verificação | Resultado |
+|---|---|---|
+| 3.3 | `patch-nf.sh nrf apply`; depois, `./run.sh`, gNB e registro do UE da instalação | ok; nenhum erro do NRF no log |
+| 3.4 | `deploy.sh`, `run-aanf.sh start` | ok, depois de ajustar `sbi.registerIPv4` e `bindingIPv4` da cópia instalada |
+| 3.5 | perfil `AANF` no MongoDB; descoberta pelo RID `0000` e por um RID não atendido | ok; `null` para o RID não atendido |
+| 3.6 | `register`, `retrieve` da máquina do AF, AF_ID fora da política, `remove` | ok com `--aanf`; A-KID e K_AF do vetor; `expiry` uma hora à frente |
+| 4.1 a 4.3 | as duas cópias do `openapi`; *patches* do UDM, do AUSF, da configuração e do banco de testes; assinatura AKMA | ok |
+| 4.4 | `go test -run TestAkma` sem `sudo`; UERANSIM sem *patch*, com o AAnF do `run-aanf.sh` | 3 testes passam; `AKMA key material … registered at the AAnF` no log do free5GC |
+| 5.1 e 5.3 | `run.sh -aanf`: a linha de partida do AAnF e as seis linhas `[AKMA]` na ordem, com o mesmo A-KID do UE | ok; AAnF descoberto no NRF; nenhuma chave na tela |
+
+Divergências do tutorial no lado free5GC, corrigidas no tutorial:
+
+- o `patch-nf.sh` da seção 3.3 roda do repositório na máquina do free5GC, que o tutorial só mandava clonar na seção 4.1;
+- o `deploy.sh` instala o `aanfcfg.yaml` do repositório, com os endereços do laboratório, e não uma cópia ajustada;
+- o `seed` fica em `~/akma-tools/`, fora do `PATH`;
+- sem `--aanf`, o `seed` vai ao AAnF do laboratório (`aanf.md` §9).
+
 ## 6. Observações de operação
 
 - **UE em `LIMITED-SERVICE`.** O UE do UERANSIM às vezes fica em `MM-DEREGISTERED/LIMITED-SERVICE` na primeira partida, por uma corrida na seleção de célula ("no SI"). Basta reiniciá-lo; não tem relação com o AKMA.

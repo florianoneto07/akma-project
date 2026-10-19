@@ -1,6 +1,6 @@
 # Ponta a ponta e testes negativos (MVP-5)
 
-**Data:** 18 de outubro de 2026 · **Resultado:** 63 verificações, nenhuma falha (execução `20261018-171510`)
+**Data:** 18 de outubro de 2026 · **Resultado:** 63 verificações, nenhuma falha (execução `20261018-171510`) · **Instalação limpa:** 63 verificações, nenhuma falha, em 19 de outubro de 2026 (execução `20261019-160723`, seção 5.1)
 
 ## 1. O que o roteiro faz
 
@@ -39,7 +39,7 @@ Na máquina do free5GC, as partes 3 a 7 do tutorial, isto é:
 - o AAnF implantado (`bin/aanf`, `config/aanfcfg.yaml`) e o `seed` em `~/akma-tools/`;
 - o UERANSIM com os *patches*, o `linkIp: 10.100.0.1` do gNB e o `uaclient` em `~/akma-free5gc/af/build/bin/`.
 
-Na máquina do AF: `af/scripts/build-af.sh` e `free5gc/scripts/build-aanf.sh`, e acesso SSH por chave à máquina do free5GC.
+Na máquina do AF: `af/scripts/build-af.sh` e `free5gc/scripts/build-aanf.sh`; acesso SSH por chave à máquina do free5GC; e o `af/config/afcfg.yaml` com o `aanfUri` do AAnF da máquina do free5GC.
 
 O roteiro confere esses itens no início (*preflight*) e mostra o estado dos *patches*. O NAT do N6 e o *namespace* do UE ele mesmo aplica.
 
@@ -50,8 +50,15 @@ af/scripts/build-af.sh
 ```
 
 ```bash
-af/scripts/e2e.sh
+af/scripts/e2e.sh woca@192.168.16.130
 ```
+
+O argumento é a máquina do free5GC, `usuario@endereço`. Sem ele, vale a do laboratório, `woca@192.168.16.130`.
+
+Os endereços vêm de duas configurações:
+
+- o do AAnF, do `aanfUri` de `af/config/afcfg.yaml`. No *preflight*, o roteiro confere que ele é o `sbi.bindingIPv4` do `~/free5gc/config/aanfcfg.yaml` instalado e para se não for. A parte remota toma o endereço desse mesmo `aanfcfg.yaml`. O `seed` recebe o endereço em `--aanf` nas duas máquinas;
+- o dos AF extras, de relógio deslocado, do `listen` de `af/config/afcfg.yaml`, nas portas 8081 e 8082.
 
 Com `--keep`, o free5GC, o gNB e o UE continuam no ar no fim. Sem ele, o roteiro os encerra. Os arquivos ficam em `af/build/e2e/<data-hora>/`:
 
@@ -107,8 +114,34 @@ Os testes da API do AAnF (N01 a N16) estão em `af/scripts/negative/aanf_api.py`
 
 No console do `run.sh` aparece uma cadeia de 64 hexadecimais: o nome do arquivo de CDR que o CHF do free5GC apaga ao encerrar. Não é material AKMA, e a verificação R7 não a alcança, porque copia o `free5gc.log` antes do encerramento.
 
+### 5.1 Instalação limpa, em 19/10/2026 (critério 4)
+
+`63 passed, 0 failed` (30 e 33), na execução `20261019-160723`. Ambiente:
+
+- a VM 192.168.16.131, com o free5GC v4.2.3 e o UERANSIM instalados pelo guia oficial e sem nenhum *patch* do projeto;
+- o tutorial seguido do início, partes 1 a 8, a partir de um clone limpo do repositório na máquina do AF;
+- `woca@192.168.16.131` como argumento do roteiro.
+
+A primeira passagem achou três problemas que impediam o roteiro fora da VM 192.168.16.130:
+
+- o `e2e.sh` tinha o endereço do AAnF fixo;
+- o `e2e-remote.sh` esperava o AAnF em `192.168.16.130:8000`;
+- os dois chamavam o `seed` sem `--aanf`, e o padrão dele é o AAnF do laboratório.
+
+Os endereços agora vêm das configurações (seção 3). As divergências do tutorial e a correção de cada uma estão no plano, MVP-5, critério 4.
+
+Os cinco A-KID da execução:
+
+| Autenticação | A-KID |
+|---|---|
+| 1 | `rid0000.atidvfVWKPf69ZWBMVQGrvOkLaDQFdGba3KyQ5U0gCgNJFg=@…` |
+| 2 (nova autenticação) | `rid0000.atidEnHVYP6TrlaX6wXXUX9Y7QNGnhfI3zcLH/mb/s6INFA=@…` |
+| 3 (AAnF parado) | `rid0000.atidSvpTFXFecorSiZI+PGTCEXoMHM9XMgnQAoi3LAJiebw=@…` |
+| 4 (sem assinatura) | `rid0000.atidHGpmuka9FkKJw7ogzBXHnbejSfqB1XfXUHVpT4iHchc=@…` |
+| 5 (restaurada) | `rid0000.atidSaWLZ7zwKidV8wciRplt7HcrhqFnt2YAV+Mu5eBlhs4=@…` |
+
 ## 6. Limitações
 
 - **Senha de `sudo`.** É pedida uma vez por execução; o roteiro não altera o `sudoers`.
-- **Reprodução.** Uma reprodução totalmente limpa, a partir do free5GC v4.2.3 recém-instalado e só com o tutorial, exige uma VM nova ou um *snapshot* (critério 4 do MVP-5). Ver `docs/plano/plano-de-desenvolvimento.md`.
+- **Endereços.** O roteiro não lê a máquina do free5GC das configurações. Ela é o argumento, e o padrão é a do laboratório.
 - **Ordem fixa.** Uma falha no meio não interrompe o roteiro: as verificações seguintes rodam no estado que houver e podem falhar em cascata. A primeira `FAIL` do relatório é a que importa.

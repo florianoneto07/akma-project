@@ -1,6 +1,6 @@
 # Plano de desenvolvimento por MVPs
 
-**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026).
+**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026).
 **Data:** 15 de outubro de 2026; revisão 3 em 16 de outubro de 2026; aprovação em 16 de outubro de 2026
 **Base:** documentos `00` a `04`, Adendo E, ADR-0001-R2, ADR-0002, ADR-0003, `docs/baseline/ambiente-verificado.md`, `docs/baseline/conferencia-normativa.md`, `docs/literatura/analise-dos-artigos.md`, `docs/conformidade/desvios.md`
 **Revisão 2 (15/10/2026):** conferido contra as normas do acervo (hoje em `specs/`).
@@ -523,14 +523,14 @@ Diferenças em relação à tabela de arquivos e decisões tomadas na implementa
 
 ### MVP-5 — Ponta a ponta e testes negativos (primeiro MVP funcional)
 
-**Estado (18/10/2026):** implementado e executado no laboratório (`docs/af-side/e2e.md`): `af/scripts/e2e.sh` terminou com código 0, 63 verificações e nenhuma falha.
+**Estado (19/10/2026):** implementado e executado no laboratório (`docs/af-side/e2e.md`): `af/scripts/e2e.sh` terminou com código 0, 63 verificações e nenhuma falha, em 18/10/2026 na VM do free5GC e em 19/10/2026 numa instalação limpa (critério 4).
 
 | Critério | Resultado |
 |---|---|
 | 1 | Atendido. O relatório mostra quatro coisas: o registro do UE; o contexto no AAnF com o A-KID igual ao do UE; a K_AF entregue ao AF com `expiry`; a autenticação Ua\* |
 | 2 | Atendido: todos os testes negativos da lista com o resultado esperado (`e2e.md` §4) |
 | 3 | Atendido: matriz revisão 4, com as etapas de TS 33.535 §6.1 e §6.2.1 ligadas a verificações do roteiro. A "tabela de etapas mínimas" do material de partida não está no repositório (I17, I23) e foi reconstruída a partir do texto da norma |
-| 4 | **Não verificado**: exige uma VM com o free5GC v4.2.3 recém-instalado ou um *snapshot* anterior aos *patches* |
+| 4 | Atendido em 19/10/2026, com as correções abaixo. VM nova 192.168.16.131 com o free5GC v4.2.3 e o UERANSIM instalados pelo guia oficial, sem *patches*. O tutorial foi seguido do início, partes 1 a 8, com um clone limpo do repositório na máquina do AF. `e2e.sh woca@192.168.16.131`: 63 verificações, nenhuma falha (execução `20261019-160723`; `e2e.md` §5.1, `verificacao.md` §5.1) |
 
 Diferenças em relação à tabela de arquivos:
 
@@ -538,6 +538,18 @@ Diferenças em relação à tabela de arquivos:
 - **Negativos da API.** Os testes da API do AAnF estão em `af/scripts/negative/aanf_api.py`, em HTTP/1.1 cru. Os do `register-anchorkey` usam o `seed` com as opções novas `--gpsi` e `--k-akma`.
 - **Opções de teste.** O AF ganhou `clockOffset`, para o desvio deliberado de relógio. O cliente Ua\* ganhou `-kaf-file`, para apresentar a K_AF anterior depois de uma nova autenticação.
 - **Sem `free5gc/scripts/` novo.** O roteiro usa os *scripts* existentes.
+- **Endereços (critério 4).** O `e2e.sh` toma o endereço do AAnF do `aanfUri` de `af/config/afcfg.yaml`. No *preflight*, confere que ele é o `sbi.bindingIPv4` do `aanfcfg.yaml` instalado. Os AF extras usam o `listen` do mesmo arquivo. O `e2e-remote.sh` lê o AAnF do `aanfcfg.yaml` da máquina do free5GC. As chamadas ao `seed` passam `--aanf`. Antes, o endereço da VM 192.168.16.130 estava fixo nos dois.
+
+Divergências que a reprodução em instalação limpa achou no tutorial (critério 4), todas corrigidas:
+
+| Seção | O que estava escrito | O que acontecia | Correção |
+|---|---|---|---|
+| 3.3, 4.1 | repositório clonado na máquina do free5GC só na 4.1, sem endereço | o `patch-nf.sh` da 3.3 não existe ainda na máquina do free5GC | nova seção 1.1: clone em `~/akma-free5gc` com o endereço do GitHub, SSH por chave, gNB numa máquina só, assinante OPc, Ubuntu 18.04 |
+| 3.2, 3.4 | "copie e ajuste" o `aanfcfg.yaml` | o `deploy.sh` instala o do repositório, com 192.168.16.130, e o AAnF não sobe em outra máquina | dizer qual arquivo ajustar: o do repositório antes do *deploy* ou a cópia instalada |
+| 3.5, 3.6, 6.3 | `seed discover/register/remove` sem caminho e sem `--aanf` | `command not found`; depois, `connection refused` em 192.168.16.130 | `~/akma-tools/seed` e `free5gc/build/bin/seed`, com `--aanf` |
+| 6.3 | K_AF errada com `-kaf`; AF_ID fora da política sem comando | com `-vector`, o `uaclient` não aceita `-kaf` (`-akid is required`) | os comandos completos; segundo AF com outro `fqdn` para o 503 |
+| 6.3, 7.3 | semear o `testbed-ue` e, depois, o Ua\* do UE | o `testbed-ue` tem o SUPI do UE; o contexto do UE é substituído e o AF responde 403 `AKMA_KEY_NOT_AVAILABLE` | aviso: nova autenticação do UE (7.4) antes da 7.3 |
+| 8.2 | `af/scripts/e2e.sh` sem argumento | roda contra 192.168.16.130; com o argumento, o AAnF continuava fixo em 192.168.16.130 | `e2e.sh usuario@máquina` e os endereços tirados das configurações (item acima) |
 
 **Objetivo.** Executar todo o fluxo obrigatório da tabela de etapas mínimas de forma roteirizada e reprodutível, com o plano de testes negativos.
 

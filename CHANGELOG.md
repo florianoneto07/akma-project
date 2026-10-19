@@ -13,7 +13,9 @@
 - `seed register --gpsi` e `--k-akma`; AF com `clockOffset` (teste de relógio); `uaclient -kaf-file`, com as chaves explícitas tendo precedência sobre o ME.
 - Execução de 18/10/2026: 63 verificações, nenhuma falha.
 - Matriz de rastreabilidade revisão 4, com as etapas de TS 33.535 §6.1 e §6.2.1 ligadas a evidências; desvios consolidados; tutorial, parte 8; `docs/af-side/e2e.md`. A pergunta-guia está respondida.
-- Não verificado: a reprodução do tutorial numa instalação limpa do free5GC v4.2.3 (critério 4).
+- Critério 4, verificado em 19/10/2026: o tutorial, seguido do início numa VM nova com o free5GC v4.2.3 do guia oficial, reproduz o resultado (63 verificações, nenhuma falha). A reprodução levou a duas correções:
+  - `e2e.sh` e `e2e-remote.sh` tiram o endereço do AAnF do `afcfg.yaml` e do `aanfcfg.yaml`, em vez de 192.168.16.130 fixo; o `seed` recebe `--aanf`; o *preflight* confere que os dois endereços coincidem;
+  - tutorial: nova seção 1.1 (repositório nas duas máquinas, SSH, gNB numa máquina só, assinante OPc, Ubuntu 18.04), caminho e `--aanf` do `seed`, qual `aanfcfg.yaml` ajustar, comandos completos da 6.3, aviso sobre o SUPI do vetor `testbed-ue` e `e2e.sh` com a máquina do free5GC.
 
 ### MVP-4 — lado UE: K_AF no ME e Ua\* pelo plano de usuário (18/10/2026)
 - `af/ue/ueransim/patches/0003-akma-kaf-nr-cli-selftest.patch`:

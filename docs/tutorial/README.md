@@ -1,6 +1,6 @@
 # Tutorial — AKMA sobre o free5GC
 
-Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-5, o primeiro MVP funcional.
+Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-5, o primeiro MVP funcional. Em 19/10/2026 ele foi seguido do início numa VM com o free5GC v4.2.3 recém-instalado, e o roteiro da parte 8 terminou com 63 verificações e nenhuma falha (critério 4 do MVP-5).
 
 | Parte | Conteúdo | Disponível |
 |---|---|---|
@@ -20,11 +20,19 @@ Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia of
 | Item | Versão usada no projeto |
 |---|---|
 | free5GC | v4.2.3, instalado pelo guia oficial, com `TestRegistration` passando |
+| MongoDB | o do guia, com `mongosh` (partes 3 e 4) |
 | Go | 1.26.2 — a mesma do free5GC |
-| Python | 3.10 ou mais recente (para o oráculo de referência) |
-| UERANSIM | v3.2.6 (a partir da parte 4; com *patch* a partir da parte 5) |
+| Python | 3.10 ou mais recente, na máquina do AF (oráculo de referência e testes negativos) |
+| UERANSIM | v3.2.6, commit `85a0fbf` do guia do free5GC, na máquina do free5GC (a partir da parte 4; com *patch* a partir da parte 5) |
 
-Topologia de referência (ADR-0001-R2): o free5GC e o AAnF numa máquina; o AF e este repositório em outra. Uma única máquina também serve para as partes 1 e 2.
+Topologia de referência (ADR-0001-R2): o free5GC, o AAnF e o UERANSIM numa máquina; o AF e este repositório em outra. Uma única máquina também serve para as partes 1 e 2.
+
+Os comandos usam os endereços do laboratório: **192.168.16.130** para a máquina do free5GC e **192.168.16.129** para a do AF. Com outros endereços, troque-os nos comandos e nestes pontos de configuração:
+
+- no `aanfcfg.yaml` (seção 3.2);
+- no `--aanf` do `seed` (seção 3.6);
+- no `afcfg.yaml` (seção 6.2);
+- no argumento do `e2e.sh` (seção 8.2).
 
 Se o Go não estiver instalado, instale-o num diretório de usuário, sem privilégios:
 
@@ -37,6 +45,30 @@ export PATH=$HOME/sdk/go1.26.2/bin:$PATH
 ```
 
 Confira o SHA-256 do arquivo com o publicado em https://go.dev/dl/ antes de usar. O projeto usou `990e6b4bbba816dc3ee129eaeaf4b42f17c2800b88a2166c265ac1a200262282` para `go1.26.2.linux-amd64.tar.gz`.
+
+### 1.1 Antes da parte 3
+
+**O repositório nas duas máquinas.**
+
+- Na máquina do AF, clone onde preferir. Os comandos sem `~/` partem da raiz dele.
+- Na do free5GC, clone em `~/akma-free5gc`, ao lado de `~/free5gc`. Os *scripts* das partes 3 a 7 rodam dali, e os `go.mod` corrigidos da parte 4 apontam para esse local:
+
+```bash
+git clone https://github.com/florianoneto07/akma-free5gc.git ~/akma-free5gc
+```
+
+**SSH por chave** da máquina do AF para a do free5GC. O `deploy.sh` (seção 3.4) e o `e2e.sh` (parte 8) não pedem senha de SSH.
+
+**O UERANSIM na máquina do free5GC.** O guia instala o UERANSIM em outra máquina e manda apontar o gNB para o AMF (§6 do guia do UERANSIM). Numa máquina só, o ajuste é um: `amfConfigs` do `config/free5gc-gnb.yaml` passa de `127.0.0.1` para `127.0.0.18`, o `ngapIpList` do AMF. O restante fica como veio.
+
+**O assinante.** Use o assinante padrão da *webconsole* (`imsi-208930000000001`), com o tipo de código de operador **OPc**, que já vem marcado. O guia manda trocar para "OP", mas o `free5gc-ue.yaml` do UERANSIM usa `opType: 'OPC'`, e prevalece a nota do próprio guia: os parâmetros têm de bater com os do UE.
+
+`[FREE5GC]` **Ubuntu 18.04.** O guia supõe Ubuntu 20.04 ou mais recente. No 18.04, com kernel 5.4, o projeto precisou de quatro adaptações:
+
+- MongoDB 5.0, do repositório `bionic`, porque o 8.2 do guia não tem pacote para 18.04;
+- Node.js 22 da compilação para glibc 2.17, de unofficial-builds.nodejs.org, porque a oficial exige glibc 2.28;
+- a *webconsole* pela alternativa manual do guia (D.2), porque o `make webconsole` executa `sudo corepack enable`;
+- gcc 9 e CMake 3.17 ou mais recente para o UERANSIM.
 
 ---
 
@@ -105,7 +137,7 @@ cd free5gc/aanf && go test ./...
 
 ### 3.2 Configurar
 
-Copie `free5gc/config/aanfcfg.yaml` e ajuste:
+O `deploy.sh` (seção 3.4) instala o `free5gc/config/aanfcfg.yaml` do repositório quando a máquina do free5GC ainda não tem um, e depois não o sobrescreve. Ajuste esse arquivo antes do *deploy*, ou ajuste depois a cópia instalada, `~/free5gc/config/aanfcfg.yaml`, na máquina do free5GC. O arquivo do repositório tem os endereços do laboratório. Os campos:
 
 - `sbi.registerIPv4` e `sbi.bindingIPv4`: um endereço da máquina do free5GC que a máquina do AF alcance. Não use um *loopback* `127.0.0.x`, a menos que o AF rode na mesma máquina. Porta 8000, como as outras NFs.
 - `nrfUri` e `nrfCertPem`: os mesmos das outras NFs (`http://127.0.0.10:8000`, `cert/nrf.pem`).
@@ -122,10 +154,10 @@ O NRF do free5GC v4.2.3 tem três falhas em relação a TS 29.510 que afetam o A
 - recusa a descoberta do tipo `AANF`;
 - emite tokens sem `aud`.
 
-O AAnF exige `aud` no token. **Sem esta correção, o registro de chaves responde 401.** Na máquina do free5GC, com o free5GC parado:
+O AAnF exige `aud` no token. **Sem esta correção, o registro de chaves responde 401.** Na máquina do free5GC, com o free5GC parado e o repositório em `~/akma-free5gc` (seção 1.1):
 
 ```bash
-free5gc/scripts/patch-nf.sh nrf apply
+~/akma-free5gc/free5gc/scripts/patch-nf.sh nrf apply
 ```
 
 O *script*:
@@ -144,10 +176,10 @@ Copie `free5gc/build/bin/aanf` para `~/free5gc/bin/aanf` e a configuração para
 free5gc/scripts/deploy.sh usuario@maquina-do-free5gc
 ```
 
-Com o free5GC em execução (pelo menos o NRF), inicie o AAnF na máquina do free5GC:
+Se o *deploy* instalou a configuração do repositório sem o ajuste da seção 3.2, ajuste-a agora na máquina do free5GC. Com o free5GC em execução (pelo menos o NRF), inicie o AAnF na máquina do free5GC:
 
 ```bash
-free5gc/scripts/run-aanf.sh start
+~/akma-free5gc/free5gc/scripts/run-aanf.sh start
 ```
 
 Ou, a partir da outra máquina:
@@ -164,10 +196,10 @@ O log fica em `~/free5gc/log/aanf/aanf.log`. As linhas esperadas são `OAuth2 se
 mongosh --quiet free5gc --eval 'printjson(db.NfProfile.find({nfType: "AANF"}, {_id: 0}).toArray())'
 ```
 
-O perfil deve ter `nfType: 'AANF'`, o serviço `naanf-akma` (versão `v1`) no endereço configurado e o `aanfInfoList` com os RIDs. Para conferir a descoberta, rode na máquina do free5GC:
+O perfil deve ter `nfType: 'AANF'`, o serviço `naanf-akma` (versão `v1`) no endereço configurado e o `aanfInfoList` com os RIDs. Para conferir a descoberta, rode na máquina do free5GC o `seed`, que o `deploy.sh` deixou em `~/akma-tools/`, fora do `PATH`:
 
 ```bash
-seed discover --nrf http://127.0.0.10:8000 --routing-indicator 0000
+~/akma-tools/seed discover --nrf http://127.0.0.10:8000 --routing-indicator 0000
 ```
 
 O AAnF deve aparecer na lista. Com um RID que ele não atende, a resposta é `null`. É assim que o AUSF vai encontrá-lo na parte 4 (TS 33.535 §6.7).
@@ -176,18 +208,20 @@ O AAnF deve aparecer na lista. Com um RID que ele não atende, a resposta é `nu
 
 Os valores abaixo são do vetor `testbed-ue` (`shared/akma/testdata/vectors.json`). O `seed` precisa de um *token* OAuth2 para registrar, e o NRF só é alcançável na máquina do free5GC. Para obtê-lo, o `seed` se registra no NRF como um AF temporário e se descadastra ao sair.
 
+`[MVP]` O `--aanf` dá o endereço do AAnF, o `sbi.registerIPv4` da seção 3.2 com a porta 8000. Sem ele, o `seed` usa o do laboratório (`http://192.168.16.130:8000`).
+
 Na máquina do free5GC, no papel do AUSF:
 
 ```bash
-seed register --nrf http://127.0.0.10:8000 --supi imsi-208930000000001 --k-ausf 141ef548f86e3a2a1ad949331caa9e6bb12401afa321bde4f9f23b84870dd654 --rid 0000 --mcc 208 --mnc 93
+~/akma-tools/seed register --nrf http://127.0.0.10:8000 --aanf http://192.168.16.130:8000 --supi imsi-208930000000001 --k-ausf 141ef548f86e3a2a1ad949331caa9e6bb12401afa321bde4f9f23b84870dd654 --rid 0000 --mcc 208 --mnc 93
 ```
 
 A saída deve trazer o A-KID `rid0000.atidiz1FN8DkMGyxwtfTVYsKUsWnzOJdBOLlQEiQlK2gHNA=@5gc.mnc093.mcc208.3gppnetwork.org`.
 
-Na máquina do AF (o endereço dela precisa estar em `authorizedAfs`), no papel do AF:
+Na máquina do AF (o endereço dela precisa estar em `authorizedAfs`), no papel do AF, com o `seed` da seção 3.1:
 
 ```bash
-seed retrieve --aanf http://192.168.16.130:8000 --af-id af1.akma.example.FF00000001 --akid 'rid0000.atidiz1FN8DkMGyxwtfTVYsKUsWnzOJdBOLlQEiQlK2gHNA=@5gc.mnc093.mcc208.3gppnetwork.org'
+free5gc/build/bin/seed retrieve --aanf http://192.168.16.130:8000 --af-id af1.akma.example.FF00000001 --akid 'rid0000.atidiz1FN8DkMGyxwtfTVYsKUsWnzOJdBOLlQEiQlK2gHNA=@5gc.mnc093.mcc208.3gppnetwork.org'
 ```
 
 A K_AF deve ser `00c16845c2e4e1256755b84bb06d94e2e659d8ba53c59e874fc149bffd5ea04b`, a mesma que o oráculo da parte 2 calcula. O `expiry` deve estar uma hora à frente, em UTC.
@@ -199,8 +233,13 @@ Respostas que indicam configuração errada:
 | `401` no `register` | sem `--nrf`; o NRF sem a correção da seção 3.3 (token sem `aud`); ou o `nrfCertPem` do AAnF não é o certificado do NRF em uso |
 | `403` sem causa no `retrieve` | o AF_ID não está em `authorizedAfs`, ou o pedido saiu de um endereço que não está na lista daquele AF_ID |
 | `403 (K_AKMA_NOT_PRESENT)` | o A-KID não foi registrado, foi substituído por um registro mais novo do mesmo SUPI ou o AAnF reiniciou (o contexto fica só em memória) |
+| `connection refused` | `--aanf` ausente ou com o endereço de outra máquina |
 
-Por fim, para remover o contexto: `seed remove --nrf http://127.0.0.10:8000 --supi imsi-208930000000001`.
+Por fim, para remover o contexto, na máquina do free5GC:
+
+```bash
+~/akma-tools/seed remove --nrf http://127.0.0.10:8000 --aanf http://192.168.16.130:8000 --supi imsi-208930000000001
+```
 
 ---
 
@@ -215,7 +254,7 @@ Esta parte altera o UDM e o AUSF do free5GC com *patches* do repositório (`docs
 
 ### 4.1 Onde fica o repositório
 
-O AUSF corrigido depende de código deste repositório: da biblioteca `shared/akma` e da cópia do `openapi` da parte 3. Os `go.mod` corrigidos apontam para `~/akma-free5gc` por caminho relativo. **Clone o repositório nesse local, ao lado de `~/free5gc`**, na máquina do free5GC, e prepare as duas cópias do `openapi`: a das NFs e a do banco de testes do free5GC.
+O AUSF corrigido depende de código deste repositório: da biblioteca `shared/akma` e da cópia do `openapi` da parte 3. Os `go.mod` corrigidos apontam para `~/akma-free5gc` por caminho relativo. **O repositório tem de estar nesse local, ao lado de `~/free5gc`** (seção 1.1). Na máquina do free5GC, prepare as duas cópias do `openapi`: a das NFs e a do banco de testes do free5GC.
 
 ```bash
 ~/akma-free5gc/free5gc/scripts/prepare-openapi.sh
@@ -274,7 +313,7 @@ Três testes devem passar:
 - `TestAkma5GAKA` e `TestAkmaEAPAKAPrime`: o UE de teste deriva a K_AF da própria K_AUSF, e ela é igual à que o AAnF entrega;
 - `TestAkmaWithoutSubscription`: sem assinatura, nada é registrado.
 
-**Pelo UERANSIM.** Inicie o free5GC (`./run.sh`), o AAnF (`run-aanf.sh start`), o gNB e o UE. No log do free5GC deve aparecer `AKMA key material of imsi-208930000000001 registered at the AAnF`. O log do AAnF (`~/free5gc/log/aanf/aanf.log`) mostra o A-KID guardado, da forma `rid0000.atid<44 caracteres>@5gc.mnc093.mcc208.3gppnetwork.org`. A parte 5 põe tudo isso numa tela só.
+**Pelo UERANSIM.** Inicie o free5GC (`./run.sh`), o AAnF (`~/akma-free5gc/free5gc/scripts/run-aanf.sh start`), o gNB e o UE. No log do free5GC deve aparecer `AKMA key material of imsi-208930000000001 registered at the AAnF`. O log do AAnF (`~/free5gc/log/aanf/aanf.log`) mostra o A-KID guardado, da forma `rid0000.atid<44 caracteres>@5gc.mnc093.mcc208.3gppnetwork.org`. A parte 5 põe tudo isso numa tela só.
 
 Se o UE do UERANSIM ficar em `MM-DEREGISTERED/LIMITED-SERVICE` logo depois de iniciar, reinicie o UE. É uma corrida da seleção de célula do UERANSIM ("no SI"), sem relação com o AKMA.
 
@@ -415,8 +454,8 @@ af/scripts/build-af.sh
 A configuração fica em `af/config/afcfg.yaml`. Os campos que importam:
 
 - `fqdn`: o nome pelo qual o UE chama o AF. Ele entra na K_AF, e o AF só aceita esse nome no cabeçalho `Host`;
-- `listen`: o endereço em que o AF escuta;
-- `aanfUri`: o endereço do AAnF;
+- `listen`: o endereço em que o AF escuta. É também o endereço de origem dos pedidos ao AAnF, que tem de estar em `sourceAddresses` (seção 6.1);
+- `aanfUri`: o endereço do AAnF, o `sbi.registerIPv4` da seção 3.2 com a porta 8000. No repositório está o do laboratório;
 - `kafExpiry`: o que fazer quando a K_AF vence, `refetch` ou `reject`.
 
 ```bash
@@ -433,7 +472,7 @@ Na tela, a partida mostra o AF_ID e o `realm`:
 
 O UE do UERANSIM só entrega a K_AF na parte 7. Antes disso, faça o papel do UE com um vetor do projeto, em dois passos:
 
-1. semeie no AAnF o contexto do vetor `testbed-ue`, como na seção 3.6 (`seed register`);
+1. semeie no AAnF o contexto do vetor `testbed-ue`, como na seção 3.6 (`~/akma-tools/seed register`, com o `--aanf`);
 2. rode o cliente Ua\* com o mesmo vetor:
 
    ```bash
@@ -452,12 +491,14 @@ O que testar a seguir, e o que esperar:
 
 | Caso | Resposta do AF |
 |---|---|
-| K_AF errada (`-kaf` com outro valor) | `401` |
+| K_AF errada: `-akid` com o A-KID do vetor e `-kaf` com outro valor (com `-vector`, o `-kaf` não vale) | `401` |
 | A-KID que o AAnF não conhece (`-vector rid-012`) | `403 AKMA_KEY_NOT_AVAILABLE` |
-| outro nome no `Host` (`-fqdn af2.akma.example`) | `421 MISDIRECTED_REQUEST` |
-| AF_ID fora da política do AAnF | `503 AANF_UNAVAILABLE` |
+| outro nome no `Host` (`-vector testbed-ue -fqdn af2.akma.example`) | `421 MISDIRECTED_REQUEST` |
+| AF_ID fora da política do AAnF: um segundo AF, com outra configuração, `fqdn: af2.akma.example` e outra porta em `listen`; o cliente com `-vector testbed-ue -fqdn af2.akma.example -connect <listen desse AF>` | `503 AANF_UNAVAILABLE` |
 
 Os resultados do laboratório estão em `docs/af-side/teste-af.md`.
+
+**Antes da parte 7.** O vetor `testbed-ue` tem o SUPI do UE do UERANSIM (`imsi-208930000000001`). Se o UE já se registrou, o `seed register` deste teste substituiu o contexto dele no AAnF. Faça então uma nova autenticação do UE (seção 7.4) antes da seção 7.3. Sem ela, o AF responde `403 AKMA_KEY_NOT_AVAILABLE` ao UE, porque o AAnF não tem mais o A-KID que o UE apresenta.
 
 ### 6.4 Limitações
 
@@ -495,7 +536,7 @@ O resultado esperado é `5 passed, 3 refused (DV-4), 0 failed`. Os três recusad
 
 ### 7.3 Autenticar no AF a partir do UE
 
-Na máquina do free5GC, compile o cliente Ua\* com `~/akma-free5gc/af/scripts/build-af.sh`, ou copie o `af/build/bin/uaclient` da máquina do AF para o mesmo lugar. Com o AF da parte 6 no ar:
+Na máquina do free5GC, compile o cliente Ua\* com `~/akma-free5gc/af/scripts/build-af.sh`, ou copie o `af/build/bin/uaclient` da máquina do AF para o mesmo lugar. O AAnF precisa ter o contexto da última autenticação do UE: se a seção 6.3 semeou o vetor `testbed-ue` depois que o UE se registrou, faça antes a nova autenticação da seção 7.4. Com o AF da parte 6 no ar:
 
 ```bash
 sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -n 3
@@ -554,20 +595,24 @@ af/scripts/build-af.sh
 free5gc/scripts/build-aanf.sh
 ```
 
-A máquina do AF precisa de acesso SSH por chave à do free5GC. Na do free5GC, o roteiro espera o que as partes anteriores deixaram:
+A máquina do AF precisa de acesso SSH por chave à do free5GC (seção 1.1) e do `af/config/afcfg.yaml` da seção 6.2. Na do free5GC, o roteiro espera o que as partes anteriores deixaram:
 
 - o repositório em `~/akma-free5gc`;
 - os *patches* aplicados, o AAnF implantado e o `seed` em `~/akma-tools/`;
 - o UERANSIM com os *patches* e o `linkIp: 10.100.0.1`;
 - o `uaclient` em `~/akma-free5gc/af/build/bin/`.
 
-O free5GC deve estar parado: o roteiro o inicia.
+O free5GC deve estar parado: o roteiro o inicia. O AF da parte 6 também deve estar parado, porque o roteiro inicia o seu na mesma porta.
 
 ### 8.2 Rodar
 
+Na máquina do AF, com o usuário e o endereço da máquina do free5GC:
+
 ```bash
-af/scripts/e2e.sh
+af/scripts/e2e.sh woca@192.168.16.130
 ```
+
+Sem o argumento, o roteiro usa a máquina do free5GC do laboratório, `woca@192.168.16.130`. O endereço do AAnF vem do `aanfUri` de `af/config/afcfg.yaml`. Antes de começar, o roteiro confere que é o `sbi.bindingIPv4` do `aanfcfg.yaml` instalado na máquina do free5GC.
 
 O roteiro pede a senha de `sudo` da máquina do free5GC uma vez e leva cerca de dois minutos. Ele:
 

@@ -165,6 +165,8 @@ O mesmo *script* aceita `stop`, `status` e `foreground`; na própria máquina do
 
 Registro no NRF: `registro-nrf.md` §7. Fluxo das três operações com a ferramenta `seed` e o vetor `testbed-ue` (`shared/akma/testdata/vectors.json`):
 
+`[MVP]` O `seed` fala com o AAnF no endereço de `--aanf`, cujo padrão é o do laboratório (`http://192.168.16.130:8000`). Em outra máquina, passe `--aanf http://<sbi.registerIPv4>:8000` em `register`, `retrieve` e `remove`; sem isso, a resposta é `connection refused` ou, pior, vem de outro AAnF.
+
 1. Na máquina do free5GC, no papel do AUSF, com token obtido do NRF:
 
 ```bash
