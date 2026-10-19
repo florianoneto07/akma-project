@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"gopkg.in/yaml.v2"
 
 	"github.com/florianoneto07/akma-free5gc/af/uastar"
@@ -63,8 +64,21 @@ type Configuration struct {
 	// KafExpiry is "refetch" or "reject".
 	KafExpiry KafExpiry `yaml:"kafExpiry,omitempty"`
 	// AanfURI is the apiRoot of the AAnF, locally configured (TS 33.535
-	// cl. 6.7).
-	AanfURI string `yaml:"aanfUri"`
+	// cl. 6.7). The AF is then inside the operator network.
+	AanfURI string `yaml:"aanfUri,omitempty"`
+	// NefURI is the apiRoot of the NEF. The AF is then outside the operator
+	// network and requests K_AF through the NEF (TS 33.535 cl. 6.3). Exactly
+	// one of aanfUri and nefUri is set.
+	NefURI string `yaml:"nefUri,omitempty"`
+	// NrfURI is the NRF that issues the access token of the NEF API, at
+	// which the AF registers (docs/free5gc-side/nef.md cl. 2.1). Required
+	// with nefUri.
+	NrfURI string `yaml:"nrfUri,omitempty"`
+	// NfInstanceID identifies the AF at the NRF; a random UUID when absent.
+	NfInstanceID string `yaml:"nfInstanceId,omitempty"`
+	// Anonymous requests anonymous user access: the K_AF comes without the
+	// SUPI (TS 33.535 cl. 6.2.2).
+	Anonymous bool `yaml:"anonymous,omitempty"`
 	// ClockOffset shifts the clock of the AF, a Go duration ("2h", "-2h").
 	// Test only: it simulates an AF whose clock disagrees with the AAnF's
 	// (MVP-5 negative tests).
@@ -89,6 +103,10 @@ type Settings struct {
 	NonceLifetime time.Duration
 	KafExpiry     KafExpiry
 	AanfURI       string
+	NefURI        string
+	NrfURI        string
+	NfInstanceID  string
+	Anonymous     bool
 	ClockOffset   time.Duration
 	Logger        Logger
 }
@@ -125,14 +143,31 @@ func (c Config) Settings() (*Settings, error) {
 	if _, _, err := net.SplitHostPort(cf.Listen); err != nil {
 		errs = append(errs, fmt.Errorf("listen: %w", err))
 	}
-	if u, err := url.Parse(cf.AanfURI); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+	switch {
+	case cf.AanfURI != "" && cf.NefURI != "":
+		errs = append(errs, errors.New("aanfUri and nefUri: set only one of them"))
+	case cf.NefURI != "":
+		if !isAPIRoot(cf.NefURI) {
+			errs = append(errs, fmt.Errorf("nefUri: %q is not an http(s) apiRoot", cf.NefURI))
+		}
+		if !isAPIRoot(cf.NrfURI) {
+			errs = append(errs, fmt.Errorf("nrfUri: %q is not an http(s) apiRoot (required with nefUri)", cf.NrfURI))
+		}
+	case !isAPIRoot(cf.AanfURI):
 		errs = append(errs, fmt.Errorf("aanfUri: %q is not an http(s) apiRoot", cf.AanfURI))
+	}
+	nfID := cf.NfInstanceID
+	if nfID == "" {
+		nfID = uuid.New().String()
+	} else if _, err := uuid.Parse(nfID); err != nil {
+		errs = append(errs, fmt.Errorf("nfInstanceId: %q is not a UUID", nfID))
 	}
 
 	s := &Settings{
 		AfID: id, FQDN: cf.FQDN, Listen: cf.Listen, Path: cf.Path, Qop: cf.Qop,
 		NonceLifetime: DefaultNonceLifetime, KafExpiry: cf.KafExpiry, AanfURI: strings.TrimRight(cf.AanfURI, "/"),
-		Logger: c.Logger,
+		NefURI: strings.TrimRight(cf.NefURI, "/"), NrfURI: strings.TrimRight(cf.NrfURI, "/"),
+		NfInstanceID: nfID, Anonymous: cf.Anonymous, Logger: c.Logger,
 	}
 	if s.Path == "" {
 		s.Path = DefaultPath
@@ -181,6 +216,11 @@ func (c Config) Settings() (*Settings, error) {
 		return nil, err
 	}
 	return s, nil
+}
+
+func isAPIRoot(s string) bool {
+	u, err := url.Parse(s)
+	return err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Host != ""
 }
 
 func parseUaStarID(s string) (afid.UaStarID, error) {

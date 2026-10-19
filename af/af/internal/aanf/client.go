@@ -39,22 +39,25 @@ type Key struct {
 
 // Client requests K_AF for one AF_ID.
 type Client struct {
-	api  *Naanf_AKMA.APIClient
-	afID afid.AfID
+	api       *Naanf_AKMA.APIClient
+	afID      afid.AfID
+	anonymous bool
 }
 
 // New returns a client of the AAnF at apiRoot, for the AF identified by id.
-func New(apiRoot string, id afid.AfID) *Client {
+// With anonymous, the requests carry anonInd: the AAnF answers without the
+// SUPI (Naanf_AKMA_ApplicationKey_AnonUser_Get, TS 33.535 cl. 6.2.2).
+func New(apiRoot string, id afid.AfID, anonymous bool) *Client {
 	cfg := Naanf_AKMA.NewConfiguration()
 	cfg.SetBasePath(apiRoot)
-	return &Client{api: Naanf_AKMA.NewAPIClient(cfg), afID: id}
+	return &Client{api: Naanf_AKMA.NewAPIClient(cfg), afID: id, anonymous: anonymous}
 }
 
 // ApplicationKey requests the K_AF of aKid. The afId is sent in transport
 // form and the aKId exactly as received from the UE (MVP-3 criterion 2).
 func (c *Client) ApplicationKey(ctx context.Context, aKid string) (Key, error) {
 	req := &Naanf_AKMA.GetAKMAAPPKeyMaterialRequest{}
-	req.SetAkmaAfKeyRequest(models.AkmaAfKeyRequest{AfId: c.afID.Transport(), AKId: aKid})
+	req.SetAkmaAfKeyRequest(models.AkmaAfKeyRequest{AfId: c.afID.Transport(), AKId: aKid, AnonInd: c.anonymous})
 	rsp, err := c.api.RetrieveTheAKMAApplicationKeyMaterialCollectionApi.GetAKMAAPPKeyMaterial(ctx, req)
 	if err != nil {
 		return Key{}, classify(err)

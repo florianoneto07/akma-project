@@ -18,7 +18,7 @@ configuration:
   kafExpiry: refetch
   # AAnF apiRoot, locally configured (TS 33.535 cl. 6.7). The AAnF authorizes
   # this AF_ID from this machine's address (akma.authorizedAfs of aanfcfg.yaml).
-  aanfUri: http://192.168.16.130:8000
+  aanfUri: http://192.168.16.130:8010
 
 logger:
   enable: true

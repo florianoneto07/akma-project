@@ -11,7 +11,7 @@ import (
 func base() Config {
 	return Config{Configuration: Configuration{
 		FQDN: "af1.akma.example", UaStarID: "FF00000001", Listen: "192.168.16.129:8080",
-		AanfURI: "http://192.168.16.130:8000/",
+		AanfURI: "http://192.168.16.130:8010/",
 	}}
 }
 
@@ -22,25 +22,34 @@ func TestDefaults(t *testing.T) {
 	}
 	if s.AfID.Transport() != "af1.akma.example.FF00000001" || s.Realm != "3GPP-bootstrapping-akma@af1.akma.example" ||
 		s.Path != DefaultPath || len(s.Qop) != 1 || s.Qop[0] != "auth" || s.NonceLifetime != DefaultNonceLifetime ||
-		s.KafExpiry != KafExpiryRefetch || s.AanfURI != "http://192.168.16.130:8000" {
+		s.KafExpiry != KafExpiryRefetch || s.AanfURI != "http://192.168.16.130:8010" {
 		t.Fatalf("settings %+v", s)
 	}
 }
 
 func TestInvalid(t *testing.T) {
 	for name, mutate := range map[string]func(*Configuration){
-		"fqdn with port":      func(c *Configuration) { c.FQDN = "af1.akma.example:8080" },
-		"fqdn empty label":    func(c *Configuration) { c.FQDN = "af1..example" },
-		"fqdn non ascii":      func(c *Configuration) { c.FQDN = "äf1.example" },
-		"ua* id short":        func(c *Configuration) { c.UaStarID = "FF0000" },
-		"listen without port": func(c *Configuration) { c.Listen = "192.168.16.129" },
-		"aanfUri":             func(c *Configuration) { c.AanfURI = "192.168.16.130:8000" },
-		"qop":                 func(c *Configuration) { c.Qop = []string{"auth-conf"} },
-		"nonceLifetime":       func(c *Configuration) { c.NonceLifetime = "-1s" },
-		"kafExpiry":           func(c *Configuration) { c.KafExpiry = "renew" },
-		"realmPrefix with @":  func(c *Configuration) { c.RealmPrefix = "a@b" },
-		"path":                func(c *Configuration) { c.Path = "ua" },
-		"clockOffset":         func(c *Configuration) { c.ClockOffset = "two hours" },
+		"fqdn with port":        func(c *Configuration) { c.FQDN = "af1.akma.example:8080" },
+		"fqdn empty label":      func(c *Configuration) { c.FQDN = "af1..example" },
+		"fqdn non ascii":        func(c *Configuration) { c.FQDN = "äf1.example" },
+		"ua* id short":          func(c *Configuration) { c.UaStarID = "FF0000" },
+		"listen without port":   func(c *Configuration) { c.Listen = "192.168.16.129" },
+		"aanfUri":               func(c *Configuration) { c.AanfURI = "192.168.16.130:8010" },
+		"qop":                   func(c *Configuration) { c.Qop = []string{"auth-conf"} },
+		"nonceLifetime":         func(c *Configuration) { c.NonceLifetime = "-1s" },
+		"kafExpiry":             func(c *Configuration) { c.KafExpiry = "renew" },
+		"realmPrefix with @":    func(c *Configuration) { c.RealmPrefix = "a@b" },
+		"path":                  func(c *Configuration) { c.Path = "ua" },
+		"clockOffset":           func(c *Configuration) { c.ClockOffset = "two hours" },
+		"no aanfUri nor nefUri": func(c *Configuration) { c.AanfURI = "" },
+		"aanfUri and nefUri":    func(c *Configuration) { c.NefURI = "http://192.168.16.130:8000" },
+		"nefUri without nrfUri": func(c *Configuration) {
+			c.AanfURI, c.NefURI = "", "http://192.168.16.130:8000"
+		},
+		"nefUri not an apiRoot": func(c *Configuration) {
+			c.AanfURI, c.NefURI, c.NrfURI = "", "192.168.16.130:8000", "http://127.0.0.10:8000"
+		},
+		"nfInstanceId": func(c *Configuration) { c.NfInstanceID = "af1" },
 	} {
 		t.Run(name, func(t *testing.T) {
 			c := base()
@@ -52,7 +61,27 @@ func TestInvalid(t *testing.T) {
 	}
 }
 
-// TestSampleConfig loads the configuration of the laboratory.
+// The AF outside the operator network: NEF, NRF and an NF instance ID.
+func TestExternal(t *testing.T) {
+	c := base()
+	c.Configuration.AanfURI = ""
+	c.Configuration.NefURI = "http://192.168.16.130:8000/"
+	c.Configuration.NrfURI = "http://127.0.0.10:8000"
+	c.Configuration.Anonymous = true
+	s, err := c.Settings()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.NefURI != "http://192.168.16.130:8000" || s.NrfURI != "http://127.0.0.10:8000" || s.AanfURI != "" ||
+		!s.Anonymous || len(s.NfInstanceID) != 36 {
+		t.Fatalf("settings %+v", s)
+	}
+	c.Configuration.NfInstanceID = "b6f417f0-06fa-4c38-b291-33066f5a5fe8"
+	if s, err = c.Settings(); err != nil || s.NfInstanceID != c.Configuration.NfInstanceID {
+		t.Fatalf("settings %+v, %v", s, err)
+	}
+}
+
 func TestClockOffset(t *testing.T) {
 	c := base()
 	c.Configuration.ClockOffset = "-2h"

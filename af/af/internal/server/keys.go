@@ -11,7 +11,8 @@ import (
 	"github.com/florianoneto07/akma-free5gc/af/af/internal/logger"
 )
 
-// KeyProvider obtains K_AF from the AAnF (*aanf.Client).
+// KeyProvider obtains K_AF from the AAnF, directly (*aanf.Client) or
+// through the NEF (*nef.Client).
 type KeyProvider interface {
 	ApplicationKey(ctx context.Context, aKid string) (aanf.Key, error)
 }

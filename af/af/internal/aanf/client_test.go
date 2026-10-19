@@ -41,11 +41,16 @@ func fakeAanf(t *testing.T, handler func(w http.ResponseWriter, req models.AkmaA
 
 func client(t *testing.T, apiRoot string) *Client {
 	t.Helper()
+	return clientAnon(t, apiRoot, false)
+}
+
+func clientAnon(t *testing.T, apiRoot string, anonymous bool) *Client {
+	t.Helper()
 	id, err := afid.New("af1.akma.example", afid.UaStarMVP)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return New(apiRoot, id)
+	return New(apiRoot, id, anonymous)
 }
 
 func writeJSON(w http.ResponseWriter, status int, contentType string, v any) {
@@ -74,6 +79,24 @@ func TestApplicationKey(t *testing.T) {
 	}
 	if k.KAf != kaf || !k.Expiry.Equal(exp) || k.Supi != "imsi-208930000000001" {
 		t.Fatalf("key %+v", k)
+	}
+}
+
+// TestApplicationKeyAnonymous: an anonymous AF sends anonInd
+// (TS 33.535 cl. 6.2.2; TS 29.535 cl. 4.2.2.3.2).
+func TestApplicationKeyAnonymous(t *testing.T) {
+	exp := time.Now().Add(time.Hour)
+	var got models.AkmaAfKeyRequest
+	root := fakeAanf(t, func(w http.ResponseWriter, req models.AkmaAfKeyRequest) {
+		got = req
+		writeJSON(w, http.StatusOK, "application/json", models.AkmaAfKeyData{Kaf: codec.HexKey(kdf.Key{7}), Expiry: &exp})
+	})
+	k, err := clientAnon(t, root, true).ApplicationKey(context.Background(), testAKid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.AnonInd || k.Supi != "" {
+		t.Fatalf("request %+v, key SUPI %q", got, k.Supi)
 	}
 }
 
