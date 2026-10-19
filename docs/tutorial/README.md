@@ -454,7 +454,7 @@ af/scripts/build-af.sh
 A configuração fica em `af/config/afcfg.yaml`. Os campos que importam:
 
 - `fqdn`: o nome pelo qual o UE chama o AF. Ele entra na K_AF, e o AF só aceita esse nome no cabeçalho `Host`;
-- `listen`: o endereço em que o AF escuta. É também o endereço de origem dos pedidos ao AAnF, que tem de estar em `sourceAddresses` (seção 6.1);
+- `listen`: o endereço em que o AF escuta. Os pedidos ao AAnF não saem dele: saem do endereço que o sistema escolhe pela rota até o AAnF, e é esse que tem de estar em `sourceAddresses` (seção 6.1). Numa máquina com uma interface só, como no laboratório, os dois coincidem;
 - `aanfUri`: o endereço do AAnF, o `sbi.registerIPv4` da seção 3.2 com a porta 8000. No repositório está o do laboratório;
 - `kafExpiry`: o que fazer quando a K_AF vence, `refetch` ou `reject`.
 
