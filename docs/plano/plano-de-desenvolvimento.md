@@ -1,6 +1,6 @@
 # Plano de desenvolvimento por MVPs
 
-**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026).
+**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) aprovado (19/10/2026), em especificação.
 **Data:** 15 de outubro de 2026; revisão 3 em 16 de outubro de 2026; aprovação em 16 de outubro de 2026
 **Base:** documentos `00` a `04`, Adendo E, ADR-0001-R2, ADR-0002, ADR-0003, `docs/baseline/ambiente-verificado.md`, `docs/baseline/conferencia-normativa.md`, `docs/literatura/analise-dos-artigos.md`, `docs/conformidade/desvios.md`
 **Revisão 2 (15/10/2026):** conferido contra as normas do acervo (hoje em `specs/`).
@@ -573,9 +573,140 @@ Divergências que a reprodução em instalação limpa achou no tutorial (crité
 
 ---
 
-## 5. MVP-6 em diante
+### MVP-6 — AF externo via NEF, acesso anônimo e remoção por OAM
 
-Acesso anônimo (§6.2.2, `anonInd`) · acionamento de `remove-context` pelo núcleo (§6.6) · caminho via NEF (§6.3, `3gpp-akma`) · *roaming* (`ROAMING_STATUS`, `RoamingRestriction`, `Notify` com `3gpp-Sbi-Callback`) · `AuthTrigger` (§6.4.4, divergência D: POST) · GPSI via `id-translation-result` e `AKMA_GPSI_Support` · TLS nas interfaces SBI (§4.4.0) · Ua\* conforme K.2 sobre TLS e TLS 1.3 PSK conforme K.3.3 (`crypto/tls` do Go não suporta PSK externa; avaliar OpenSSL) · filtro `routing-indicator` para `AANF` no NRF · várias instâncias de AAnF · persistência do contexto · desempenho (metodologia do ADR-0001-R2 §5.4) · verificação formal · *upstream* (*rebase* para a versão corrente, modelos do Naanf_AKMA produzidos pela mesma ferramenta OpenAPI que o free5GC usa para os demais, migração de `shared/akma` para `free5gc/util`).
+**Estado (19/10/2026):** **aprovado** pelo responsável, com P11 (b) e DV-9 (b). Na aprovação, o responsável acrescentou o item 7: UERANSIM em outra máquina. Especificação `docs/free5gc-side/nef.md` aprovada em 19/10/2026, com três pontos a confirmar (seção 9 dele). Também decidido: o AAnF passa para a porta 8010, fora das portas do free5GC. Nada implementado.
+
+**Por que este escopo.**
+
+- `[3GPP]` Pelo histórico de TS 33.535 (Anexo E), três procedimentos que o MVP-5 não cobre já estavam no Release 17:
+  - a remoção do contexto (§6.6, CR 0072, V17.2.0);
+  - o acesso anônimo (§6.2.2, esclarecido pelo CR 0126, V17.6.0);
+  - o pedido de K_AF via NEF (§6.3, esclarecido pelo CR 0147, V17.8.0).
+
+  A seção 2, item 10, só deixou para o MVP-6+ os acréscimos do Release 18.
+- `[INTERPRETAÇÃO]` Dos três, só o §6.3 depende de uma NF do free5GC que o projeto ainda não alterou: o NEF. Com ele, a contribuição *upstream* cobre o AKMA do Release 17 em todas as NFs do lado da rede (NRF, UDM, AUSF, AAnF e NEF). Os perfis TLS do Ua\* (AKMA_TLS, também Release 17 pelo TR 21.917 §16.3) ficam do lado do AF e do UE.
+- `[FREE5GC]` O laboratório já tem o que o teste pede:
+  - o NEF do free5GC v4.2.3 está no `run.sh` e protege cada grupo de APIs *northbound* com um *middleware* OAuth2 por nome de serviço;
+  - `3gpp-akma` já é um `ServiceName` no `openapi` v1.2.4 e em TS 29.510;
+  - a máquina do AF faz o papel do AF fora da rede do operador.
+
+**O que já existe e não entra como trabalho.**
+
+| Item da lista da seção 5 | Onde já está |
+|---|---|
+| `anonInd` no AAnF (§6.2.2) | MVP-1: resposta sem `supi` quando `anonInd` é `true`; teste em `free5gc/aanf/internal/sbi/api_akma_test.go` |
+| operação `remove-context` (§6.6) | MVP-1, no AAnF; o `seed remove` faz o pedido |
+| filtro `routing-indicator` para `AANF` no NRF | MVP-1b, `free5gc/patches/nrf/0002-discover-aanf-by-routing-indicator.patch` |
+
+**Escopo.**
+
+1. **NEF** (TS 33.535 §6.3; TS 29.522 §4.4.23.2 e §5.14). *Patch* no NEF do free5GC com a operação `POST {apiRoot}/3gpp-akma/v1/retrieve`:
+   - o NEF autoriza o AF (passo 2) com o seu *middleware* OAuth2 para `3gpp-akma` e com uma política local de AF_ID;
+   - o NEF seleciona o AAnF pelo NRF, com o RID do A-KID (§6.7);
+   - o NEF manda `Naanf_AKMA_ApplicationKey_Get` ao AAnF (passo 3) e repassa o `anonInd`;
+   - a resposta ao AF tem `kaf` e `expiry` e **nunca** o SUPI (passo 5);
+   - `403 K_AKMA_NOT_PRESENT` do AAnF é repassado ao AF (TS 29.522 §4.4.23.2).
+2. **AAnF**: autorizar os pedidos que chegam pelo NEF (decisão P11, abaixo).
+3. **Acesso anônimo de ponta a ponta** (§6.2.2):
+   - opção `anonymous` no AF, que manda `anonInd: true`, direto ao AAnF ou via NEF;
+   - o AF trata o A-KID como identificador temporário do usuário.
+4. **AF fora da rede do operador**:
+   - `nefUri` em vez de `aanfUri` no `afcfg.yaml`;
+   - *token* OAuth2 para `3gpp-akma`.
+   - `[3GPP]` §6.3 NOTA: sem CAPIF, o AF é configurado localmente com o ponto de terminação da API.
+5. **Remoção por OAM** (§6.6), sem código novo.
+   - `[3GPP]` O consumidor que a norma nomeia é o OAM: TS 33.535 tab. 7.1.1-1; TS 29.535 §4.2.1.3.2 e tab. 4.2.2.1-1, corrigida pelo CR 0057 (V19.4.0, *"Incorrect consumer of ContextRemove service operation"*).
+   - O tutorial documenta o `seed remove` nesse papel, e o item "acionamento pelo núcleo" sai da lista.
+6. **Testes e documentação**: `e2e.sh` com grupos novos para o caminho via NEF e para o acesso anônimo; tutorial, parte 9.
+7. **UERANSIM em outra máquina** (pedido do responsável, 19/10/2026): free5GC na VM 192.168.16.130; AF na VM 192.168.16.129; gNB, UE (com o ME) e cliente Ua\* na VM 192.168.16.131. O UE autentica no AF pelo Ua\*, e o Ua\* passa pelo plano de usuário: do UE ao gNB na .131, pelo N3 até o UPF na .130 e pelo N6 até o AF na .129.
+   - `[FREE5GC]` Hoje o N2 do AMF (`ngapIpList`) e o N3 do UPF (`gtpu`) estão em endereços de *loopback* (127.0.0.18 e 127.0.0.8), que um gNB em outra máquina não alcança. Os dois passam para 192.168.16.130, no AMF, no UPF e no SMF. O gNB local da .130 continua funcionando com o mesmo endereço.
+   - `[FREE5GC]` O guia oficial do free5GC instala o UERANSIM numa máquina separada. Com este item, o tutorial cobre as duas topologias.
+
+**Fora do escopo: o GPSI ao AF externo.**
+
+- `[3GPP]` §6.3 passo 5: por política local, o NEF traduz o SUPI em GPSI pelo `Nudm_SubscriberDataManagement` e o inclui *"optionally"*.
+- `[FREE5GC]` O `id-translation-result` do UDM v4.2.3 só traduz GPSI → SUPI (`GetIdTranslationResultProcedure`).
+
+O NEF do MVP-6 não devolve GPSI, o que a norma permite. A tradução SUPI → GPSI exige um *patch* no UDM e fica para depois (seção 5).
+
+**Decisões.** Tomadas pelo responsável em 19/10/2026: P11 (b) e DV-9 (b), registrado em `desvios.md`. O detalhe fica em `docs/free5gc-side/nef.md`, aprovado antes da implementação, como a especificação do Ua\* no MVP-3.
+
+| Nº | Questão | Opções | Recomendação |
+|---|---|---|---|
+| P11 | Como o AAnF autoriza o NEF. `[3GPP]` §6.3 passo 2: quem autoriza o AF é o NEF. `[MVP]` Hoje a política local do AAnF (§6.2.1 passo 2) liga cada AF_ID a endereços de origem, e o pedido via NEF sai do endereço do NEF | (a) o AAnF aceita do NEF qualquer AF_ID e confere só o *token* (`nfType` NEF), porque o NEF já autorizou o AF; (b) além do *token*, uma lista de AF_ID externos que o AAnF aceita via NEF | (b): a política do AAnF continua sendo a última barreira |
+| DV-9 | Segurança entre o NEF e o AF externo. `[3GPP]` TS 33.501 §12.2 e §12.3: autenticação mútua por certificados de cliente e servidor e TLS *"shall"*; §12.4: autorização OAuth *"shall"*. `[FREE5GC]` O NEF tem OAuth2 com *tokens* do NRF e TLS só de servidor (`sbi.scheme: https`), sem certificado de cliente | (a) TLS com certificado de cliente no NEF, só para `3gpp-akma`; (b) `http`, como o resto do laboratório, registrado como DV-9 ao lado do DV-1 e encerrado junto com ele | (b), se (a) exigir mudar o servidor SBI comum do free5GC; senão (a). A conferir no código do NEF e decidir no `nef.md` |
+
+**Pré-requisitos.** MVP-5.
+
+**Cláusulas.** TS 33.535 §6.2.2, §6.3, §6.6, §6.7, §7.1.3, §7.1.5, §7.3.2 · TS 29.522 §4.4.23.2, §5.14 · TS 29.535 §4.2.2.3.2 (`anonInd`) · TS 33.501 §12.
+
+**Arquivos.**
+
+- `free5gc/patches/nef/` (API `3gpp-akma` e consumidor do AAnF) e o alvo `nef` em `patch-nf.sh`;
+- `free5gc/aanf/` (P11) e `free5gc/config/aanfcfg.yaml` (porta 8010);
+- `af/af/` (`anonymous`, `nefUri`, *token*);
+- `af/scripts/e2e.sh` e `e2e-remote.sh`;
+- configuração do AMF, do SMF e do UPF para o N2 e o N3 fora do *loopback* (item 7), por *patch* em `free5gc/patches/config/`;
+- `docs/free5gc-side/nef.md`, `docs/free5gc-side/correcoes-free5gc.md`, `docs/af-side/af.md`;
+- documentação da topologia com o UERANSIM em outra máquina, nos dois lados;
+- matriz de rastreabilidade revisão 5; `desvios.md` (DV-9);
+- tutorial, parte 9.
+
+**Critérios de aceitação.**
+
+1. O AF externo obtém pelo NEF, para o mesmo A-KID e AF_ID, a mesma K_AF que o AAnF entrega a um AF interno. A resposta do NEF não tem `supi` (§6.3 passo 5).
+2. O UE autentica no AF externo pelo Ua\*, pelo plano de usuário.
+3. Negativos no NEF:
+   - AF sem *token*, ou com *token* de outro serviço: recusado pelo *middleware*;
+   - AF_ID fora da política do NEF: recusado, com o código de TS 29.122 fixado no `nef.md`;
+   - A-KID desconhecido: `403 K_AKMA_NOT_PRESENT` repassado;
+   - pedido do NEF fora da política do AAnF: 403.
+4. Acesso anônimo, direto e via NEF: `anonInd: true`; resposta sem `supi` e sem `gpsi` (TS 29.522 tab. 5.14.5.3.3-1, NOTA 3); Ua\* bem-sucedido.
+5. `e2e.sh` termina com código 0, com os grupos novos e as 63 verificações do MVP-5. Nenhuma chave aparece no log do NEF.
+6. Com o gNB e o UE na VM 192.168.16.131, o free5GC na 192.168.16.130 e o AF na 192.168.16.129:
+   - o UE registra;
+   - o A-KID é igual no UE, no AUSF e no AAnF;
+   - o UE autentica no AF pelo Ua\*, direto e via NEF;
+   - nenhuma chave aparece nos logs das três máquinas.
+
+**Riscos.**
+
+- O NEF é a NF menos exercitada do `run.sh` do free5GC.
+- A mudança do N2 e do N3 (item 7) altera a configuração que o MVP-5 usa. O roteiro do MVP-5 tem de continuar passando com o gNB local.
+- `[MVP]` O AF externo obtém o *token* no NRF do operador, como o `seed` já faz. Fora do laboratório, quem emite o *token* para um AF externo é o CAPIF ou o próprio NEF (TS 33.501 §12.4, §12.5).
+
+**O tutorial ganha.** Parte 9: um AF fora da rede do operador, pelo NEF, e o acesso anônimo. As partes 4, 7 e 8 passam a cobrir o UERANSIM em outra máquina, como no guia oficial do free5GC.
+
+---
+
+## 5. Depois do MVP-6
+
+**MVP-7 — Repositório público** (pedido do responsável em 19/10/2026). Logo depois do MVP-6. Uma pasta separada, com o próprio `git`, que o responsável publica no GitHub e anuncia no fórum do free5GC, para a comunidade começar a testar. Requisitos do pedido:
+
+- só o tutorial e o necessário para compilar e aplicar o que o projeto desenvolveu: código, *patches* e *scripts*;
+- no molde do free5GC: o guia de instalação e o repositório com o que baixar;
+- nada do projeto: sem plano, MVP, ADR, desvios, literatura, matriz nem marcações `[3GPP]`;
+- texto escrito como um desenvolvedor escreve, direto;
+- todos os pontos do free5GC a corrigir para o AKMA (`docs/free5gc-side/correcoes-free5gc.md`, iniciado em 19/10/2026). Cada correção diz onde a norma manda fazer e como fazer segundo a norma;
+- autoria só do responsável, em todo arquivo, mensagem de *commit* e metadado.
+
+A decidir no início do MVP-7: idioma, nome do repositório, licença e se o AF e o cliente Ua\* de teste vão junto. A licença precisa ser conferida: o free5GC é Apache 2.0, e o UERANSIM, cujos *patches* vão junto, é GPL-3.0.
+
+**Demais itens.** A lista original desta seção, revista em 19/10/2026. A ordem é uma sugestão: cada MVP é proposto e aprovado à parte.
+
+| Item | Situação | Proposta |
+|---|---|---|
+| Acesso anônimo (§6.2.2, `anonInd`) | AAnF pronto no MVP-1 | MVP-6, no AF e no NEF |
+| `remove-context` (§6.6) | operação pronta no MVP-1; a norma nomeia o OAM como consumidor, não uma NF do núcleo | MVP-6, só documentação |
+| Caminho via NEF (§6.3, `3gpp-akma`) | — | MVP-6 |
+| Filtro `routing-indicator` para `AANF` no NRF | feito no MVP-1b | sai da lista |
+| Ua\* conforme K.2 sobre TLS; TLS 1.3 PSK conforme K.3.3 | Release 17 (AKMA_TLS) | MVP-8: primeiro K.2 sobre TLS, com certificado do AF; exige rever o ADR-0003 (identificador de H.3 em vez da faixa privada). Depois o PSK: o `crypto/tls` do Go não suporta PSK externa, então avaliar OpenSSL |
+| GPSI via `id-translation-result`; `AKMA_GPSI_Support` | o UDM v4.2.3 só traduz GPSI → SUPI | MVP-9: *patch* no UDM; GPSI ao AF externo pelo NEF e, com a *feature*, ao AF interno |
+| TLS nas interfaces SBI (§4.4.0) | DV-1 e DV-9 | MVP-9 ou MVP-10, junto com a autenticação do AF |
+| *Upstream* | — | *rebase* para a versão corrente (D4); modelos do Naanf_AKMA gerados pela mesma ferramenta OpenAPI do free5GC; `shared/akma` migrado para `free5gc/util`. O repositório público (MVP-7) é o primeiro passo; o *pull request* pode vir antes dos MVP-8 e MVP-9: depende de quando o projeto quer abrir a conversa com o free5GC |
+| *Roaming* (`ROAMING_STATUS`, `RoamingRestriction`, `Notify` com `3gpp-Sbi-Callback`); `ServiceDisableNotification` (§6.8); `AuthTrigger` (§6.4.4, divergência D: POST) | Release 18. O *roaming* exige uma VPLMN, que o laboratório não tem; o `AuthTrigger` exige o AMF | depois do *upstream*, sob demanda |
+| Várias instâncias de AAnF; persistência do contexto; desempenho (ADR-0001-R2 §5.4); verificação formal | — | sob demanda |
 
 ---
 
@@ -593,6 +724,7 @@ Registro oficial, com motivo e impacto: `docs/conformidade/desvios.md`. Cada um 
 | DV-6 | `[DIVERGÊNCIA]` Divergência E. TS 33.535 B.1.2.2 (Stage 2): o AF inclui `3GPP-bootstrapping-akma` no `WWW-Authenticate`, e o `realm` contém o FQDN do AF (passos 3 e 4); TS 24.109 K.2 b)2) repete a constante; TS 24.109 §5.2.2.1 dá a forma `<constante>@<FQDN>`. Só TS 24.109 K.2 c)3) usa `3gpp-akma@<FQDN>` | Segue TS 33.535: `realm = "3GPP-bootstrapping-akma@<FQDN do AF>"` — constante e FQDN de TS 33.535, separador `@` do Stage 3; primeira parte configurável. Diverge só de K.2 c)3). Registro de defeitos (D-C) e Adendo D a atualizar | **decidido** · MVP-3 |
 | DV-7 | `[DIVERGÊNCIA]` TS 29.535 §4.2.2.3.2: 204 *"if the requested AKMA Application Key information for the UE does not exist"*, mas sem K_AKMA a resposta é 403 `K_AKMA_NOT_PRESENT`, e com K_AKMA a K_AF é sempre derivável — não há condição distinta para o 204 | não emitir 204; 403 `K_AKMA_NOT_PRESENT` quando não há K_AKMA. Registrar como defeito candidato (CT3) | **implementado** (17/10/2026) · MVP-1 |
 | DV-8 | TS 33.501 §13.4.1.1.2 passo 2: o produtor verifica `exp` e `aud` do token. `[FREE5GC]` `oauth.VerifyOAuth` não verifica nenhum dos dois; o NRF v1.4.5 emite `aud` vazio | o AAnF verificava `exp` e tolerava `aud` vazio; com o NRF corrigido (MVP-1b), exige `aud` igual ao seu ID ou a `AANF` | **encerrado** em 17/10/2026 (MVP-1b) · MVP-1 |
+| DV-9 | TS 33.501 §12.2 e §12.3: entre o NEF e o AF externo, TLS e autenticação mútua por certificados *"shall"*; §12.4: autorização OAuth *"shall"* | `http`, *token* OAuth2 do NRF para `3gpp-akma` e política local AF_ID ↔ endereço de origem no NEF, no padrão das APIs do NEF do free5GC. Sem TLS nem certificado de cliente | **decidido** (19/10/2026) · MVP-6 |
 
 Não são desvios, e assim serão documentados: identificador Ua\* da faixa privada (TS 33.220 H.2 NOTA 2, ADR-0003); seleção do AAnF por configuração local (TS 33.535 §6.7); autorização do AF por política local em vez de token OAuth2 (TS 33.535 §6.2.1 passo 2; TS 29.535 §5.1.9: OAuth2 *"may"* ser usado); contexto em memória; GPSI não obtido (condicional à política local, §6.2.1 passo 3); A-KID transmitido a cada AF guardado mesmo sem subscrição de *roaming* (§6.2.1 passo 8 só o exige com a subscrição).
 

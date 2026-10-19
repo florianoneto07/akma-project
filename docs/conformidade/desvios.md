@@ -15,6 +15,7 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-6 | `realm` do Digest conforme TS 33.535 | **implementado** (MVP-3, 18/10/2026) | MVP-3 |
 | DV-7 | Nunca emitir 204 em `retrieve-applicationkey` | **implementado** (MVP-1, 17/10/2026) | MVP-1 |
 | DV-8 | `aud` vazio tolerado no token OAuth2 | **encerrado** em 17/10/2026 (MVP-1b: NRF corrigido, AAnF estrito) | MVP-1 |
+| DV-9 | NEF–AF externo sem TLS nem certificado de cliente | **decidido** em 19/10/2026 | MVP-6 |
 
 **Consolidação (MVP-5, 18/10/2026).** Nenhum desvio novo surgiu no MVP-5. Estado e evidência de cada um no roteiro ponta a ponta (`docs/af-side/e2e.md`, execução `20261018-171510`):
 
@@ -144,3 +145,45 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 **Implementação (17/10/2026).** `free5gc/aanf/internal/context/context.go` (`VerifyAccessToken`, `audienceAccepted`). Testes: `TestOAuth2` (expirado, sem `exp`, `aud` de outra instância e de outro tipo recusados; `aud` vazio, igual ao ID, igual a `AANF` e em lista aceitos).
 
 **Encerramento (17/10/2026).** A decisão D13 foi revista no mesmo dia: o NRF foi corrigido (MVP-1b, *patch* `free5gc/patches/nrf/0003-access-token-audience.patch`, `docs/free5gc-side/nrf.md`) e passou a preencher `aud` com o tipo de NF do produtor (TS 29.510 Tab. 6.3.5.2.4-1). O AAnF deixou de tolerar `aud` vazio ou ausente. Testes: `TestOAuth2` (`aud` vazio, ausente e lista vazia recusados) e, na VM, `register-anchorkey` aceito com token do NRF corrigido. O desvio deixa de existir; o registro fica como histórico.
+
+---
+
+## DV-9 — NEF–AF externo sem TLS nem certificado de cliente
+
+**Norma.** `[3GPP]` TS 33.501:
+
+- §12.2: entre o NEF e um AF fora do domínio do operador, *"mutual authentication based on client and server certificates shall be performed between the NEF and AF using TLS"*;
+- §12.3: *"TLS shall be used to provide integrity protection, replay protection and confidentiality protection for the interface between the NEF and the AF. The support of TLS is mandatory"*;
+- §12.4: o NEF *"shall authorize the requests from AF using OAuth-based authorization mechanism"* (RFC 6749).
+
+TS 33.535 §6.3 passo 2: o NEF autoriza o AF, inclusive pela verificação do AF_ID.
+
+**O que o free5GC faz.** `[FREE5GC]` O NEF v1.2.5 serve as APIs do lado do AF (`3gpp-traffic-influence`, `3gpp-pfd-management`) no mesmo servidor SBI das outras NFs:
+
+- em `http` ou `https` (`sbi.scheme`), só com certificado de servidor;
+- cada grupo de APIs protegido por um *middleware* OAuth2 que confere o *token* emitido pelo NRF para o nome do serviço, quando o NRF tem `oauth: true`.
+
+Não há verificação de certificado de cliente.
+
+**O que o projeto faz.** `[MVP]` A API `3gpp-akma` do NEF segue o padrão do free5GC:
+
+- `http`, como o resto do laboratório;
+- *token* OAuth2 do NRF para `3gpp-akma`, conferido pelo mesmo *middleware*: atende a §12.4, com o NRF no papel de servidor de autorização;
+- política local do NEF que associa cada AF_ID externo aos endereços de origem do AF, como a do AAnF no DV-1.
+
+Não há TLS nem autenticação mútua por certificados (§12.2, §12.3).
+
+**Por quê.** Decidido pelo responsável em 19/10/2026 (MVP-6, opção b), entre duas opções:
+
+- (a) TLS com certificado de cliente, só para `3gpp-akma`;
+- (b) esta.
+
+O certificado de cliente exige mudar o servidor SBI comum do NEF do free5GC. O TLS das interfaces SBI e NEF–AF fica para um MVP próprio, junto com o DV-1 (plano, seção 5).
+
+**Impacto.**
+
+- **Transporte.** A K_AF trafega em claro entre o NEF e o AF externo. Um atacante na rede entre os dois a lê.
+- **Autenticação do AF.** Ela se apoia no *token* e no endereço de origem, e não num certificado. O risco é o mesmo do DV-1, agora do lado do NEF: um AF que obtenha *token* para `3gpp-akma` e esteja num endereço autorizado pode apresentar o AF_ID de outro.
+- **Origem do *token*.** `[MVP]` O AF externo obtém o *token* no NRF do operador, o que um AF fora da rede não faria. Fora do laboratório, quem emite o *token* é o CAPIF ou o servidor de autorização do NEF (§12.4, §12.5).
+
+**Implementação.** Pendente (MVP-6, `docs/free5gc-side/nef.md`).
