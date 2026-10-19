@@ -23,5 +23,7 @@ Base de código: free5GC v4.2.3 (`docs/baseline/ambiente-verificado.md`).
 | `verificacao.md` — banco de testes, regressão, UERANSIM e instalação limpa | MVP-2, MVP-3a, MVP-5 | escrito (17/10/2026); seções 4 e 5 em 18/10/2026; seção 5.1 em 19/10/2026 |
 | `logs-akma.md` — mensagens AKMA na tela do `run.sh`; opção `-aanf` | MVP-3a | escrito (18/10/2026) |
 | `plano-de-usuario.md` — do UE ao AF pelo N6: diagnóstico e NAT | MVP-4 | escrito (18/10/2026) |
+| `nef.md` — API `3gpp-akma` do NEF, autorização do NEF no AAnF e AF externo: especificação | MVP-6 | aprovada (19/10/2026), três pontos a confirmar |
+| `correcoes-free5gc.md` — o que o free5GC precisa corrigir para o AKMA, com a cláusula e a forma da norma | MVP-6, MVP-7 | iniciado (19/10/2026) |
 
 O que é comum aos dois lados — KDF, formatos de identificador, codificação, vetores — fica em `docs/shared/`.
