@@ -43,9 +43,20 @@ Os campos e os padrões estão em `ua-star.md` §11. No laboratório:
 | `uaStarId` | `FF00000001` |
 | `listen` | `192.168.16.129:8080` |
 | `kafExpiry` | `refetch` |
-| `aanfUri` | `http://192.168.16.130:8000` |
+| `aanfUri` | `http://192.168.16.130:8010` |
 
 O AF_ID resultante, `af1.akma.example.FF00000001`, precisa estar em `akma.authorizedAfs` do `aanfcfg.yaml`, com o endereço do AF (`docs/free5gc-side/aanf.md` §2).
+
+**AF fora da rede do operador (MVP-6).** Com `nefUri` no lugar de `aanfUri`, o AF pede a K_AF ao NEF (`POST {nefUri}/3gpp-akma/v1/retrieve`, TS 29.522 §4.4.23.2; TS 33.535 §6.3). Especificação: `docs/free5gc-side/nef.md`.
+
+| Campo | Uso |
+|---|---|
+| `nefUri` | API do NEF, `http://192.168.16.130:8000`. Exclusivo com `aanfUri` |
+| `nrfUri` | NRF em que o AF se registra como `nfType: AF` e de que obtém o *token* `3gpp-akma` (`nef.md` §2.1). Obrigatório com `nefUri`. No laboratório, `http://127.0.0.10:8000` pelo túnel SSH |
+| `nfInstanceId` | UUID do AF no NRF; sem ele, um UUID novo a cada partida |
+| `anonymous` | `true` manda `anonInd: true`, direto ao AAnF ou via NEF: a K_AF vem sem o SUPI (TS 33.535 §6.2.2). Vale nos dois modos |
+
+No modo externo, o AF se registra no NRF na partida e se descadastra ao encerrar. A resposta do NEF nunca traz o SUPI (§6.3 passo 5).
 
 `[MVP]` A opção `clockOffset` (duração Go, como `2h` ou `-2h`) desloca o relógio do AF. É só de teste: simula um AF cujo relógio discorda do relógio do AAnF (MVP-5, `e2e.md` §4). Com ela, o AF registra um `warn` na partida.
 

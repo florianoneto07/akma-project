@@ -139,7 +139,7 @@ cd free5gc/aanf && go test ./...
 
 O `deploy.sh` (seção 3.4) instala o `free5gc/config/aanfcfg.yaml` do repositório quando a máquina do free5GC ainda não tem um, e depois não o sobrescreve. Ajuste esse arquivo antes do *deploy*, ou ajuste depois a cópia instalada, `~/free5gc/config/aanfcfg.yaml`, na máquina do free5GC. O arquivo do repositório tem os endereços do laboratório. Os campos:
 
-- `sbi.registerIPv4` e `sbi.bindingIPv4`: um endereço da máquina do free5GC que a máquina do AF alcance. Não use um *loopback* `127.0.0.x`, a menos que o AF rode na mesma máquina. Porta 8000, como as outras NFs.
+- `sbi.registerIPv4` e `sbi.bindingIPv4`: um endereço da máquina do free5GC que a máquina do AF alcance. Não use um *loopback* `127.0.0.x`, a menos que o AF rode na mesma máquina. Porta 8010: a 8000 é a das NFs do free5GC, e o NEF passa a usá-la no endereço da máquina (parte 9).
 - `nrfUri` e `nrfCertPem`: os mesmos das outras NFs (`http://127.0.0.10:8000`, `cert/nrf.pem`).
 - `plmnSupportList`: a PLMN da sua rede.
 - `routingIndicators`: os RIDs dos assinantes, **entre aspas** (`"0000"`). Com a lista vazia, o AAnF atende qualquer RID.
@@ -188,7 +188,7 @@ Ou, a partir da outra máquina:
 ssh usuario@maquina-do-free5gc bash -s -- start < free5gc/scripts/run-aanf.sh
 ```
 
-O log fica em `~/free5gc/log/aanf/aanf.log`. As linhas esperadas são `OAuth2 setting receive from NRF: true` e `Start SBI server (listen on …:8000)`. `run-aanf.sh stop` encerra o AAnF, que antes se descadastra do NRF.
+O log fica em `~/free5gc/log/aanf/aanf.log`. As linhas esperadas são `OAuth2 setting receive from NRF: true` e `Start SBI server (listen on …:8010)`. `run-aanf.sh stop` encerra o AAnF, que antes se descadastra do NRF.
 
 ### 3.5 Verificar o registro e a descoberta no NRF
 
@@ -208,12 +208,12 @@ O AAnF deve aparecer na lista. Com um RID que ele não atende, a resposta é `nu
 
 Os valores abaixo são do vetor `testbed-ue` (`shared/akma/testdata/vectors.json`). O `seed` precisa de um *token* OAuth2 para registrar, e o NRF só é alcançável na máquina do free5GC. Para obtê-lo, o `seed` se registra no NRF como um AF temporário e se descadastra ao sair.
 
-`[MVP]` O `--aanf` dá o endereço do AAnF, o `sbi.registerIPv4` da seção 3.2 com a porta 8000. Sem ele, o `seed` usa o do laboratório (`http://192.168.16.130:8000`).
+`[MVP]` O `--aanf` dá o endereço do AAnF, o `sbi.registerIPv4` da seção 3.2 com a porta 8010. Sem ele, o `seed` usa o do laboratório (`http://192.168.16.130:8010`).
 
 Na máquina do free5GC, no papel do AUSF:
 
 ```bash
-~/akma-tools/seed register --nrf http://127.0.0.10:8000 --aanf http://192.168.16.130:8000 --supi imsi-208930000000001 --k-ausf 141ef548f86e3a2a1ad949331caa9e6bb12401afa321bde4f9f23b84870dd654 --rid 0000 --mcc 208 --mnc 93
+~/akma-tools/seed register --nrf http://127.0.0.10:8000 --aanf http://192.168.16.130:8010 --supi imsi-208930000000001 --k-ausf 141ef548f86e3a2a1ad949331caa9e6bb12401afa321bde4f9f23b84870dd654 --rid 0000 --mcc 208 --mnc 93
 ```
 
 A saída deve trazer o A-KID `rid0000.atidiz1FN8DkMGyxwtfTVYsKUsWnzOJdBOLlQEiQlK2gHNA=@5gc.mnc093.mcc208.3gppnetwork.org`.
@@ -221,7 +221,7 @@ A saída deve trazer o A-KID `rid0000.atidiz1FN8DkMGyxwtfTVYsKUsWnzOJdBOLlQEiQlK
 Na máquina do AF (o endereço dela precisa estar em `authorizedAfs`), no papel do AF, com o `seed` da seção 3.1:
 
 ```bash
-free5gc/build/bin/seed retrieve --aanf http://192.168.16.130:8000 --af-id af1.akma.example.FF00000001 --akid 'rid0000.atidiz1FN8DkMGyxwtfTVYsKUsWnzOJdBOLlQEiQlK2gHNA=@5gc.mnc093.mcc208.3gppnetwork.org'
+free5gc/build/bin/seed retrieve --aanf http://192.168.16.130:8010 --af-id af1.akma.example.FF00000001 --akid 'rid0000.atidiz1FN8DkMGyxwtfTVYsKUsWnzOJdBOLlQEiQlK2gHNA=@5gc.mnc093.mcc208.3gppnetwork.org'
 ```
 
 A K_AF deve ser `00c16845c2e4e1256755b84bb06d94e2e659d8ba53c59e874fc149bffd5ea04b`, a mesma que o oráculo da parte 2 calcula. O `expiry` deve estar uma hora à frente, em UTC.
@@ -238,7 +238,7 @@ Respostas que indicam configuração errada:
 Por fim, para remover o contexto, na máquina do free5GC:
 
 ```bash
-~/akma-tools/seed remove --nrf http://127.0.0.10:8000 --aanf http://192.168.16.130:8000 --supi imsi-208930000000001
+~/akma-tools/seed remove --nrf http://127.0.0.10:8000 --aanf http://192.168.16.130:8010 --supi imsi-208930000000001
 ```
 
 ---
@@ -455,7 +455,7 @@ A configuração fica em `af/config/afcfg.yaml`. Os campos que importam:
 
 - `fqdn`: o nome pelo qual o UE chama o AF. Ele entra na K_AF, e o AF só aceita esse nome no cabeçalho `Host`;
 - `listen`: o endereço em que o AF escuta. Os pedidos ao AAnF não saem dele: saem do endereço que o sistema escolhe pela rota até o AAnF, e é esse que tem de estar em `sourceAddresses` (seção 6.1). Numa máquina com uma interface só, como no laboratório, os dois coincidem;
-- `aanfUri`: o endereço do AAnF, o `sbi.registerIPv4` da seção 3.2 com a porta 8000. No repositório está o do laboratório;
+- `aanfUri`: o endereço do AAnF, o `sbi.registerIPv4` da seção 3.2 com a porta 8010. No repositório está o do laboratório;
 - `kafExpiry`: o que fazer quando a K_AF vence, `refetch` ou `reject`.
 
 ```bash

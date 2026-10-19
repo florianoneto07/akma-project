@@ -93,7 +93,7 @@ Com a opção, o AAnF passa a usar o mesmo terminal e o mesmo arquivo de log das
 cd ~/free5gc && ./run.sh -aanf
 ```
 
-O `run-aanf.sh` continua servindo para rodar o AAnF à parte. Os dois não podem rodar juntos, porque o AAnF escuta em `192.168.16.130:8000`. O `run-aanf.sh` também passa a exportar `GIN_MODE=release`, como o `run.sh`, para não imprimir as linhas `[GIN-debug]` do Gin.
+O `run-aanf.sh` continua servindo para rodar o AAnF à parte. Os dois não podem rodar juntos, porque o AAnF escuta em `192.168.16.130:8010`. O `run-aanf.sh` também passa a exportar `GIN_MODE=release`, como o `run.sh`, para não imprimir as linhas `[GIN-debug]` do Gin.
 
 ## 6. Arquivos tocados
 

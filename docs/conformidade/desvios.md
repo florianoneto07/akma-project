@@ -42,7 +42,7 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 
 **Impacto.** O AF não é autenticado pelo transporte; um AF que conheça um A-KID pode apresentar o AF_ID de outro AF (ataque de falsificação de AF descrito por Akman et al., 2023 — `docs/literatura/analise-dos-artigos.md`). A associação AF_ID↔endereço reduz, mas não elimina, o risco. O suporte a TLS continua obrigatório para a NF (TS 33.501 §13.1.0).
 
-**Implementação (17/10/2026).** O AAnF serve h2c (`sbi.scheme: http`) em `192.168.16.130:8000`, alcançável da VM do AF. A política local está em `akma.authorizedAfs`: cada AF_ID tem a lista de endereços de origem autorizados, e o endereço é o da conexão, não o de `X-Forwarded-For` (`free5gc/aanf/internal/context/context.go`, `AfPolicy`). Testes: `TestRetrieveAfNotAuthorized` e, na VM, AF_ID autorizado pedido de outra máquina → 403 (`docs/free5gc-side/aanf.md` §9). O suporte a `https` existe na configuração (`sbi.tls`), mas não foi exercitado.
+**Implementação (17/10/2026).** O AAnF serve h2c (`sbi.scheme: http`) em `192.168.16.130:8000` (8010 desde o MVP-6), alcançável da VM do AF. A política local está em `akma.authorizedAfs`: cada AF_ID tem a lista de endereços de origem autorizados, e o endereço é o da conexão, não o de `X-Forwarded-For` (`free5gc/aanf/internal/context/context.go`, `AfPolicy`). Testes: `TestRetrieveAfNotAuthorized` e, na VM, AF_ID autorizado pedido de outra máquina → 403 (`docs/free5gc-side/aanf.md` §9). O suporte a `https` existe na configuração (`sbi.tls`), mas não foi exercitado.
 
 ---
 
@@ -184,6 +184,6 @@ O certificado de cliente exige mudar o servidor SBI comum do NEF do free5GC. O T
 
 - **Transporte.** A K_AF trafega em claro entre o NEF e o AF externo. Um atacante na rede entre os dois a lê.
 - **Autenticação do AF.** Ela se apoia no *token* e no endereço de origem, e não num certificado. O risco é o mesmo do DV-1, agora do lado do NEF: um AF que obtenha *token* para `3gpp-akma` e esteja num endereço autorizado pode apresentar o AF_ID de outro.
-- **Origem do *token*.** `[MVP]` O AF externo obtém o *token* no NRF do operador, o que um AF fora da rede não faria. Fora do laboratório, quem emite o *token* é o CAPIF ou o servidor de autorização do NEF (§12.4, §12.5).
+- **Origem do *token*.** `[MVP]` O AF externo obtém o *token* no NRF do operador, o que um AF fora da rede não faria. Fora do laboratório, quem emite o *token* é o CAPIF ou o servidor de autorização do NEF (§12.4, §12.5). Sem CAPIF, TS 29.522 §6 deixa o servidor de autorização para a configuração local. O CAPIF está planejado para o MVP-8 (plano, seção 5) e fecha esta parte do desvio.
 
 **Implementação.** Pendente (MVP-6, `docs/free5gc-side/nef.md`).

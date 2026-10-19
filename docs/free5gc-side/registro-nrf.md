@@ -19,7 +19,7 @@ O registro do AAnF não exige configuração nova no NRF do free5GC v4.2.3 (`nrf
 | `plmnList` | `plmnSupportList` | |
 | `nfServices[0].serviceName` | `naanf-akma` | `[3GPP]` TS 29.535 §5.1.1 |
 | `versions` | `apiVersionInUri: v1`, `apiFullVersion: 1.2.0` | `[3GPP]` versão do `TS29535_Naanf_AKMA.yaml` implementado. `[FREE5GC]` As NFs do free5GC publicam a versão do arquivo de configuração; o AAnF publica a da API |
-| `ipEndPoints` | `192.168.16.130`, TCP, porta 8000 | |
+| `ipEndPoints` | `192.168.16.130`, TCP, porta 8010 (8000 até o MVP-5) | |
 | `allowedNfTypes` | `AUSF`, `NEF`, `AF` | `[3GPP]` consumidores do Naanf_AKMA, TS 29.535 Tab. 4.2.2.1-1. `[FREE5GC]` O NRF só emite token para esses tipos |
 | `aanfInfoList` | `{"1": {"routingIndicators": ["0000"]}}`, omitido sem RIDs configurados | `[3GPP]` TS 29.510 Tab. 6.1.6.2.73-1: RIDs como cadeias; sem `AanfInfo`, o AAnF atende qualquer RID. Chave do mapa com até 32 caracteres |
 
@@ -61,7 +61,7 @@ Com NRF e AAnF em execução, na máquina do free5GC:
 mongosh --quiet free5gc --eval 'printjson(db.NfProfile.find({nfType: "AANF"}, {_id: 0}).toArray())'
 ```
 
-O resultado deve conter `nfType: 'AANF'`, o serviço `naanf-akma` com `apiVersionInUri: 'v1'`, `ipEndPoints` em `192.168.16.130:8000` e, com o NRF corrigido, `aanfInfoList` com os RIDs configurados. Sem o *patch* 0001, `aanfInfoList` não aparece (N1). No log do AAnF (`~/free5gc/log/aanf/aanf.log`) deve aparecer `OAuth2 setting receive from NRF: true`. Ao parar o AAnF, aparecem `Deregister from NRF successfully` no log e um `NfProfile` sem o AAnF.
+O resultado deve conter `nfType: 'AANF'`, o serviço `naanf-akma` com `apiVersionInUri: 'v1'`, `ipEndPoints` em `192.168.16.130:8010` e, com o NRF corrigido, `aanfInfoList` com os RIDs configurados. Sem o *patch* 0001, `aanfInfoList` não aparece (N1). No log do AAnF (`~/free5gc/log/aanf/aanf.log`) deve aparecer `OAuth2 setting receive from NRF: true`. Ao parar o AAnF, aparecem `Deregister from NRF successfully` no log e um `NfProfile` sem o AAnF.
 
 Resultado em 17/10/2026:
 

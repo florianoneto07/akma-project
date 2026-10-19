@@ -34,7 +34,7 @@ Dependências: `free5gc/openapi` v1.2.4 com os *patches* do projeto (`openapi.md
 
 ## 2. Configuração
 
-Além dos campos comuns às NFs do free5GC (`sbi`, `serviceNameList`, `nrfUri`, `nrfCertPem`, `plmnSupportList`, `logger`):
+Além dos campos comuns às NFs do free5GC (`sbi`, `serviceNameList`, `nrfUri`, `nrfCertPem`, `plmnSupportList`, `logger`). A porta SBI é a **8010** desde o MVP-6: a 8000 é a das NFs do free5GC, e o NEF passa a usá-la no endereço da máquina (`nef.md` §2).
 
 | Campo | Exemplo | Regra | Marcação |
 |---|---|---|---|
@@ -44,6 +44,8 @@ Além dos campos comuns às NFs do free5GC (`sbi`, `serviceNameList`, `nrfUri`, 
 | `akma.kafLifetime` | `1h` | duração Go positiva; padrão `1h` | `[3GPP]` política do operador (TS 33.535 §5.2); `[MVP]` o valor |
 | `akma.authorizedAfs[].afId` | `af1.akma.example.FF00000001` | forma de transporte `<FQDN>.<10 hex>` | `[3GPP]` TS 29.522 `AfId` |
 | `akma.authorizedAfs[].sourceAddresses` | `[192.168.16.129]` | ao menos um endereço IP | `[MVP]` política local (seção 5) |
+| `akma.authorizedNefs[].sourceAddresses` | `[192.168.16.130]` | ao menos um endereço IP: os do NEF | `[MVP]` MVP-6; `nef.md` §4 |
+| `akma.authorizedNefs[].afIds` | `[af1.akma.example.FF00000001]` | ao menos um AF_ID na forma de transporte: os AF externos aceitos daquele NEF | `[3GPP]` TS 33.535 §6.3 passo 3; `[MVP]` política local (P11) |
 | `akma.roamingStatusSubscription` | `false` | `true` impede a partida | DV-2 |
 | `akma.aKid` | `atidEncoding`, `atidLabel`, `acceptLabels` | padrão: base64, escreve `atid`, aceita `atid` e `akid` | ADR-0002 §4; defeito D-A |
 
@@ -165,7 +167,7 @@ O mesmo *script* aceita `stop`, `status` e `foreground`; na própria máquina do
 
 Registro no NRF: `registro-nrf.md` §7. Fluxo das três operações com a ferramenta `seed` e o vetor `testbed-ue` (`shared/akma/testdata/vectors.json`):
 
-`[MVP]` O `seed` fala com o AAnF no endereço de `--aanf`, cujo padrão é o do laboratório (`http://192.168.16.130:8000`). Em outra máquina, passe `--aanf http://<sbi.registerIPv4>:8000` em `register`, `retrieve` e `remove`; sem isso, a resposta é `connection refused` ou, pior, vem de outro AAnF.
+`[MVP]` O `seed` fala com o AAnF no endereço de `--aanf`, cujo padrão é o do laboratório (`http://192.168.16.130:8010`). Em outra máquina, passe `--aanf http://<sbi.registerIPv4>:8010` em `register`, `retrieve` e `remove`; sem isso, a resposta é `connection refused` ou, pior, vem de outro AAnF.
 
 1. Na máquina do free5GC, no papel do AUSF, com token obtido do NRF:
 

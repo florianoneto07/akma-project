@@ -223,7 +223,7 @@ O perfil normativo (K.2 com TLS, ou K.3.3) fica para o MVP-6+; a migração est�
 | `qop` | `[auth]` | `auth-int` opcional |
 | `nonceLifetime` | `300s` | |
 | `kafExpiry` | `refetch` | ou `reject` |
-| `aanfUri` | `http://192.168.16.130:8000` | §6.7, configuração local |
+| `aanfUri` | `http://192.168.16.130:8010` | §6.7, configuração local |
 
 ## 12. Vetores de teste
 

@@ -575,7 +575,7 @@ Divergências que a reprodução em instalação limpa achou no tutorial (crité
 
 ### MVP-6 — AF externo via NEF, acesso anônimo e remoção por OAM
 
-**Estado (19/10/2026):** **aprovado** pelo responsável, com P11 (b) e DV-9 (b). Na aprovação, o responsável acrescentou o item 7: UERANSIM em outra máquina. Especificação `docs/free5gc-side/nef.md` aprovada em 19/10/2026, com três pontos a confirmar (seção 9 dele). Também decidido: o AAnF passa para a porta 8010, fora das portas do free5GC. Nada implementado.
+**Estado (19/10/2026):** **aprovado** pelo responsável, com P11 (b) e DV-9 (b). Na aprovação, o responsável acrescentou o item 7: UERANSIM em outra máquina. Especificação `docs/free5gc-side/nef.md` aprovada em 19/10/2026, com todos os pontos da seção 9 decididos; o *token* do AF externo vem do NRF no MVP-6 e do CAPIF no MVP-8. Também decidido: o AAnF passa para a porta 8010, fora das portas do free5GC. Nada implementado.
 
 **Por que este escopo.**
 
@@ -693,6 +693,17 @@ O NEF do MVP-6 não devolve GPSI, o que a norma permite. A tradução SUPI → G
 
 A decidir no início do MVP-7: idioma, nome do repositório, licença e se o AF e o cliente Ua\* de teste vão junto. A licença precisa ser conferida: o free5GC é Apache 2.0, e o UERANSIM, cujos *patches* vão junto, é GPL-3.0.
 
+**MVP-8 — CAPIF no free5GC** (pedido do responsável em 19/10/2026, na confirmação do P12 do MVP-6). O AF externo passa a obter o *token* do NEF pelo caminho da norma, e não do NRF.
+
+- `[3GPP]` TS 29.522 §7.2 e TS 33.122 §6.5.2.3: com CAPIF, o CAPIF Core Function (CCF) é o servidor de autorização. O AF, como *API invoker*, pede o *token* em `{apiRoot}/capif-security/v1/securities/{securityId}/token` (`Obtain_Authorization`, TS 29.222 §5.6.2.3). O NEF, como AEF, confere no *token* o próprio identificador, o nome da API e o escopo.
+- `[FREE5GC]` O free5GC não tem CCF (F13 de `docs/free5gc-side/correcoes-free5gc.md`).
+- Escopo mínimo a detalhar na proposta do MVP-8:
+  - um CCF com a entrada do *API invoker* (`CAPIF_API_Invoker_Management_API`), a descoberta (`CAPIF_Discover_Service_API`), a segurança (`CAPIF_Security_API`) e a publicação (`CAPIF_Publish_Service_API`);
+  - o NEF como APF, publicando `3gpp-akma`, e como AEF, conferindo os *tokens* do CCF;
+  - o AF como *API invoker*.
+- Normas: TS 23.222 V19.10.0, TS 29.222 V19.8.0 (com os YAML em `specs/openapi/`) e TS 33.122 V19.4.0, em `specs/` desde 19/10/2026.
+- Fecha a parte do DV-9 sobre a origem do *token*. O TLS entre o NEF e o AF continua com o DV-9.
+
 **Demais itens.** A lista original desta seção, revista em 19/10/2026. A ordem é uma sugestão: cada MVP é proposto e aprovado à parte.
 
 | Item | Situação | Proposta |
@@ -701,10 +712,10 @@ A decidir no início do MVP-7: idioma, nome do repositório, licença e se o AF 
 | `remove-context` (§6.6) | operação pronta no MVP-1; a norma nomeia o OAM como consumidor, não uma NF do núcleo | MVP-6, só documentação |
 | Caminho via NEF (§6.3, `3gpp-akma`) | — | MVP-6 |
 | Filtro `routing-indicator` para `AANF` no NRF | feito no MVP-1b | sai da lista |
-| Ua\* conforme K.2 sobre TLS; TLS 1.3 PSK conforme K.3.3 | Release 17 (AKMA_TLS) | MVP-8: primeiro K.2 sobre TLS, com certificado do AF; exige rever o ADR-0003 (identificador de H.3 em vez da faixa privada). Depois o PSK: o `crypto/tls` do Go não suporta PSK externa, então avaliar OpenSSL |
-| GPSI via `id-translation-result`; `AKMA_GPSI_Support` | o UDM v4.2.3 só traduz GPSI → SUPI | MVP-9: *patch* no UDM; GPSI ao AF externo pelo NEF e, com a *feature*, ao AF interno |
-| TLS nas interfaces SBI (§4.4.0) | DV-1 e DV-9 | MVP-9 ou MVP-10, junto com a autenticação do AF |
-| *Upstream* | — | *rebase* para a versão corrente (D4); modelos do Naanf_AKMA gerados pela mesma ferramenta OpenAPI do free5GC; `shared/akma` migrado para `free5gc/util`. O repositório público (MVP-7) é o primeiro passo; o *pull request* pode vir antes dos MVP-8 e MVP-9: depende de quando o projeto quer abrir a conversa com o free5GC |
+| Ua\* conforme K.2 sobre TLS; TLS 1.3 PSK conforme K.3.3 | Release 17 (AKMA_TLS) | MVP-9: primeiro K.2 sobre TLS, com certificado do AF; exige rever o ADR-0003 (identificador de H.3 em vez da faixa privada). Depois o PSK: o `crypto/tls` do Go não suporta PSK externa, então avaliar OpenSSL |
+| GPSI via `id-translation-result`; `AKMA_GPSI_Support` | o UDM v4.2.3 só traduz GPSI → SUPI | MVP-10: *patch* no UDM; GPSI ao AF externo pelo NEF e, com a *feature*, ao AF interno |
+| TLS nas interfaces SBI (§4.4.0) | DV-1 e DV-9 | MVP-10 ou MVP-11, junto com a autenticação do AF |
+| *Upstream* | — | *rebase* para a versão corrente (D4); modelos do Naanf_AKMA gerados pela mesma ferramenta OpenAPI do free5GC; `shared/akma` migrado para `free5gc/util`. O repositório público (MVP-7) é o primeiro passo; o *pull request* pode vir antes dos MVP seguintes: depende de quando o projeto quer abrir a conversa com o free5GC |
 | *Roaming* (`ROAMING_STATUS`, `RoamingRestriction`, `Notify` com `3gpp-Sbi-Callback`); `ServiceDisableNotification` (§6.8); `AuthTrigger` (§6.4.4, divergência D: POST) | Release 18. O *roaming* exige uma VPLMN, que o laboratório não tem; o `AuthTrigger` exige o AMF | depois do *upstream*, sob demanda |
 | Várias instâncias de AAnF; persistência do contexto; desempenho (ADR-0001-R2 §5.4); verificação formal | — | sob demanda |
 

@@ -1,6 +1,6 @@
 # NEF — API `3gpp-akma`: especificação
 
-**MVP:** MVP-6 · **Data:** 19 de outubro de 2026 · **Estado:** aprovada pelo responsável em 19/10/2026, com as decisões da seção 9; os pontos 1, 4 e 5 aguardam confirmação. Nada implementado.
+**MVP:** MVP-6 · **Data:** 19 de outubro de 2026 · **Estado:** aprovada pelo responsável em 19/10/2026, com as decisões da seção 9. Em implementação.
 
 Este documento define o que muda no NEF do free5GC, no AAnF e no AF para que um AF fora da rede do operador obtenha a K_AF pelo NEF (TS 33.535 §6.3). O *patch* no NEF, a mudança no AAnF e o modo externo do AF são implementados a partir dele. As decisões P11 (b) e DV-9 (b) já foram tomadas (plano, MVP-6); os pontos ainda abertos estão na seção 9.
 
@@ -237,9 +237,9 @@ Respostas do responsável em 19/10/2026:
 
 | Nº | Ponto | Decisão |
 |---|---|---|
-| 1 | P12: como o AF externo obtém o *token* | **aguarda confirmação.** O que a norma diz está na seção 2.1. Proposta: NRF como servidor de autorização (*"based on local configuration"*, TS 29.522 §6), com túnel SSH no laboratório |
+| 1 | P12: como o AF externo obtém o *token* | **decidido:** no MVP-6, o NRF é o servidor de autorização (*"based on local configuration"*, TS 29.522 §6), com túnel SSH no laboratório (seção 2.1). O caminho da norma, o CAPIF, entra no MVP-8 (plano, seção 5; F13 de `correcoes-free5gc.md`) |
 | 2 | Endereço do NEF | **decidido:** o AAnF vai para a porta 8010; o NEF fica na porta 8000 do free5GC e só troca o endereço de *loopback* por 192.168.16.130 (seção 2) |
 | 3 | 204 de TS 29.522 tab. 5.14.3.2.2-2 | **decidido:** o NEF emite 204 quando o AAnF responde 204 (seção 3.3) |
-| 4 | Códigos de erro `[INTERPRETAÇÃO]` da seção 3.3 | **aguarda confirmação**, depois da explicação dada ao responsável |
-| 5 | Como o AAnF reconhece o NEF | **aguarda confirmação.** O que a norma diz está na seção 4.1. Proposta: endereço de origem, *token* e lista de AF_ID |
+| 4 | Códigos de erro `[INTERPRETAÇÃO]` da seção 3.3 | **decidido:** a tabela da seção 3.3 |
+| 5 | Como o AAnF reconhece o NEF | **decidido:** endereço de origem, *token* e lista de AF_ID (seções 4 e 4.1) |
 | 6 | 401 do *middleware* sem `ProblemDetails` | **decidido:** mantido no MVP-6 e documentado (seção 3.2; F12 de `correcoes-free5gc.md`) |
