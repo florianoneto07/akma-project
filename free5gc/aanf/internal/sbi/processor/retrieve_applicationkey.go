@@ -19,8 +19,12 @@ import (
 
 // RetrieveApplicationKey returns the K_AF of the requesting AF
 // (Naanf_AKMA_ApplicationKey_Get and _AnonUser_Get, TS 29.535 cl. 4.2.2.3.2;
-// TS 33.535 cl. 6.2.1 and 6.2.2). remote is the source address of the AF.
-func (p *Processor) RetrieveApplicationKey(c *gin.Context, req *models.AkmaAfKeyRequest, remote netip.Addr) {
+// TS 33.535 cl. 6.2.1, 6.2.2 and 6.3). remote is the source address of the
+// consumer, an AF or a NEF; withToken tells whether the request carried an
+// access token, already verified.
+func (p *Processor) RetrieveApplicationKey(
+	c *gin.Context, req *models.AkmaAfKeyRequest, remote netip.Addr, withToken bool,
+) {
 	aanfCtx := p.Context()
 
 	if pd := validateAkmaAfKeyRequest(req); pd != nil {
@@ -42,9 +46,17 @@ func (p *Processor) RetrieveApplicationKey(c *gin.Context, req *models.AkmaAfKey
 
 	// TS 33.535 cl. 6.2.1 step 2: the AAnF checks, with its local policy,
 	// whether it can provide the service to the AF, and otherwise rejects
-	// the procedure. No application error is defined for this case
-	// (TS 29.535 table 5.1.7.3-1): 403 without cause.
-	if !aanfCtx.AfPolicy.Authorize(af, remote) {
+	// the procedure. Through a NEF, the request is processed in the same way
+	// (cl. 6.3 step 3), with the AF_IDs accepted from that NEF. No application
+	// error is defined for this case (TS 29.535 table 5.1.7.3-1): 403 without
+	// cause.
+	viaNef := aanfCtx.NefPolicy.IsNef(remote) && (withToken || !aanfCtx.RequiresOAuth2())
+	switch {
+	case viaNef && !aanfCtx.NefPolicy.Authorize(af, remote):
+		logger.AkmaLog.Warnf("NEF at %s not authorized for AF_ID %s", remote, af.Transport())
+		util.WriteProblem(c, util.Problem(http.StatusForbidden, "", "AF_ID not accepted from this NEF"))
+		return
+	case !viaNef && !aanfCtx.AfPolicy.Authorize(af, remote):
 		logger.AkmaLog.Warnf("AF at %s not authorized for AF_ID %s", remote, af.Transport())
 		util.WriteProblem(c, util.Problem(http.StatusForbidden, "", "AF not authorized by local policy"))
 		return
@@ -77,8 +89,12 @@ func (p *Processor) RetrieveApplicationKey(c *gin.Context, req *models.AkmaAfKey
 	if !req.AnonInd {
 		rsp.Supi = supi
 	}
-	logger.AkmaLog.Infof("K_AF of %s provided to AF_ID %s for A-KID %s, expires %s",
-		supi, af.Transport(), req.AKId, exp.Format(time.RFC3339))
+	via := ""
+	if viaNef {
+		via = ", through the NEF at " + remote.String()
+	}
+	logger.AkmaLog.Infof("K_AF of %s provided to AF_ID %s for A-KID %s, expires %s%s",
+		supi, af.Transport(), req.AKId, exp.Format(time.RFC3339), via)
 	util.WriteJSON(c, http.StatusOK, rsp)
 }
 

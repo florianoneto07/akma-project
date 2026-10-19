@@ -25,7 +25,7 @@ const (
 	AanfDefaultConfigPath         = "./config/aanfcfg.yaml"
 	AanfDefaultNfInstanceIdEnvVar = "AANF_NF_INSTANCE_ID"
 	AanfSbiDefaultIPv4            = "127.0.0.1"
-	AanfSbiDefaultPort            = 8000
+	AanfSbiDefaultPort            = 8010
 	AanfAkmaResUriPrefix          = "/naanf-akma/v1"
 	// AanfApiFullVersion is the version of TS29535_Naanf_AKMA.yaml implemented.
 	AanfApiFullVersion = "1.2.0"
@@ -82,6 +82,9 @@ type Akma struct {
 	// AuthorizedAfs is the local policy that authorizes AFs to obtain K_AF
 	// (TS 33.535 cl. 6.2.1 step 2).
 	AuthorizedAfs []AuthorizedAf `yaml:"authorizedAfs,omitempty" valid:"optional"`
+	// AuthorizedNefs is the local policy for the K_AF requests that a NEF
+	// relays for AFs outside the operator network (TS 33.535 cl. 6.3 step 3).
+	AuthorizedNefs []AuthorizedNef `yaml:"authorizedNefs,omitempty" valid:"optional"`
 	// RoamingStatusSubscription enables the ROAMING_STATUS subscription of
 	// TS 33.535 cl. 6.2.1 step 5. Not implemented: it must stay false
 	// (deviation DV-2).
@@ -95,6 +98,13 @@ type Akma struct {
 type AuthorizedAf struct {
 	AfId            string   `yaml:"afId" valid:"required"`
 	SourceAddresses []string `yaml:"sourceAddresses" valid:"required"`
+}
+
+// AuthorizedNef binds the source addresses of a NEF to the AF_IDs of the
+// external AFs whose K_AF the NEF may request.
+type AuthorizedNef struct {
+	SourceAddresses []string `yaml:"sourceAddresses" valid:"required"`
+	AfIds           []string `yaml:"afIds" valid:"required"`
 }
 
 // AKidFormat configures the textual form of the A-KID (ADR-0002 section 4).
@@ -168,6 +178,24 @@ func (a *Akma) validate() error {
 		for j, addr := range af.SourceAddresses {
 			if net.ParseIP(addr) == nil {
 				return fmt.Errorf("invalid akma.authorizedAfs[%d].sourceAddresses[%d]", i, j)
+			}
+		}
+	}
+	for i, nef := range a.AuthorizedNefs {
+		if len(nef.SourceAddresses) == 0 {
+			return fmt.Errorf("akma.authorizedNefs[%d]: at least one source address is required", i)
+		}
+		for j, addr := range nef.SourceAddresses {
+			if net.ParseIP(addr) == nil {
+				return fmt.Errorf("invalid akma.authorizedNefs[%d].sourceAddresses[%d]", i, j)
+			}
+		}
+		if len(nef.AfIds) == 0 {
+			return fmt.Errorf("akma.authorizedNefs[%d]: at least one AF_ID is required", i)
+		}
+		for j, id := range nef.AfIds {
+			if _, err := afid.Parse(id); err != nil {
+				return fmt.Errorf("invalid akma.authorizedNefs[%d].afIds[%d]: expected \"<FQDN>.<10 hex>\"", i, j)
 			}
 		}
 	}

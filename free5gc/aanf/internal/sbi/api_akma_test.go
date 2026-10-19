@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,6 +33,7 @@ import (
 	"github.com/florianoneto07/akma-free5gc/free5gc/aanf/internal/sbi/consumer"
 	"github.com/florianoneto07/akma-free5gc/free5gc/aanf/internal/sbi/processor"
 	"github.com/florianoneto07/akma-free5gc/free5gc/aanf/pkg/factory"
+	"github.com/florianoneto07/akma-free5gc/shared/akma/afid"
 	"github.com/free5gc/openapi/models"
 )
 
@@ -658,6 +660,106 @@ func TestOAuth2(t *testing.T) {
 	t.Run("retrieve without token", func(t *testing.T) {
 		wantStatus(t, e.retrieve(afLocal, e.v.AKID["base64"]), http.StatusOK)
 	})
+}
+
+// --- K_AF requested through the NEF (TS 33.535 cl. 6.3; nef.md cl. 4) ---
+
+func TestRetrieveViaNef(t *testing.T) {
+	e := newEnv(t)
+	wantStatus(t, e.register(nil), http.StatusOK)
+	// The test client connects from the loopback address, which is also the
+	// address of afLocal in the AF policy.
+	nefs, err := aanf_context.NewNefPolicy([]factory.AuthorizedNef{
+		{SourceAddresses: []string{"127.0.0.1", "::1"}, AfIds: []string{afRemote}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.app.ctx.NefPolicy = nefs
+	ti := newTokenIssuer(t)
+	e.app.ctx.NrfCertPem = ti.pemPath
+	e.app.ctx.SetOAuth2Required(true)
+	token := map[string]string{"Authorization": ti.token(t, "naanf-akma", time.Now().Add(time.Hour), "AANF")}
+	retrieve := func(afID string, anon bool, header map[string]string) response {
+		return e.postJSON("/retrieve-applicationkey",
+			map[string]any{"afId": afID, "aKId": e.v.AKID["base64"], "anonInd": anon}, header)
+	}
+
+	t.Run("NEF with token, accepted AF_ID", func(t *testing.T) {
+		r := retrieve(afRemote, false, token)
+		wantStatus(t, r, http.StatusOK)
+		var rsp models.AkmaAfKeyData
+		if err := json.Unmarshal(r.body, &rsp); err != nil {
+			t.Fatal(err)
+		}
+		// cl. 6.3 step 4: the AAnF answers the NEF with the SUPI.
+		if rsp.Supi != e.v.Supi || rsp.Kaf == "" {
+			t.Errorf("response %s", r.body)
+		}
+	})
+	t.Run("NEF with token, anonymous access", func(t *testing.T) {
+		r := retrieve(afRemote, true, token)
+		wantStatus(t, r, http.StatusOK)
+		if bytes.Contains(r.body, []byte(`"supi"`)) {
+			t.Errorf("SUPI in the anonymous answer: %s", r.body)
+		}
+	})
+	t.Run("NEF with token, AF_ID not accepted from the NEF", func(t *testing.T) {
+		wantProblem(t, retrieve(afLocal, false, token), http.StatusForbidden, "")
+	})
+	t.Run("invalid token", func(t *testing.T) {
+		bad := map[string]string{"Authorization": newTokenIssuer(t).token(t, "naanf-akma", time.Now().Add(time.Hour), "AANF")}
+		r := retrieve(afRemote, false, bad)
+		wantProblem(t, r, http.StatusUnauthorized, "")
+		if !strings.Contains(r.header.Get("WWW-Authenticate"), "invalid_token") {
+			t.Errorf("WWW-Authenticate = %q", r.header.Get("WWW-Authenticate"))
+		}
+	})
+	// Without a token, the request is an AF's, under the AF policy.
+	t.Run("no token, AF policy", func(t *testing.T) {
+		wantStatus(t, retrieve(afLocal, false, nil), http.StatusOK)
+		wantProblem(t, retrieve(afRemote, false, nil), http.StatusForbidden, "")
+	})
+	// Without OAuth2, the NEF is recognized by its source address alone.
+	t.Run("OAuth2 not required", func(t *testing.T) {
+		e.app.ctx.SetOAuth2Required(false)
+		defer e.app.ctx.SetOAuth2Required(true)
+		wantStatus(t, retrieve(afRemote, false, nil), http.StatusOK)
+		wantProblem(t, retrieve(afLocal, false, nil), http.StatusForbidden, "")
+	})
+}
+
+func TestNefPolicy(t *testing.T) {
+	p, err := aanf_context.NewNefPolicy([]factory.AuthorizedNef{
+		{SourceAddresses: []string{"192.0.2.20"}, AfIds: []string{afRemote}},
+		{SourceAddresses: []string{"192.0.2.20", "192.0.2.21"}, AfIds: []string{"af4.akma.example.ff00000001"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	nef, other := netip.MustParseAddr("192.0.2.20"), netip.MustParseAddr("192.0.2.21")
+	id := func(s string) afid.AfID {
+		v, err := afid.Parse(s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return v
+	}
+	if !p.IsNef(nef) || !p.IsNef(netip.MustParseAddr("::ffff:192.0.2.20")) || p.IsNef(netip.MustParseAddr("192.0.2.22")) {
+		t.Error("IsNef")
+	}
+	if !p.Authorize(id(afRemote), nef) || !p.Authorize(id("af4.akma.example.FF00000001"), nef) ||
+		p.Authorize(id(afRemote), other) || p.Authorize(id(afLocal), nef) {
+		t.Error("Authorize")
+	}
+	if got := strings.Join(p.AfIds(), ","); got != "af2.akma.example.FF00000001,af4.akma.example.FF00000001" {
+		t.Errorf("AfIds = %s", got)
+	}
+	if _, err := aanf_context.NewNefPolicy([]factory.AuthorizedNef{
+		{SourceAddresses: []string{"192.0.2.20"}, AfIds: []string{"af1.akma.example"}},
+	}); err == nil {
+		t.Error("AF_ID without Ua* id accepted")
+	}
 }
 
 // --- No key material in the logs ---

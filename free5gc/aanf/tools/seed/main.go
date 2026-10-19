@@ -45,7 +45,7 @@ import (
 const defaultNfInstanceID = "76a7ade7-c7d6-4e09-8d66-2726fd6f2cb9"
 
 func main() {
-	aanfFlag := &cli.StringFlag{Name: "aanf", Value: "http://192.168.16.130:8000", Usage: "AAnF apiRoot"}
+	aanfFlag := &cli.StringFlag{Name: "aanf", Value: "http://192.168.16.130:8010", Usage: "AAnF apiRoot"}
 	nrfFlags := []cli.Flag{
 		&cli.StringFlag{Name: "nrf", Usage: "NRF apiRoot; when set, an OAuth2 access token is obtained"},
 		&cli.StringFlag{Name: "nf-id", Value: defaultNfInstanceID, Usage: "NF instance ID of the temporary AF profile"},

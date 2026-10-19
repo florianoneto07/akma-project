@@ -16,7 +16,7 @@ configuration:
     scheme: http
     registerIPv4: 192.168.16.130
     bindingIPv4: 192.168.16.130
-    port: 8000
+    port: 8010
   serviceNameList:
     - naanf-akma
   nrfUri: http://127.0.0.10:8000
@@ -31,6 +31,9 @@ configuration:
     authorizedAfs:
       - afId: %AFID%
         sourceAddresses: [%ADDR%]
+    authorizedNefs:
+      - sourceAddresses: [%NEFADDR%]
+        afIds: [%NEFAFIDS%]
 logger:
   enable: true
   level: info
@@ -47,6 +50,8 @@ func writeConfig(t *testing.T, p params) string {
 		"ROAMING":  "false",
 		"AFID":     "af1.akma.example.FF00000001",
 		"ADDR":     "192.168.16.129",
+		"NEFADDR":  "192.168.16.130",
+		"NEFAFIDS": "af1.akma.example.FF00000001",
 	}
 	s := baseConfig
 	for k, v := range defaults {
@@ -77,7 +82,7 @@ func TestReadConfig(t *testing.T) {
 	if c.NfInstanceId == "" {
 		t.Error("nfInstanceId not generated")
 	}
-	if cfg.GetSbiBindingAddr() != "192.168.16.130:8000" {
+	if cfg.GetSbiBindingAddr() != "192.168.16.130:8010" {
 		t.Errorf("binding addr = %s", cfg.GetSbiBindingAddr())
 	}
 }
@@ -115,6 +120,10 @@ func TestInvalidConfigs(t *testing.T) {
 		"afId with 9 hex digits":   {"AFID": "af1.akma.example.FF0000001"},
 		"source address not an IP": {"ADDR": "af1.akma.example"},
 		"no source address":        {"ADDR": ""},
+		"NEF address not an IP":    {"NEFADDR": "nef.example"},
+		"NEF without address":      {"NEFADDR": ""},
+		"NEF without AF_ID":        {"NEFAFIDS": ""},
+		"NEF AF_ID without Ua* id": {"NEFAFIDS": "af1.akma.example"},
 	}
 	for name, p := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -135,7 +144,8 @@ func TestSampleConfig(t *testing.T) {
 	if c.NfInstanceId != "b6f417f0-06fa-4c38-b291-33066f5a5fe7" {
 		t.Errorf("nfInstanceId = %s", c.NfInstanceId)
 	}
-	if strings.Join(c.RoutingIndicators, ",") != "0000" || len(c.Akma.AuthorizedAfs) != 1 {
+	if strings.Join(c.RoutingIndicators, ",") != "0000" || len(c.Akma.AuthorizedAfs) != 1 ||
+		len(c.Akma.AuthorizedNefs) != 1 || c.Sbi.Port != 8010 {
 		t.Errorf("configuration = %+v", c)
 	}
 }

@@ -44,6 +44,7 @@ type AANFContext struct {
 	KafLifetime time.Duration
 	AKidOptions akid.Options
 	AfPolicy    *AfPolicy
+	NefPolicy   *NefPolicy
 	Store       *Store
 
 	mu sync.RWMutex
@@ -65,6 +66,9 @@ func Init(cfg *factory.Config) error {
 	self = c
 	logger.AkmaLog.Infof("Routing Indicators %v; K_AF lifetime %s; AF_IDs authorized by local policy: %v",
 		c.RoutingIndicators, c.KafLifetime, c.AfPolicy.AfIds())
+	if ids := c.NefPolicy.AfIds(); len(ids) > 0 {
+		logger.AkmaLog.Infof("AF_IDs accepted from a NEF: %v", ids)
+	}
 	return nil
 }
 
@@ -111,6 +115,9 @@ func New(cfg *factory.Config) (*AANFContext, error) {
 		return nil, err
 	}
 	if c.AfPolicy, err = NewAfPolicy(configuration.Akma.AuthorizedAfs); err != nil {
+		return nil, err
+	}
+	if c.NefPolicy, err = NewNefPolicy(configuration.Akma.AuthorizedNefs); err != nil {
 		return nil, err
 	}
 
@@ -175,6 +182,11 @@ func (c *AANFContext) SetOAuth2Required(v bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.OAuth2Required = v
+}
+
+// RequiresOAuth2 reports whether the NRF asked for OAuth2 access tokens.
+func (c *AANFContext) RequiresOAuth2() bool {
+	return c.oauth2Required()
 }
 
 func (c *AANFContext) oauth2Required() bool {
@@ -304,4 +316,73 @@ func (p *AfPolicy) Authorize(id afid.AfID, remote netip.Addr) bool {
 	}
 	_, ok = set[remote.Unmap()]
 	return ok
+}
+
+// NefPolicy is the local policy for the K_AF requests that a NEF relays for
+// AFs outside the operator network (TS 33.535 cl. 6.3 step 3, processed as
+// in cl. 6.2.1 step 2). The NEF is recognized by its source address, the
+// implicit authentication between NFs that TS 33.501 cl. 13.3.2.1 allows
+// without TLS (deviation DV-1), together with an access token when OAuth2 is
+// required. Each NEF has the list of AF_IDs accepted from it
+// (docs/free5gc-side/nef.md cl. 4).
+type NefPolicy struct {
+	afIds map[netip.Addr]map[string]struct{}
+}
+
+// NewNefPolicy builds the policy from the configuration.
+func NewNefPolicy(nefs []factory.AuthorizedNef) (*NefPolicy, error) {
+	p := &NefPolicy{afIds: make(map[netip.Addr]map[string]struct{})}
+	for i, nef := range nefs {
+		ids := make([]string, 0, len(nef.AfIds))
+		for j, s := range nef.AfIds {
+			id, err := afid.Parse(s)
+			if err != nil {
+				return nil, fmt.Errorf("akma.authorizedNefs[%d].afIds[%d]: %w", i, j, err)
+			}
+			ids = append(ids, id.Transport())
+		}
+		for j, s := range nef.SourceAddresses {
+			addr, err := netip.ParseAddr(strings.TrimSpace(s))
+			if err != nil {
+				return nil, fmt.Errorf("akma.authorizedNefs[%d].sourceAddresses[%d]: %w", i, j, err)
+			}
+			set := p.afIds[addr.Unmap()]
+			if set == nil {
+				set = make(map[string]struct{})
+				p.afIds[addr.Unmap()] = set
+			}
+			for _, id := range ids {
+				set[id] = struct{}{}
+			}
+		}
+	}
+	return p, nil
+}
+
+// IsNef reports whether remote is the source address of an authorized NEF.
+func (p *NefPolicy) IsNef(remote netip.Addr) bool {
+	_, ok := p.afIds[remote.Unmap()]
+	return ok
+}
+
+// Authorize reports whether the NEF at remote may obtain K_AF for id.
+func (p *NefPolicy) Authorize(id afid.AfID, remote netip.Addr) bool {
+	_, ok := p.afIds[remote.Unmap()][id.Transport()]
+	return ok
+}
+
+// AfIds returns the AF_IDs accepted from any NEF, in transport form, sorted.
+func (p *NefPolicy) AfIds() []string {
+	seen := make(map[string]struct{})
+	for _, set := range p.afIds {
+		for id := range set {
+			seen[id] = struct{}{}
+		}
+	}
+	ids := make([]string, 0, len(seen))
+	for id := range seen {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	return ids
 }

@@ -11,7 +11,7 @@ configuration:
     scheme: http # the protocol for sbi (http or https); http (h2c) per deviation DV-1
     registerIPv4: 192.168.16.130 # IP used to register to NRF; reachable from the AF VM
     bindingIPv4: 192.168.16.130 # IP used to bind the service
-    port: 8000 # port used to bind the service
+    port: 8010 # port used to bind the service; not used by any free5GC NF (8000 is their SBI port)
   serviceNameList: # the SBI services provided by this AANF
     - naanf-akma # Naanf_AKMA service (TS 29.535)
   nrfUri: http://127.0.0.10:8000 # a valid URI of NRF
@@ -28,6 +28,11 @@ configuration:
       - afId: af1.akma.example.FF00000001 # "<FQDN>.<Ua* security protocol id>"
         sourceAddresses: # addresses from which this AF may request its K_AF
           - 192.168.16.129
+    authorizedNefs: # K_AF requests relayed by a NEF for external AFs, TS 33.535 cl. 6.3
+      - sourceAddresses: # addresses of the NEF
+          - 192.168.16.130
+        afIds: # external AF_IDs accepted from this NEF
+          - af1.akma.example.FF00000001
 
 logger: # log output setting
   enable: true # true or false
