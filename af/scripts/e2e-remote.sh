@@ -31,6 +31,9 @@ seed="$HOME/akma-tools/seed"
 nrf="http://127.0.0.10:8000"
 supi="imsi-208930000000001"
 fqdn="af1.akma.example"
+# Where the AAnF listens: sbi.bindingIPv4 and sbi.port of its configuration
+aanf="$(sed -n 's/^ *bindingIPv4: *\([0-9.]*\).*/\1/p' "$f5/config/aanfcfg.yaml" | head -1):$(
+    sed -n 's/^ *port: *\([0-9]*\).*/\1/p' "$f5/config/aanfcfg.yaml" | head -1)"
 
 mkdir -p "$run"
 results="$run/remote-results.txt"
@@ -139,7 +142,7 @@ wait_for "$run/run.out" "log path:" 20
 f5log="$f5/$(sed -n 's/^log path: \.\///p' "$run/run.out" | head -1)free5gc.log"
 setstate FREE5GC_LOG "$f5log"
 check R1.free5gc "free5GC up with the AAnF registered at the NRF" \
-    wait_for "$f5log" 'msg="Start SBI server (listen on 192.168.16.130:8000)" CAT="SBI" NF="AANF"' 90
+    wait_for "$f5log" "msg=\"Start SBI server (listen on $aanf)\" CAT=\"SBI\" NF=\"AANF\"" 90
 
 "$uer/build/nr-gnb" -c "$uer/config/free5gc-gnb.yaml" >"$run/gnb.log" 2>&1 </dev/null &
 check R1.gnb "gNB NG Setup" wait_for "$run/gnb.log" "NG Setup procedure is successful" 30
@@ -195,7 +198,7 @@ ua -n 1 >"$run/ua-3.out" 2>&1
 check R4.ua "Ua*: the AF cannot obtain K_AF (503 AANF_UNAVAILABLE)" grep -q "503 AANF_UNAVAILABLE" "$run/ua-3.out"
 ./bin/aanf -c ./config/aanfcfg.yaml -l "$f5log" >"$run/aanf-restart.out" 2>&1 </dev/null &
 check R4.aanf-restarted "AAnF started again" \
-    bash -c 'for i in $(seq 20); do ss -ltn | grep -q "192.168.16.130:8000" && exit 0; sleep 1; done; exit 1'
+    bash -c 'for i in $(seq 20); do ss -ltn | grep -qF "$1" && exit 0; sleep 1; done; exit 1' _ "$aanf"
 
 # ---------------------------------------------------------------- R5
 step "R5 subscriber without AKMA subscription"
@@ -220,9 +223,9 @@ check R5.ua-restored "Ua* again with the restored subscription" grep -q "session
 
 # ---------------------------------------------------------------- R6
 step "R6 remove-context"
-"$seed" remove --nrf "$nrf" --supi "$supi" >"$run/remove-1.out" 2>&1
+"$seed" remove --nrf "$nrf" --aanf "http://$aanf" --supi "$supi" >"$run/remove-1.out" 2>&1
 check R6.removed "Naanf_AKMA_ContextRemove: removed (204)" grep -q "^removed" "$run/remove-1.out"
-"$seed" remove --nrf "$nrf" --supi "$supi" >"$run/remove-2.out" 2>&1
+"$seed" remove --nrf "$nrf" --aanf "http://$aanf" --supi "$supi" >"$run/remove-2.out" 2>&1
 check R6.not-found "remove-context again: 404 AKMA_CONTEXT_NOT_FOUND" \
     grep -q "404 (AKMA_CONTEXT_NOT_FOUND)" "$run/remove-2.out"
 sync_point C

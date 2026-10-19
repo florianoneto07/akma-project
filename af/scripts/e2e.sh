@@ -13,6 +13,10 @@
 # af/scripts/build-af.sh and free5gc/scripts/build-aanf.sh run here; the AF
 # configuration of af/config/afcfg.yaml.
 #
+# The AAnF address is the aanfUri of af/config/afcfg.yaml, and the address of
+# the extra AFs is the one of its listen; the AAnF of the free5GC host must
+# listen on that aanfUri (sbi.bindingIPv4 of ~/free5gc/config/aanfcfg.yaml).
+#
 # Output: af/build/e2e/<time>/ with report.md, the results and the logs of
 # both machines. Exit code 0 when every check passes.
 set -uo pipefail
@@ -31,7 +35,9 @@ repo="$(cd "$here/.." && pwd)"
 ts="$(date +%Y%m%d-%H%M%S)"
 L="$here/build/e2e/$ts"
 R="akma-e2e/$ts" # relative to the home directory on the free5GC host
-aanf="192.168.16.130:8000"
+afcfg="$here/config/afcfg.yaml"
+aanf="$(sed -n 's#^ *aanfUri: *https\{0,1\}://\([^/[:space:]]*\).*#\1#p' "$afcfg" | head -1)"
+af_ip="$(sed -n 's/^ *listen: *\([0-9.]*\):[0-9]*.*/\1/p' "$afcfg" | head -1)"
 nrf="http://127.0.0.10:8000"
 seed_local="$repo/free5gc/build/bin/seed"
 uaclient="$here/build/bin/uaclient"
@@ -73,15 +79,15 @@ group_A() { # system up, A_KID_1 registered
 
     # AkmaKeyInfo the AAnF must refuse (AUSF role, with an access token)
     k_ausf="$(vec rid-012 k_ausf)"
-    out="$(ssh_b "~/akma-tools/seed register --nrf $nrf --supi imsi-208930000000099 --k-ausf $k_ausf --rid 0000 --mcc 208 --mnc 93 --gpsi msisdn-5511999990000" 2>&1)"
+    out="$(ssh_b "~/akma-tools/seed register --nrf $nrf --aanf http://$aanf --supi imsi-208930000000099 --k-ausf $k_ausf --rid 0000 --mcc 208 --mnc 93 --gpsi msisdn-5511999990000" 2>&1)"
     expect N17 "AkmaKeyInfo with supi and gpsi: 400 OPTIONAL_IE_INCORRECT (TS 29.535 table 5.1.6.2.2-1)" "$out" "400 (OPTIONAL_IE_INCORRECT"
-    out="$(ssh_b "~/akma-tools/seed register --nrf $nrf --supi imsi-208930000000099 --k-ausf $k_ausf --rid 0000 --mcc 208 --mnc 93 --k-akma 0123" 2>&1)"
+    out="$(ssh_b "~/akma-tools/seed register --nrf $nrf --aanf http://$aanf --supi imsi-208930000000099 --k-ausf $k_ausf --rid 0000 --mcc 208 --mnc 93 --k-akma 0123" 2>&1)"
     expect N18 "kAkma outside the pattern: 400 MANDATORY_IE_INCORRECT" "$out" "400 (MANDATORY_IE_INCORRECT"
 
     # RID "012" and "12" are different A-KIDs (TS 23.003 cl. 2.2B)
     supi012="$(vec rid-012 supi)"
     akid012="$(vec rid-012 a_kid)"
-    out="$(ssh_b "~/akma-tools/seed register --nrf $nrf --supi $supi012 --k-ausf $k_ausf --rid 012 --mcc 345 --mnc 12" 2>&1)"
+    out="$(ssh_b "~/akma-tools/seed register --nrf $nrf --aanf http://$aanf --supi $supi012 --k-ausf $k_ausf --rid 012 --mcc 345 --mnc 12" 2>&1)"
     expect N19 "context with RID 012 registered with the A-KID of the oracle" "$out" "a-kid: $akid012"
     expect N20 "retrieve with RID 012: 200" "$(retrieve "$akid012")" "^200 "
     akid12="${akid012/rid012./rid12.}"
@@ -92,16 +98,16 @@ group_A() { # system up, A_KID_1 registered
     # af1.akma.example and whose SUPI is not the one of the UE.
     supi3="$(vec mnc-3-digits supi)"
     k_ausf3="$(vec mnc-3-digits k_ausf)"
-    out="$(ssh_b "~/akma-tools/seed register --nrf $nrf --supi $supi3 --k-ausf $k_ausf3 --rid 7 --mcc 310 --mnc 410" 2>&1)"
+    out="$(ssh_b "~/akma-tools/seed register --nrf $nrf --aanf http://$aanf --supi $supi3 --k-ausf $k_ausf3 --rid 7 --mcc 310 --mnc 410" 2>&1)"
     expect N22a "context of the vector mnc-3-digits registered" "$out" "a-kid: $(vec mnc-3-digits a_kid)"
-    pid="$(af_instance plus2h 192.168.16.129:8081 2h)"
+    pid="$(af_instance plus2h "$af_ip:8081" 2h)"
     sleep 1
-    out="$("$uaclient" -vector mnc-3-digits -vectors "$vectors" -connect 192.168.16.129:8081 2>&1)"
+    out="$("$uaclient" -vector mnc-3-digits -vectors "$vectors" -connect "$af_ip:8081" 2>&1)"
     expect N22 "AF clock 2 h ahead: a valid K_AF looks expired and is refused (503 AANF_UNAVAILABLE)" "$out" "503 AANF_UNAVAILABLE"
     kill "$pid" 2>/dev/null
-    pid="$(af_instance minus2h 192.168.16.129:8082 -2h)"
+    pid="$(af_instance minus2h "$af_ip:8082" -2h)"
     sleep 1
-    out="$("$uaclient" -vector mnc-3-digits -vectors "$vectors" -connect 192.168.16.129:8082 2>&1)"
+    out="$("$uaclient" -vector mnc-3-digits -vectors "$vectors" -connect "$af_ip:8082" 2>&1)"
     expect N23 "AF clock 2 h behind: K_AF accepted, and it would stay in use 2 h past its expiry" "$out" "session established"
     kill "$pid" 2>/dev/null
 
@@ -111,7 +117,7 @@ group_A() { # system up, A_KID_1 registered
     out="$("$uaclient" -vector mnc-3-digits -vectors "$vectors" -fqdn af2.akma.example 2>&1)"
     expect N25 "Ua* with the Host of another AF: 421" "$out" "421 MISDIRECTED_REQUEST"
 
-    out="$(ssh_b "~/akma-tools/seed remove --nrf $nrf --supi $supi012; ~/akma-tools/seed remove --nrf $nrf --supi $supi3" 2>&1)"
+    out="$(ssh_b "~/akma-tools/seed remove --nrf $nrf --aanf http://$aanf --supi $supi012; ~/akma-tools/seed remove --nrf $nrf --aanf http://$aanf --supi $supi3" 2>&1)"
     expect N26 "test contexts removed" "$(grep -c '^removed' <<<"$out")" "^2$"
 }
 
@@ -154,6 +160,10 @@ for f in akma-free5gc/af/scripts/e2e-remote.sh akma-free5gc/af/scripts/ue-netns.
     akma-tools/seed UERANSIM/build/nr-akma-selftest; do
     ssh_b "test -e $f" || { echo "$host:$f missing (docs/af-side/e2e.md, prerequisites)" >&2; exit 1; }
 done
+[ -n "$aanf" ] && [ -n "$af_ip" ] || { echo "aanfUri or listen missing in $afcfg" >&2; exit 1; }
+bind="$(ssh_b "sed -n 's/^ *bindingIPv4: *\([0-9.]*\).*/\1/p' ~/free5gc/config/aanfcfg.yaml" | head -1)"
+[ "${aanf%:*}" = "$bind" ] ||
+    { echo "aanfUri of $afcfg ($aanf) is not the AAnF of $host (bindingIPv4 ${bind:-missing})" >&2; exit 1; }
 {
     echo "commit $(git -C "$repo" describe --always --dirty 2>/dev/null)"
     for nf in nrf udm ausf config run; do ssh_b "~/akma-free5gc/free5gc/scripts/patch-nf.sh $nf status | head -1"; done
