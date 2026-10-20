@@ -1,6 +1,6 @@
 # Plano de desenvolvimento por MVPs
 
-**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) implementado e verificado, com 83 verificações e nenhuma falha (19/10/2026).
+**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) implementado e verificado, com 83 verificações e nenhuma falha (19/10/2026). MVP-7 (repositório público) aprovado (20/10/2026).
 **Data:** 15 de outubro de 2026; revisão 3 em 16 de outubro de 2026; aprovação em 16 de outubro de 2026
 **Base:** documentos `00` a `04`, Adendo E, ADR-0001-R2, ADR-0002, ADR-0003, `docs/baseline/ambiente-verificado.md`, `docs/baseline/conferencia-normativa.md`, `docs/literatura/analise-dos-artigos.md`, `docs/conformidade/desvios.md`
 **Revisão 2 (15/10/2026):** conferido contra as normas do acervo (hoje em `specs/`).
@@ -698,18 +698,96 @@ O NEF do MVP-6 não devolve GPSI, o que a norma permite. A tradução SUPI → G
 
 ---
 
-## 5. Depois do MVP-6
+### MVP-7 — Repositório público
 
-**MVP-7 — Repositório público** (pedido do responsável em 19/10/2026). Logo depois do MVP-6. Uma pasta separada, com o próprio `git`, que o responsável publica no GitHub e anuncia no fórum do free5GC, para a comunidade começar a testar. Requisitos do pedido:
+**Estado (20/10/2026):** **aprovado** pelo responsável, com as decisões abaixo. Começa pela limpeza do código.
+
+**Objetivo.** Uma pasta separada, com o próprio `git`, que o responsável publica no GitHub e anuncia no fórum do free5GC, para a comunidade começar a testar. Segue o molde do free5GC: o guia de instalação e o repositório com o que baixar. Requisitos do pedido (19/10/2026):
 
 - só o tutorial e o necessário para compilar e aplicar o que o projeto desenvolveu: código, *patches* e *scripts*;
-- no molde do free5GC: o guia de instalação e o repositório com o que baixar;
 - nada do projeto: sem plano, MVP, ADR, desvios, literatura, matriz nem marcações `[3GPP]`;
 - texto escrito como um desenvolvedor escreve, direto;
-- todos os pontos do free5GC a corrigir para o AKMA (`docs/free5gc-side/correcoes-free5gc.md`, iniciado em 19/10/2026). Cada correção diz onde a norma manda fazer e como fazer segundo a norma;
+- todos os pontos do free5GC a corrigir para o AKMA (F1 a F15 de `docs/free5gc-side/correcoes-free5gc.md`). Cada correção diz onde a norma manda fazer e como fazer segundo a norma;
 - autoria só do responsável, em todo arquivo, mensagem de *commit* e metadado.
 
-A decidir no início do MVP-7: idioma, nome do repositório, licença e se o AF e o cliente Ua\* de teste vão junto. A licença precisa ser conferida: o free5GC é Apache 2.0, e o UERANSIM, cujos *patches* vão junto, é GPL-3.0.
+**Decisões.** Tomadas pelo responsável em 20/10/2026.
+
+| Questão | Decisão |
+|---|---|
+| Idioma dos documentos públicos | Inglês, o idioma do fórum e da documentação do free5GC. Os documentos do projeto continuam em português |
+| Repositório | `github.com/florianoneto07/akma-free5gc`, que já existe e está vazio. Os caminhos de módulo Go já usam esse nome. Este repositório do projeto continua só local |
+| Licença | Apache-2.0 (a do free5GC) para o repositório; GPL-3.0 para os *patches* do UERANSIM, que derivam de código GPL-3.0 |
+| AF e cliente Ua\* de teste | Vão junto: sem eles não há como testar o AKMA de ponta a ponta |
+
+**Escopo.**
+
+1. **Limpeza do código, neste repositório.** Os comentários do código, dos *scripts*, das configurações e dos *patches* deixam de citar:
+   - documentos do projeto;
+   - números de MVP, DV, ADR e decisões (D9 a D16, P11, P12);
+   - o laboratório.
+
+   Passam a citar só a cláusula 3GPP, ou um texto neutro. O código continua tendo uma fonte só: este repositório. Os identificadores não mudam, exceto os que levavam o nome de etapas ou documentos do projeto: `afid.UaStarMVP` passa a `afid.UaStarDigest`, o vetor `baseline-2.5` a `worked-example` e o teste `TestSBaseline` a `TestSWorkedExample`.
+2. ***Scripts* sem dado pessoal.** O `e2e.sh` e o `deploy.sh` deixam de ter `woca@192.168.16.130` como padrão. A máquina vem por argumento ou por variável de ambiente.
+3. **Documentos públicos em inglês**, escritos neste repositório em `public/`, cujo conteúdo vai para a raiz do repositório público:
+   - `README.md`: o que é, o estado, a arquitetura, o início rápido, as limitações e a licença;
+   - guia de instalação: o tutorial reescrito, nas duas topologias (UERANSIM na máquina do free5GC e em outra máquina);
+   - correções do free5GC, F1 a F15. Cada uma traz o que o free5GC faz, a cláusula da norma e como fazer segundo ela, inclusive o 401 sem ProblemDetails (F12);
+   - AAnF, API AKMA do NEF, Ua\* e testes;
+   - limitações, ditas sem rodeio:
+     - sem TLS nas interfaces SBI e entre o NEF e o AF;
+     - Ua\* simplificado, com identificador da faixa privada;
+     - o NRF emite o *token* do AF externo;
+     - `nr-cli` como interface de teste no UE;
+     - *patches* para o free5GC v4.2.3 e o UERANSIM v3.2.6.
+4. **Exportação.** `public/export-public.sh <pasta>` monta a pasta pública a partir deste repositório.
+   - **Vai:** `shared/` (com os vetores de teste e a validação cruzada), `free5gc/aanf`, `free5gc/patches`, `free5gc/scripts`, `free5gc/config`, `af/af`, `af/uastar`, `af/ue`, `af/config`, `af/scripts`, `reference/kdf` (o oráculo da KDF), os documentos de `public/` e as licenças.
+   - **Não vai:** `docs/`, `papers/`, `specs/`, o `README.md` e o `CHANGELOG.md` do projeto, `free5gc/build`, `af/build`, a história do git, as *tags* e o próprio *script*.
+   - Na pasta exportada eu só rodo `git init`; o *commit* e o *push* são do responsável.
+
+**Fora do escopo.**
+
+- O *pull request* ao free5GC (seção 5, *Upstream*).
+- O CAPIF (MVP-8) e o TLS (MVP-9 em diante).
+
+**Pré-requisitos.** MVP-6.
+
+**Arquivos.**
+
+- comentários em `shared/`, `free5gc/`, `af/` e `reference/`;
+- `free5gc/patches/nef/0001-akma-api.patch`, regenerado se os comentários do NEF mudarem, e os demais *patches* com comentário a limpar;
+- `af/scripts/e2e.sh` e `free5gc/scripts/deploy.sh`;
+- `public/` (documentos e *script* de exportação).
+
+**Critérios de aceitação.**
+
+1. Nenhum arquivo fora de `docs/` cita documento do projeto, MVP, DV, ADR, decisão numerada ou o laboratório. Os testes Go passam em todos os módulos. Os *patches* aplicam no free5GC v4.2.3 e no UERANSIM v3.2.6.
+2. Nenhum *script* tem usuário ou máquina pessoal como padrão.
+3. A pasta exportada tem só o que o escopo lista, com a `LICENSE` Apache-2.0 na raiz e a GPL-3.0 junto dos *patches* do UERANSIM.
+4. Na pasta exportada, sem nada deste repositório, tudo compila e os testes Go passam.
+5. Varreduras na pasta exportada:
+   - autoria: o responsável é o único autor citado;
+   - projeto: nenhuma menção a plano, MVP, DV, ADR, matriz ou às marcações `[3GPP]`;
+   - dados pessoais: nenhum caminho `/home/<usuário>`, nenhum usuário e nenhum e-mail além dos do autor;
+   - chaves: nenhuma cadeia de 64 hexadecimais fora dos vetores de teste.
+6. Numa VM limpa, seguindo só os documentos públicos:
+   - o UE registra;
+   - o A-KID é igual no UE, no AUSF e no AAnF;
+   - o UE autentica no AF pelo Ua\*, direto e via NEF;
+   - o `e2e.sh` termina com código 0.
+
+**Riscos.**
+
+- A VM limpa do critério 6 exige reverter o *snapshot* da .131 ou criar uma VM nova. Decidir com o responsável antes desse critério.
+- Mudar um comentário dentro do *patch* do NEF obriga a regenerá-lo e a conferir que ele aplica. O binário na VM do free5GC não muda: comentários não alteram o código.
+- Os *replace* do `go.mod` do NEF apontam para `../../../akma-free5gc/`. A pasta clonada precisa ter esse nome, que é o do repositório público, e o guia de instalação diz isso.
+
+**O tutorial ganha.** Nada: o tutorial do projeto continua como está. O guia de instalação público é a sua reescrita em inglês.
+
+---
+
+## 5. Depois do MVP-6
+
+**MVP-7 — Repositório público.** Aprovado em 20/10/2026; passou para a seção 4.
 
 **MVP-8 — CAPIF no free5GC** (pedido do responsável em 19/10/2026, na confirmação do P12 do MVP-6). O AF externo passa a obter o *token* do NEF pelo caminho da norma, e não do NRF.
 
