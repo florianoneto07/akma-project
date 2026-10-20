@@ -31,6 +31,7 @@ seed="$HOME/akma-tools/seed"
 nrf="http://127.0.0.10:8000"
 supi="imsi-208930000000001"
 fqdn="af1.akma.example"
+af_ip="${AF_IP:-192.168.16.129}" # the AF machine; the extra AFs of the NEF group listen there
 # Where the AAnF listens: sbi.bindingIPv4 and sbi.port of its configuration
 aanf="$(sed -n 's/^ *bindingIPv4: *\([0-9.]*\).*/\1/p' "$f5/config/aanfcfg.yaml" | head -1):$(
     sed -n 's/^ *port: *\([0-9]*\).*/\1/p' "$f5/config/aanfcfg.yaml" | head -1)"
@@ -163,6 +164,27 @@ ua -n 3 >"$run/ua-1.out" 2>&1
 check R2.ua "Ua* from the UE, through the user plane, with the K_AF of the ME (3 requests)" \
     grep -q "session established (nc 00000003)" "$run/ua-1.out"
 sync_point A
+
+# ---------------------------------------------------------------- R2n
+# The AF machine has started, in group A, an AF outside the operator network
+# (8083), the same AF with anonymous access (8084) and an anonymous AF inside
+# the operator network (8085). MVP-6.
+step "R2n AF outside the operator network (NEF) and anonymous access"
+ua -connect "$af_ip:8083" -n 1 >"$run/ua-nef.out" 2>&1
+check R2n.ua-nef "Ua* with the AF outside the operator network, K_AF through the NEF (TS 33.535 cl. 6.3)" \
+    grep -q "session established (nc 00000001)" "$run/ua-nef.out"
+ua -connect "$af_ip:8084" -n 1 >"$run/ua-nef-anon.out" 2>&1
+check R2n.ua-nef-anon "Ua* with the AF outside the operator network, anonymous access (cl. 6.2.2)" \
+    grep -q "session established (nc 00000001)" "$run/ua-nef-anon.out"
+ua -connect "$af_ip:8085" -n 1 >"$run/ua-anon.out" 2>&1
+check R2n.ua-anon "Ua* with an anonymous AF inside the operator network (cl. 6.2.2)" \
+    grep -q "session established (nc 00000001)" "$run/ua-anon.out"
+check R2n.aanf-via-nef "the AAnF provides K_AF through the NEF (cl. 6.3 step 4)" \
+    bash -c 'grep -aF "for A-KID $1, expires" "$2" | grep -qF "through the NEF at"' _ "$akid1" "$f5log"
+check R2n.nef-relayed "the NEF relays K_AF to the AF" \
+    grep -aqF "K_AF for A-KID $akid1 relayed to AF_ID $fqdn." "$f5log"
+check R2n.nef-no-supi "no SUPI in the AKMA lines of the NEF (cl. 6.3 step 5)" \
+    bash -c '! grep -a "CAT=\"AKMA\" NF=\"NEF\"" "$1" | grep -q "imsi-"' _ "$f5log"
 
 # ---------------------------------------------------------------- R3
 step "R3 new primary authentication"

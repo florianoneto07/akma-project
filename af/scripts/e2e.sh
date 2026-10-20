@@ -36,7 +36,9 @@ ts="$(date +%Y%m%d-%H%M%S)"
 L="$here/build/e2e/$ts"
 R="akma-e2e/$ts" # relative to the home directory on the free5GC host
 afcfg="$here/config/afcfg.yaml"
+afcfg_ext="$here/config/afcfg-external.yaml"
 aanf="$(sed -n 's#^ *aanfUri: *https\{0,1\}://\([^/[:space:]]*\).*#\1#p' "$afcfg" | head -1)"
+nef="$(sed -n 's#^ *nefUri: *https\{0,1\}://\([^/[:space:]]*\).*#\1#p' "$afcfg_ext" | head -1)"
 af_ip="$(sed -n 's/^ *listen: *\([0-9.]*\):[0-9]*.*/\1/p' "$afcfg" | head -1)"
 nrf="http://127.0.0.10:8000"
 seed_local="$repo/free5gc/build/bin/seed"
@@ -68,6 +70,27 @@ af_instance() { # name listen clockOffset -> pid of an extra AF
         /^  aanfUri:/ && off != "" { print "  clockOffset: " off }' "$here/config/afcfg.yaml" >"$L/afcfg-$1.yaml"
     "$here/build/bin/af" -c "$L/afcfg-$1.yaml" >"$L/af-$1.log" 2>&1 &
     echo $!
+}
+
+# af_variant <name> <base configuration> <listen> [line for the configuration]
+# -> pid of an extra AF; the line replaces an "anonymous:" line of the base.
+af_variant() {
+    awk -v listen="$3" -v extra="${4:-}" '
+        /^  anonymous:/ { next }
+        /^  listen:/ { print "  listen: " listen; if (extra != "") print "  " extra; next }
+        { print }' "$2" >"$L/afcfg-$1.yaml"
+    "$here/build/bin/af" -c "$L/afcfg-$1.yaml" >"$L/af-$1.log" 2>&1 &
+    echo $!
+}
+extra_pids=()
+tunnel=""
+# stop_extra stops the AFs of the NEF group (they deregister from the NRF)
+# and the tunnel to the NRF.
+stop_extra() {
+    [ "${#extra_pids[@]}" -gt 0 ] && kill -INT "${extra_pids[@]}" 2>/dev/null && sleep 2
+    extra_pids=()
+    [ -n "$tunnel" ] && kill "$tunnel" 2>/dev/null
+    tunnel=""
 }
 
 # ---------------------------------------------------------------- local checks
@@ -119,12 +142,37 @@ group_A() { # system up, A_KID_1 registered
 
     out="$(ssh_b "~/akma-tools/seed remove --nrf $nrf --aanf http://$aanf --supi $supi012; ~/akma-tools/seed remove --nrf $nrf --aanf http://$aanf --supi $supi3" 2>&1)"
     expect N26 "test contexts removed" "$(grep -c '^removed' <<<"$out")" "^2$"
+
+    group_nef "$akid1"
+}
+
+# The AF outside the operator network, through the NEF (TS 33.535 cl. 6.3),
+# and anonymous access (cl. 6.2.2), MVP-6. The extra AFs stay up for the Ua*
+# of the UE (R2n) and are stopped in group B. The NRF listens on a loopback
+# address of the free5GC host: the AFs reach it through an SSH tunnel
+# (docs/free5gc-side/nef.md cl. 2.1).
+group_nef() {
+    local akid1="$1" out
+    echo "== A (NEF): AF outside the operator network and anonymous access"
+    ssh -N -o BatchMode=yes -o ExitOnForwardFailure=yes -L "${nrf#http://}:${nrf#http://}" "$host" &
+    tunnel=$!
+    sleep 2
+    extra_pids+=("$(af_variant nef "$afcfg_ext" "$af_ip:8083")")
+    extra_pids+=("$(af_variant nef-anon "$afcfg_ext" "$af_ip:8084" "anonymous: true")")
+    extra_pids+=("$(af_variant anon "$afcfg" "$af_ip:8085" "anonymous: true")")
+    sleep 3
+    expect E00 "AFs outside the operator network registered at the NRF through the tunnel" \
+        "$(cat "$L/af-nef.log" "$L/af-nef-anon.log" | grep -c 'registered at the NRF')" "^2$"
+    python3 -I "$here/scripts/negative/nef_api.py" "${nrf#http://}" "$nef" "$aanf" "$af_ip" "$akid1" >>"$results" 2>&1
 }
 
 group_B() { # after the new authentication
     local akid1 akid2
     akid1="$(state A_KID_1)"
     akid2="$(state A_KID_2)"
+    stop_extra
+    expect E12 "AFs outside the operator network deregistered from the NRF" \
+        "$(cat "$L/af-nef.log" "$L/af-nef-anon.log" | grep -c 'Deregistered from the NRF')" "^2$"
     echo "== B: A-KID after a new authentication"
     expect B1 "previous A-KID refused by the AAnF: 403 K_AKMA_NOT_PRESENT (TS 33.535 cl. 6.1 NOTE 1a)" "$(retrieve "$akid1")" "^403 (K_AKMA_NOT_PRESENT)"
     expect B2 "new A-KID: 200" "$(retrieve "$akid2")" "^200 "
@@ -139,6 +187,7 @@ group_C() { # after remove-context
 
 worker() {
     local s i
+    trap stop_extra EXIT
     for s in A B C; do
         for ((i = 0; i < 2400; i++)); do
             ssh_b "test -f $R/sync-$s.ready" && break
@@ -183,7 +232,7 @@ worker >"$L/worker.out" 2>&1 &
 workerpid=$!
 
 echo "== free5GC host: type the sudo password of $host when asked"
-ssh -t "$host" "bash ~/akma-free5gc/af/scripts/e2e-remote.sh \$HOME/$R $keep" | tee "$L/remote.out"
+ssh -t "$host" "AF_IP=$af_ip bash ~/akma-free5gc/af/scripts/e2e-remote.sh \$HOME/$R $keep" | tee "$L/remote.out"
 ssh_b "touch $R/.finished"
 wait "$workerpid"
 kill "$afpid" 2>/dev/null

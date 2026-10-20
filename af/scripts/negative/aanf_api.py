@@ -88,6 +88,13 @@ def main():
         print(("PASS" if ok else "FAIL") + " N01b AkmaAfKeyData carries kaf (64 hexadecimal characters) and expiry")
         globals()["failures"] += 0 if ok else 1
 
+    s, d = request(aanf, "POST", API + "/retrieve-applicationkey",
+                   json.dumps({"afId": AF_ID, "aKId": akid, "anonInd": True}).encode())
+    rsp = json.loads(d) if s == 200 else {}
+    ok = s == 200 and "kaf" in rsp and "supi" not in rsp
+    print(("PASS" if ok else "FAIL") + f" N01c anonymous access (anonInd, TS 33.535 cl. 6.2.2): {s}, supi absent: {'supi' not in rsp}")
+    globals()["failures"] += 0 if ok else 1
+
     s, d = retrieve(aanf, AF_ID, akid.replace(".atid", ".akid", 1))
     check("N02", 'A-KID with the label "akid" accepted (TS 29.522 example; ADR-0002)', s, d, 200)
 
