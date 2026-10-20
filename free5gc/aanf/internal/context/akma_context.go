@@ -24,7 +24,7 @@ type UeAkmaContext struct {
 	AKID    string
 	akidKey akidKey
 	KAkma   kdf.Key
-	Gpsi    string                  // not obtained in the MVP
+	Gpsi    string                  // always empty: AKMA_GPSI_Support is not supported
 	AfKeys  map[string]*AfKeyRecord // by AF_ID transport form
 }
 

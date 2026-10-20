@@ -86,10 +86,9 @@ type Akma struct {
 	// relays for AFs outside the operator network (TS 33.535 cl. 6.3 step 3).
 	AuthorizedNefs []AuthorizedNef `yaml:"authorizedNefs,omitempty" valid:"optional"`
 	// RoamingStatusSubscription enables the ROAMING_STATUS subscription of
-	// TS 33.535 cl. 6.2.1 step 5. Not implemented: it must stay false
-	// (deviation DV-2).
+	// TS 33.535 cl. 6.2.1 step 5. Not implemented: it must stay false.
 	RoamingStatusSubscription bool `yaml:"roamingStatusSubscription" valid:"optional"`
-	// AKid sets the A-KID format (ADR-0002).
+	// AKid sets the A-KID format; no specification fixes the A-TID encoding.
 	AKid *AKidFormat `yaml:"aKid,omitempty" valid:"optional"`
 }
 
@@ -107,7 +106,7 @@ type AuthorizedNef struct {
 	AfIds           []string `yaml:"afIds" valid:"required"`
 }
 
-// AKidFormat configures the textual form of the A-KID (ADR-0002 section 4).
+// AKidFormat configures the textual form of the A-KID.
 type AKidFormat struct {
 	AtidEncoding string   `yaml:"atidEncoding,omitempty" valid:"optional,in(base64|base64url|hex)"`
 	AtidLabel    string   `yaml:"atidLabel,omitempty" valid:"optional"`
@@ -163,7 +162,7 @@ func (c *Configuration) validate() (bool, error) {
 func (a *Akma) validate() error {
 	if a.RoamingStatusSubscription {
 		return errors.New("akma.roamingStatusSubscription: the ROAMING_STATUS subscription " +
-			"is not implemented in this version and must be false (deviation DV-2)")
+			"is not implemented in this version and must be false")
 	}
 	if _, err := a.GetKafLifetime(); err != nil {
 		return err

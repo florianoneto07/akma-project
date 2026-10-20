@@ -202,12 +202,14 @@ func (e *env) do(method, path, contentType string, body io.Reader, header map[st
 	if rsp.ProtoMajor != 2 {
 		e.t.Errorf("response over HTTP/%d, want HTTP/2", rsp.ProtoMajor)
 	}
-	// TS 29.535 DV-7 and DV-2: these are never emitted.
+	// Never emitted: 204, since a K_AF is always derivable when K_AKMA is
+	// present, and ROAMING_AKMA_SERVICE_DENIED, since the roaming status is
+	// not subscribed.
 	if path == prefix+"/retrieve-applicationkey" && rsp.StatusCode == http.StatusNoContent {
-		e.t.Errorf("retrieve-applicationkey answered 204 (DV-7)")
+		e.t.Errorf("retrieve-applicationkey answered 204")
 	}
 	if bytes.Contains(b, []byte("ROAMING_AKMA_SERVICE_DENIED")) {
-		e.t.Errorf("ROAMING_AKMA_SERVICE_DENIED emitted (DV-2)")
+		e.t.Errorf("ROAMING_AKMA_SERVICE_DENIED emitted")
 	}
 	return response{rsp.StatusCode, rsp.Header, b}
 }
@@ -337,7 +339,7 @@ func TestRegisterBadRequests(t *testing.T) {
 	})
 }
 
-// The "akid" label of the TS 29.522 example (defect D-A) is accepted.
+// The "akid" label of the example of TS 29.522 table 5.14.5.4.2-1 is accepted.
 func TestRegisterAcceptsAkidLabel(t *testing.T) {
 	e := newEnv(t)
 	alt := strings.Replace(e.v.AKID["base64"], ".atid", ".akid", 1)
@@ -406,7 +408,7 @@ func TestRetrieveKAkmaNotPresent(t *testing.T) {
 
 // TS 33.535 cl. 6.2.1 step 2: AF outside the local policy, and an authorized
 // AF_ID requested by another AF (AF spoofing), are rejected with 403 without
-// cause (P3).
+// cause.
 func TestRetrieveAfNotAuthorized(t *testing.T) {
 	e := newEnv(t)
 	wantStatus(t, e.register(nil), http.StatusOK)

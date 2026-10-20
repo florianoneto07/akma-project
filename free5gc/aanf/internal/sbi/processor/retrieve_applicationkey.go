@@ -62,10 +62,10 @@ func (p *Processor) RetrieveApplicationKey(
 		return
 	}
 
-	// The roaming status is not subscribed (deviation DV-2), so
-	// ROAMING_AKMA_SERVICE_DENIED is never returned. A K_AF is always
-	// derivable when K_AKMA is present, so "204 No Content" is never returned
-	// either (deviation DV-7).
+	// The roaming status is not subscribed (TS 33.535 cl. 6.2.1 step 5 is not
+	// implemented), so ROAMING_AKMA_SERVICE_DENIED is never returned. A K_AF
+	// is always derivable when K_AKMA is present, so the "204 No Content" of
+	// TS 29.535 cl. 4.2.2.3.2 is never returned either.
 	supi, kaf, expiry, err := aanfCtx.Store.ApplicationKey(id, af, aanfCtx.KafLifetime)
 	if errors.Is(err, aanf_context.ErrKAkmaNotPresent) {
 		logger.AkmaLog.Infof("K_AKMA not present for A-KID %s, requested by AF_ID %s", req.AKId, af.Transport())

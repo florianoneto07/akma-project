@@ -368,7 +368,7 @@ index 0000000..bcf1b15
 +
 +// retrieveKaf asks the AAnF for K_AF as the AF of the test bench, retrying
 +// while the AUSF registration, which runs apart from the authentication
-+// (decision D9), has not arrived. It returns the HTTP status of the last try.
++// (TS 33.535 cl. 6.1), has not arrived. It returns the HTTP status of the last try.
 +func retrieveKaf(aKId string, wait time.Duration) (*models.AkmaAfKeyData, int) {
 +	req := &Naanf_AKMA.GetAKMAAPPKeyMaterialRequest{}
 +	req.SetAkmaAfKeyRequest(models.AkmaAfKeyRequest{AfId: test.AanfTestAfId, AKId: aKId})
@@ -449,7 +449,7 @@ index 0000000..bcf1b15
 +	return subs
 +}
 +
-+// MVP-2 criterion 1, 5G AKA: the K_AF returned by the AAnF equals the K_AF
++// TestAkma5GAKA: the K_AF returned by the AAnF equals the K_AF
 +// derived by the test UE from its own K_AUSF. RID "0000" in the SUCI and in
 +// the subscription.
 +func TestAkma5GAKA(t *testing.T) {
@@ -464,7 +464,7 @@ index 0000000..bcf1b15
 +	require.Equal(t, ue.Supi, data.Supi)
 +}
 +
-+// MVP-2 criterion 1, EAP-AKA': RID "012", leading zero kept end to end.
++// TestAkmaEAPAKAPrime: RID "012", leading zero kept end to end.
 +func TestAkmaEAPAKAPrime(t *testing.T) {
 +	ue := runAkmaRegistration(t, "imsi-208930000007491", akmaSubscription(true, "012"),
 +		akmaSuci([2]uint8{0x10, 0xf2}, [5]uint8{0x00, 0x00, 0x00, 0x47, 0x19}))
@@ -477,8 +477,8 @@ index 0000000..bcf1b15
 +	require.Equal(t, ue.Supi, data.Supi)
 +}
 +
-+// MVP-2 criterion 3: without akmaAllowed the AUSF registers nothing, so the
-+// A-KID the UE would derive is unknown to the AAnF.
++// TestAkmaWithoutSubscription: without akmaAllowed the AUSF registers
++// nothing, so the A-KID the UE would derive is unknown to the AAnF.
 +func TestAkmaWithoutSubscription(t *testing.T) {
 +	ue := runAkmaRegistration(t, "imsi-208930000007492", akmaSubscription(false, ""),
 +		akmaSuci([2]uint8{0xf0, 0xff}, [5]uint8{0x00, 0x00, 0x00, 0x47, 0x29}))

@@ -223,7 +223,7 @@ index 0000000..d7539ef
 +// startAkma starts the AKMA key generation and registration of TS 33.535
 +// cl. 6.1 steps 3-5 when the UDM sent the AKMA indication. It runs apart
 +// from the authentication: the response to the AMF is neither delayed nor
-+// changed by the AAnF (decision D9).
++// changed by the AAnF (TS 33.535 cl. 6.1: AKMA follows the authentication).
 +func (p *Processor) startAkma(ue *ausf_context.AusfUeContext) {
 +	if !ue.AkmaInd {
 +		return
@@ -344,7 +344,7 @@ index 0000000..561c7d2
 +	"github.com/free5gc/openapi/models"
 +)
 +
-+// Vector "testbed-ue" of the project oracle
++// Vector "testbed-ue" of the KDF oracle
 +// (shared/akma/testdata/vectors.json in akma-free5gc).
 +const (
 +	vecKausf = "141ef548f86e3a2a1ad949331caa9e6bb12401afa321bde4f9f23b84870dd654"
@@ -377,7 +377,7 @@ index 0000000..561c7d2
 +		req   akmaRequest
 +		plmns []models.PlmnId
 +	}{
-+		"NAI SUPI (DV-3)": {akmaRequest{supi: "nai-user@example.com", supiOrSuci: vecSuci, kausf: vecKausf, routingId: "0000"}, testPlmns},
++		"NAI (IMSI only)": {akmaRequest{supi: "nai-user@example.com", supiOrSuci: vecSuci, kausf: vecKausf, routingId: "0000"}, testPlmns},
 +		"K_AUSF not hex":  {akmaRequest{supi: vecSupi, supiOrSuci: vecSuci, kausf: "zz", routingId: "0000"}, testPlmns},
 +		"no routingId":    {akmaRequest{supi: vecSupi, supiOrSuci: vecSuci, kausf: vecKausf}, testPlmns},
 +		"RID of 5 digits": {akmaRequest{supi: vecSupi, supiOrSuci: vecSuci, kausf: vecKausf, routingId: "00000"}, testPlmns},
@@ -554,7 +554,7 @@ index 0000000..561c7d2
 +	require.Empty(t, rec.requests)
 +}
 +
-+// startAkma returns at once; the registration runs apart (decision D9).
++// startAkma returns at once; the registration runs apart (TS 33.535 cl. 6.1).
 +func TestStartAkmaDoesNotBlock(t *testing.T) {
 +	received := make(chan struct{}, 1)
 +	block := make(chan struct{})

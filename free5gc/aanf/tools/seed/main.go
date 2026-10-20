@@ -1,5 +1,5 @@
 // Command seed exercises the Naanf_AKMA API of the AAnF without an AUSF or
-// an AF, for tests (MVP-1):
+// an AF, for tests:
 //
 //	register  plays the AUSF: derives K_AKMA and the A-KID from K_AUSF and
 //	          sends Naanf_AKMA_AnchorKey_Register (TS 33.535 cl. 6.1);
@@ -64,7 +64,7 @@ func main() {
 					&cli.StringFlag{Name: "rid", Required: true, Usage: "Routing Indicator, 1 to 4 digits"},
 					&cli.StringFlag{Name: "mcc", Required: true},
 					&cli.StringFlag{Name: "mnc", Required: true},
-					// Negative tests (MVP-5): the AAnF must reject these.
+					// Negative tests: the AAnF must reject these.
 					&cli.StringFlag{Name: "gpsi", Usage: "also send this gpsi (test: AKMA_GPSI_Support is not supported)"},
 					&cli.StringFlag{Name: "k-akma", Usage: "send this kAkma instead of the derived one (test)"},
 				}, nrfFlags...),

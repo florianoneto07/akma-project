@@ -322,9 +322,9 @@ func (p *AfPolicy) Authorize(id afid.AfID, remote netip.Addr) bool {
 // AFs outside the operator network (TS 33.535 cl. 6.3 step 3, processed as
 // in cl. 6.2.1 step 2). The NEF is recognized by its source address, the
 // implicit authentication between NFs that TS 33.501 cl. 13.3.2.1 allows
-// without TLS (deviation DV-1), together with an access token when OAuth2 is
-// required. Each NEF has the list of AF_IDs accepted from it
-// (docs/free5gc-side/nef.md cl. 4).
+// when TLS is not used (this AAnF serves the SBI without TLS), together with
+// an access token when OAuth2 is required. Each NEF has the list of AF_IDs
+// accepted from it.
 type NefPolicy struct {
 	afIds map[netip.Addr]map[string]struct{}
 }
