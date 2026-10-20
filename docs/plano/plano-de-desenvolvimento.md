@@ -702,6 +702,19 @@ O NEF do MVP-6 não devolve GPSI, o que a norma permite. A tradução SUPI → G
 
 **Estado (20/10/2026):** **aprovado** pelo responsável, com as decisões abaixo. Começa pela limpeza do código.
 
+**Estado (20/10/2026, tarde):** itens 1 a 4 do escopo feitos; critérios 1 a 5 atendidos numa exportação de teste (`export-public.sh --dirty`); falta o critério 6.
+
+| Critério | Resultado |
+|---|---|
+| 1 | Atendido: nenhuma referência ao projeto fora de `docs/`; testes Go passam com `-race`; *patches* aplicam nas árvores originais |
+| 2 | Atendido: `e2e.sh` e `deploy.sh` exigem a máquina (argumento ou `FREE5GC_HOST`) |
+| 3 | Atendido: 122 arquivos; `LICENSE` Apache-2.0 e `NOTICE` na raiz; `COPYING` GPL-3.0 em `af/ue/ueransim/patches/` |
+| 4 | Atendido: na pasta exportada, `build-aanf.sh` e `build-af.sh` compilam; `vet` e `go test -race` passam nos quatro módulos; os geradores reproduzem os vetores |
+| 5 | Atendido: autoria, referências ao projeto e dados pessoais sem ocorrência; as cadeias de 64 hexadecimais são todas de vetores de teste |
+| 6 | Pendente: reprodução numa VM limpa |
+
+Os documentos públicos ficam em `public/`: `README.md`, `docs/install.md` (o tutorial reescrito, com a parte 11, como desfazer), `docs/free5gc-fixes.md` (F1 a F15), `docs/aanf.md`, `docs/nef-akma-api.md`, `docs/ua-star.md` e `docs/testing.md`. O `export-public.sh` recusa exportar com mudanças não commitadas, sem `--dirty`, e confere no fim que a pasta não cita documentos que ficam aqui.
+
 **Objetivo.** Uma pasta separada, com o próprio `git`, que o responsável publica no GitHub e anuncia no fórum do free5GC, para a comunidade começar a testar. Segue o molde do free5GC: o guia de instalação e o repositório com o que baixar. Requisitos do pedido (19/10/2026):
 
 - só o tutorial e o necessário para compilar e aplicar o que o projeto desenvolveu: código, *patches* e *scripts*;

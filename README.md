@@ -54,6 +54,7 @@ docs/
 shared/akma/                          biblioteca Go comum (KDF, SUPI, A-KID, AF_ID, codecs)
 shared/crosscheck/                    comparação com a KDF do free5GC (módulo próprio)
 reference/kdf/                        oráculo Python e gerador de vetores
+public/                               repositório público (MVP-7): README, docs em inglês, licenças e export-public.sh
 specs/  papers/                       normas e artigos — locais, fora do controle de versão
 ```
 
