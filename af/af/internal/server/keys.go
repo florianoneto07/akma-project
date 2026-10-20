@@ -17,6 +17,14 @@ type KeyProvider interface {
 	ApplicationKey(ctx context.Context, aKid string) (aanf.Key, error)
 }
 
+// source names where a provider obtains K_AF, for the log.
+func source(p KeyProvider) string {
+	if s, ok := p.(interface{ Source() string }); ok {
+		return s.Source()
+	}
+	return "the AAnF"
+}
+
 // errKafExpired reports a K_AF past its expiry under the reject policy.
 var errKafExpired = errors.New("K_AF expired")
 
@@ -51,8 +59,8 @@ func (c *keyCache) get(ctx context.Context, aKid string, now time.Time) (aanf.Ke
 				aKid, k.Expiry.UTC().Format(time.RFC3339))
 			return aanf.Key{}, errKafExpired
 		}
-		logger.UaLog.Infof("K_AF for A-KID %s expired at %s: requesting it again from the AAnF (policy refetch)",
-			aKid, k.Expiry.UTC().Format(time.RFC3339))
+		logger.UaLog.Infof("K_AF for A-KID %s expired at %s: requesting it again from %s (policy refetch)",
+			aKid, k.Expiry.UTC().Format(time.RFC3339), source(c.provider))
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
@@ -64,11 +72,11 @@ func (c *keyCache) get(ctx context.Context, aKid string, now time.Time) (aanf.Ke
 	}
 	if !now.Before(k.Expiry) {
 		c.forget(aKid)
-		logger.ConsumerLog.Warnf("the AAnF returned a K_AF for A-KID %s already expired at %s (clock offset?)",
-			aKid, k.Expiry.UTC().Format(time.RFC3339))
+		logger.ConsumerLog.Warnf("%s returned a K_AF for A-KID %s already expired at %s (clock offset?)",
+			source(c.provider), aKid, k.Expiry.UTC().Format(time.RFC3339))
 		return aanf.Key{}, aanf.ErrUnavailable
 	}
-	logger.ConsumerLog.Infof("K_AF for A-KID %s obtained from the AAnF, expires %s", aKid,
+	logger.ConsumerLog.Infof("K_AF for A-KID %s obtained from %s, expires %s", aKid, source(c.provider),
 		k.Expiry.UTC().Format(time.RFC3339))
 	logger.ConsumerLog.Debugf("K_AF for A-KID %s belongs to %s", aKid, k.Supi)
 	c.mu.Lock()

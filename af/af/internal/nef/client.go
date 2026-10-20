@@ -45,6 +45,9 @@ func New(apiRoot string, id afid.AfID, anonymous bool, tokens TokenSource) *Clie
 	}
 }
 
+// Source names where the client obtains K_AF, for the log.
+func (c *Client) Source() string { return "the NEF" }
+
 // ApplicationKey requests the K_AF of aKid. The NEF never returns the SUPI
 // (TS 33.535 cl. 6.3 step 5).
 func (c *Client) ApplicationKey(ctx context.Context, aKid string) (aanf.Key, error) {

@@ -102,6 +102,18 @@ func TestSampleConfig(t *testing.T) {
 	}
 }
 
+// The configuration of the AF outside the operator network.
+func TestSampleExternalConfig(t *testing.T) {
+	s, err := Load("../../../config/afcfg-external.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.AfID.Transport() != "af1.akma.example.FF00000001" || s.Listen != "192.168.16.129:8083" ||
+		s.NefURI != "http://192.168.16.130:8000" || s.NrfURI != "http://127.0.0.10:8000" || s.AanfURI != "" {
+		t.Fatalf("settings %+v", s)
+	}
+}
+
 func TestUnknownField(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "afcfg.yaml")
 	raw := "configuration:\n  fqdn: af1.akma.example\n  uaStarID: FF00000001\n"
