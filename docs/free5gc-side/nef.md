@@ -237,7 +237,7 @@ Respostas do responsável em 19/10/2026:
 
 | Nº | Ponto | Decisão |
 |---|---|---|
-| 1 | P12: como o AF externo obtém o *token* | **decidido:** no MVP-6, o NRF é o servidor de autorização (*"based on local configuration"*, TS 29.522 §6), com túnel SSH no laboratório (seção 2.1). O caminho da norma, o CAPIF, entra no MVP-8 (plano, seção 5; F13 de `correcoes-free5gc.md`) |
+| 1 | P12: como o AF externo obtém o *token* | **decidido:** no MVP-6, o NRF é o servidor de autorização (*"based on local configuration"*, TS 29.522 §6), com túnel SSH no laboratório (seção 2.1). O caminho da norma, o CAPIF, entra no MVP-9, renumerado em 20/10/2026 (plano, seção 5; F13 de `correcoes-free5gc.md`) |
 | 2 | Endereço do NEF | **decidido:** o AAnF vai para a porta 8010; o NEF fica na porta 8000 do free5GC e só troca o endereço de *loopback* por 192.168.16.130 (seção 2) |
 | 3 | 204 de TS 29.522 tab. 5.14.3.2.2-2 | **decidido:** o NEF emite 204 quando o AAnF responde 204 (seção 3.3) |
 | 4 | Códigos de erro `[INTERPRETAÇÃO]` da seção 3.3 | **decidido:** a tabela da seção 3.3 |

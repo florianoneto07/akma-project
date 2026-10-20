@@ -1,6 +1,6 @@
 # Plano de desenvolvimento por MVPs
 
-**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) implementado e verificado, com 83 verificações e nenhuma falha (19/10/2026). MVP-7 (repositório público) aprovado (20/10/2026).
+**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) implementado e verificado, com 83 verificações e nenhuma falha (19/10/2026). MVP-7 (repositório público) concluído: publicado no GitHub e instalado numa VM limpa só pelo guia, com 83 verificações e nenhuma falha (20/10/2026). MVP-8 (Ua\* da norma e autorização por aplicação no UE) com a organização aprovada (20/10/2026); o CAPIF passou a MVP-9.
 **Data:** 15 de outubro de 2026; revisão 3 em 16 de outubro de 2026; aprovação em 16 de outubro de 2026
 **Base:** documentos `00` a `04`, Adendo E, ADR-0001-R2, ADR-0002, ADR-0003, `docs/baseline/ambiente-verificado.md`, `docs/baseline/conferencia-normativa.md`, `docs/literatura/analise-dos-artigos.md`, `docs/conformidade/desvios.md`
 **Revisão 2 (15/10/2026):** conferido contra as normas do acervo (hoje em `specs/`).
@@ -575,7 +575,7 @@ Divergências que a reprodução em instalação limpa achou no tutorial (crité
 
 ### MVP-6 — AF externo via NEF, acesso anônimo e remoção por OAM
 
-**Estado (19/10/2026):** **aprovado** pelo responsável, com P11 (b) e DV-9 (b). Na aprovação, o responsável acrescentou o item 7: UERANSIM em outra máquina. Especificação `docs/free5gc-side/nef.md` aprovada em 19/10/2026, com todos os pontos da seção 9 decididos; o *token* do AF externo vem do NRF no MVP-6 e do CAPIF no MVP-8. Também decidido: o AAnF passa para a porta 8010, fora das portas do free5GC.
+**Estado (19/10/2026):** **aprovado** pelo responsável, com P11 (b) e DV-9 (b). Na aprovação, o responsável acrescentou o item 7: UERANSIM em outra máquina. Especificação `docs/free5gc-side/nef.md` aprovada em 19/10/2026, com todos os pontos da seção 9 decididos; o *token* do AF externo vem do NRF no MVP-6 e do CAPIF no MVP-9 (MVP-8 até a renumeração de 20/10/2026). Também decidido: o AAnF passa para a porta 8010, fora das portas do free5GC.
 
 **Estado (19/10/2026, fim do dia):** implementado e verificado no laboratório. `e2e.sh`: 83 verificações e nenhuma falha (execução `20261019-213720`; `docs/af-side/e2e.md` §5.2).
 
@@ -704,6 +704,8 @@ O NEF do MVP-6 não devolve GPSI, o que a norma permite. A tradução SUPI → G
 
 **Estado (20/10/2026, tarde):** itens 1 a 4 do escopo feitos; critérios 1 a 5 atendidos numa exportação de teste (`export-public.sh --dirty`); falta o critério 6.
 
+**Estado (20/10/2026, noite):** **concluído**. O repositório público foi exportado do commit do projeto, publicado no GitHub (`1527b46`) e instalado numa VM limpa seguindo só o README e o `docs/install.md`. O guia teve uma correção: o `aanfUri` do `ausfcfg.yaml` entrou na tabela de endereços. Ela vai ao repositório público na próxima reexportação.
+
 | Critério | Resultado |
 |---|---|
 | 1 | Atendido: nenhuma referência ao projeto fora de `docs/`; testes Go passam com `-race`; *patches* aplicam nas árvores originais |
@@ -711,7 +713,7 @@ O NEF do MVP-6 não devolve GPSI, o que a norma permite. A tradução SUPI → G
 | 3 | Atendido: 122 arquivos; `LICENSE` Apache-2.0 e `NOTICE` na raiz; `COPYING` GPL-3.0 em `af/ue/ueransim/patches/` |
 | 4 | Atendido: na pasta exportada, `build-aanf.sh` e `build-af.sh` compilam; `vet` e `go test -race` passam nos quatro módulos; os geradores reproduzem os vetores |
 | 5 | Atendido: autoria, referências ao projeto e dados pessoais sem ocorrência; as cadeias de 64 hexadecimais são todas de vetores de teste |
-| 6 | Pendente: reprodução numa VM limpa |
+| 6 | Atendido em 20/10/2026 na VM 192.168.16.132 (*snapshot* limpo), com o clone do GitHub nas duas máquinas: o UE registra; o A-KID é igual no UE, no AUSF e no AAnF; Ua\* direto e via NEF; `e2e.sh` com 83 verificações e nenhuma falha (execução `20261020-173639`; `docs/af-side/teste-instalacao-github.md`) |
 
 Os documentos públicos ficam em `public/`: `README.md`, `docs/install.md` (o tutorial reescrito, com a parte 11, como desfazer), `docs/free5gc-fixes.md` (F1 a F15), `docs/aanf.md`, `docs/nef-akma-api.md`, `docs/ua-star.md` e `docs/testing.md`. O `export-public.sh` recusa exportar com mudanças não commitadas, sem `--dirty`, e confere no fim que a pasta não cita documentos que ficam aqui.
 
@@ -760,7 +762,7 @@ Os documentos públicos ficam em `public/`: `README.md`, `docs/install.md` (o tu
 **Fora do escopo.**
 
 - O *pull request* ao free5GC (seção 5, *Upstream*).
-- O CAPIF (MVP-8) e o TLS (MVP-9 em diante).
+- O Ua\* da norma (MVP-8), o CAPIF (MVP-9) e o TLS nas SBI.
 
 **Pré-requisitos.** MVP-6.
 
@@ -798,15 +800,88 @@ Os documentos públicos ficam em `public/`: `README.md`, `docs/install.md` (o tu
 
 ---
 
+### MVP-8 — Ua\* da norma e autorização por aplicação no UE
+
+**Estado (20/10/2026):** organização **aprovada** pelo responsável. O escopo detalhado de cada fase sai de uma especificação aprovada antes do código, como `ua-star.md` no MVP-3 e `nef.md` no MVP-6.
+
+**Pedido** (responsável, 20/10/2026):
+
+- o Ua\* completo, não o simplificado, já com TLS, DTLS e OSCORE conforme a norma;
+- entender e resolver a limitação do `nr-cli`, que entrega a K_AF de qualquer AF a qualquer processo da máquina.
+
+**Decisões** (responsável, 20/10/2026):
+
+| Questão | Decisão |
+|---|---|
+| Organização | Um MVP em quatro fases, cada uma com critérios e *commits* próprios: (a) serviço de chaves do ME com autorização por aplicação; (b) TLS; (c) DTLS 1.3; (d) OSCORE. O CAPIF passa a MVP-9 |
+| `akma-kaf` do `nr-cli` | Fica atrás de uma opção de teste, desligada por padrão. O caminho normal passa a ser o serviço de chaves |
+| Ua\* simplificado (`FF00000001`) | Fica como perfil de teste, desligado por padrão no AF |
+| Normas | Baixadas para `specs/` em 20/10/2026: TS 33.310 V19.5.0 e TS 33.210 V19.3.0; RFC 4279, 5489, 5869, 6066, 6347, 7252, 8442, 8446, 8613, 8949, 9052, 9053, 9147, 9258 e 9325 em `specs/rfc/` |
+
+**Situação normativa.**
+
+- `[3GPP]` TS 33.535 §4.4.3, requisitos do UE:
+  - as aplicações não acessam a K_AKMA (já atendido);
+  - *"An application on the UE shall only get the KAF keys related to specific AF Identifiers (AF_IDs) that the application is authorized to get"*;
+  - *"An application on the UE shall not be able to get access to the KAF keys that belong to other applications"*;
+  - NOTA: *"How these requirements are satisfied is out of scope of 3GPP."* `[LACUNA]` A forma fica para o projeto.
+- `[3GPP]` Perfis do Ua\* (TS 33.535 Anexos B, C e D; TS 33.222 §5.3 e §5.4; TS 24.109 Anexo K; TS 33.220 Anexos H, O e P):
+
+  | Perfil | Identificador Ua\* (TS 33.220 H.3) |
+  |---|---|
+  | Digest dentro de TLS, AF autenticado por certificado (B.1.2; K.2) | `01 00 01 yy zz`, com o *cipher suite* negociado |
+  | PSK TLS 1.2 (B.1.3.2.1; K.3.2) | `01 00 01 yy zz` |
+  | PSK TLS 1.3 (B.1.3.2.2; K.3.3) | `01 00 00 00 07` |
+  | DTLS 1.3, opcional (Anexo C) | `01 00 00 00 09` |
+  | OSCORE, opcional (Anexo D) | `01 00 00 00 08` |
+
+- `[3GPP]` TS 33.210 §6.2, o perfil TLS para o qual TS 33.310 Anexo E remete:
+  - TLS 1.3: `psk_ke` *"shall not be supported"*, então o PSK vai com ECDHE (`psk_dhe_ke`);
+  - TLS 1.2 com PSK: RFC 5489, com `TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256` (RFC 8442) obrigatório; o identificador fica `01 00 01 D0 01`;
+  - com DTLS, o DTLS 1.2 *"shall"* e o DTLS 1.3 *"should"* ser suportados.
+- `[FREE5GC]` O `crypto/tls` do Go não tem PSK nem DTLS. A pilha das fases (b) e (c) é escolhida na especificação.
+
+**Pontos a decidir na especificação.**
+
+1. `[LACUNA]` Como derivar da K_AF o *premaster secret* (TLS 1.2) e a PSK externa (TLS 1.3). TS 33.222 §5.4, TS 24.109 K.3 e TS 33.535 B.1.3 dizem só "derivar da K_AF"; TS 33.210 não diz.
+2. `[LACUNA]` O separador da identidade PSK no TLS 1.2: TS 24.109 K.3.2 e) não o dá. O GBA usa `;` (TS 24.109 §5.3.3.1.2).
+3. `[LACUNA]` DTLS 1.2: TS 33.210 §6.2.1 o exige quando há DTLS, e TS 33.535 C.1.1 diz que a identidade PSK de B.1, que inclui o TLS 1.2, vale para o DTLS; mas C.2 só descreve o procedimento do DTLS 1.3.
+4. `[LACUNA]` Os parâmetros do HKDF em `OMS = HKDF(KAF, "AKMA-OSCORE")` (TS 33.535 D.3.3): *salt*, *info* e tamanho (RFC 5869).
+5. `[LACUNA]` A forma do HPLMN-ID no A-KID em CBOR do OSCORE (D.3.5).
+6. `[DIVERGÊNCIA]` TS 33.535 D.3.2 remete a "TS 33.220 clause Y.2.3" e "Y.3.3"; o conteúdo está no Anexo P.
+7. `[DIVERGÊNCIA]` D.3.2 põe um *"CoAP Security protocol identifier"* no corpo do pedido; o CBOR de D.3.5 não o tem.
+8. No K.2 continuam o DV-5 e o DV-6. O identificador Ua\* depende do *cipher suite*, então a política do AAnF precisa de um AF_ID por *cipher suite* aceito.
+9. A identidade da aplicação no ME e o formato da política (`[INTERPRETAÇÃO]`, ponto da NOTA de §4.4.3).
+10. A pilha de PSK TLS, DTLS e OSCORE. Verificado em 20/10/2026:
+    - o OpenSSL 3.0.13 da VM do AF não tem `ECDHE-PSK-AES128-GCM-SHA256`, a suíte obrigatória de TS 33.210 §6.2.3 (só as variantes CBC e ChaCha20);
+    - o OpenSSL só traz DTLS 1.3 a partir da 4.1, anunciada pelo projeto para outubro de 2026;
+    - o wolfSSL tem TLS 1.3, DTLS 1.3 e PSK, sob GPLv3 ou licença comercial; a suíte `D0 01` aparece nos testes do próprio wolfSSL, mas ainda não foi conferida compilando;
+    - não há biblioteca de OSCORE em Go conhecida. O RFC 8613 traz vetores de teste no Apêndice C.
+
+**Fases.**
+
+- **(a) Serviço de chaves do ME.** O `nr-ue` atende por um *socket* Unix. A aplicação é identificada pelo sistema operacional (`SO_PEERCRED` e o executável), e a política na configuração do UE dá os AF_IDs de cada aplicação. Um AF_ID não pode pertencer a duas aplicações. O `uaclient` passa a usar o serviço.
+- **(b) TLS.** O K.2, com certificado do AF; o PSK TLS 1.3 e o PSK TLS 1.2.
+- **(c) DTLS 1.3**, mais o DTLS 1.2, conforme a decisão do ponto 3.
+- **(d) OSCORE.** CoAP, OSCORE (RFC 8613) e CBOR, com o recurso `/akma`.
+
+Em todas as fases: o AF escolhe os perfis pela configuração, o AAnF autoriza os AF_IDs de cada perfil e o `e2e.sh` ganha os grupos novos.
+
+**Pré-requisitos.** MVP-6. O critério 6 do MVP-7, a instalação limpa pelo GitHub, corre em paralelo noutra sessão e não bloqueia.
+
+---
+
 ## 5. Depois do MVP-6
 
 **MVP-7 — Repositório público.** Aprovado em 20/10/2026; passou para a seção 4.
 
-**MVP-8 — CAPIF no free5GC** (pedido do responsável em 19/10/2026, na confirmação do P12 do MVP-6). O AF externo passa a obter o *token* do NEF pelo caminho da norma, e não do NRF.
+**MVP-8 — Ua\* da norma e autorização por aplicação no UE.** Aprovado em 20/10/2026; está na seção 4.
+
+**MVP-9 — CAPIF no free5GC** (pedido do responsável em 19/10/2026, na confirmação do P12 do MVP-6; MVP-8 até a renumeração de 20/10/2026). O AF externo passa a obter o *token* do NEF pelo caminho da norma, e não do NRF.
 
 - `[3GPP]` TS 29.522 §7.2 e TS 33.122 §6.5.2.3: com CAPIF, o CAPIF Core Function (CCF) é o servidor de autorização. O AF, como *API invoker*, pede o *token* em `{apiRoot}/capif-security/v1/securities/{securityId}/token` (`Obtain_Authorization`, TS 29.222 §5.6.2.3). O NEF, como AEF, confere no *token* o próprio identificador, o nome da API e o escopo.
 - `[FREE5GC]` O free5GC não tem CCF (F13 de `docs/free5gc-side/correcoes-free5gc.md`).
-- Escopo mínimo a detalhar na proposta do MVP-8:
+- Escopo mínimo a detalhar na proposta do MVP-9:
   - um CCF com a entrada do *API invoker* (`CAPIF_API_Invoker_Management_API`), a descoberta (`CAPIF_Discover_Service_API`), a segurança (`CAPIF_Security_API`) e a publicação (`CAPIF_Publish_Service_API`);
   - o NEF como APF, publicando `3gpp-akma`, e como AEF, conferindo os *tokens* do CCF;
   - o AF como *API invoker*.
@@ -821,9 +896,12 @@ Os documentos públicos ficam em `public/`: `README.md`, `docs/install.md` (o tu
 | `remove-context` (§6.6) | operação pronta no MVP-1; a norma nomeia o OAM como consumidor, não uma NF do núcleo | MVP-6, só documentação |
 | Caminho via NEF (§6.3, `3gpp-akma`) | — | MVP-6 |
 | Filtro `routing-indicator` para `AANF` no NRF | feito no MVP-1b | sai da lista |
-| Ua\* conforme K.2 sobre TLS; TLS 1.3 PSK conforme K.3.3 | Release 17 (AKMA_TLS) | MVP-9: primeiro K.2 sobre TLS, com certificado do AF; exige rever o ADR-0003 (identificador de H.3 em vez da faixa privada). Depois o PSK: o `crypto/tls` do Go não suporta PSK externa, então avaliar OpenSSL |
+| Ua\* conforme K.2 sobre TLS; TLS 1.3 PSK conforme K.3.3 | Release 17 (AKMA_TLS) | MVP-8 (seção 4), com o DTLS e o OSCORE; exige rever o ADR-0003 (identificadores de H.3 ao lado da faixa privada) |
 | GPSI via `id-translation-result`; `AKMA_GPSI_Support` | o UDM v4.2.3 só traduz GPSI → SUPI | MVP-10: *patch* no UDM; GPSI ao AF externo pelo NEF e, com a *feature*, ao AF interno |
-| TLS nas interfaces SBI (§4.4.0) | DV-1 e DV-9 | MVP-10 ou MVP-11, junto com a autenticação do AF |
+| TLS nas interfaces SBI (§4.4.0) | DV-1 e DV-9 | MVP-11, junto com a autenticação do AF |
+| Pontos abertos do free5GC: escopos por tipo de consumidor (F4), `exp` e `aud` no `VerifyOAuth` (F5), *webconsole* (F9), 401 do NEF (F12), descadastro do NEF (F14), `complexQuery` (F15) | `docs/free5gc-side/correcoes-free5gc.md` | F4 e F5 junto com o TLS nas SBI; os demais com o *upstream* |
+| NFKC no UE (DV-4); SUPI dos tipos NAI, GLI e GCI (DV-3) | desvios registrados | sob demanda |
+| *Authentication Proxy* (TS 33.535 §4.7) | opcional na norma | sob demanda, depois do MVP-8 |
 | *Upstream* | — | *rebase* para a versão corrente (D4); modelos do Naanf_AKMA gerados pela mesma ferramenta OpenAPI do free5GC; `shared/akma` migrado para `free5gc/util`. O repositório público (MVP-7) é o primeiro passo; o *pull request* pode vir antes dos MVP seguintes: depende de quando o projeto quer abrir a conversa com o free5GC |
 | *Roaming* (`ROAMING_STATUS`, `RoamingRestriction`, `Notify` com `3gpp-Sbi-Callback`); `ServiceDisableNotification` (§6.8); `AuthTrigger` (§6.4.4, divergência D: POST) | Release 18. O *roaming* exige uma VPLMN, que o laboratório não tem; o `AuthTrigger` exige o AMF | depois do *upstream*, sob demanda |
 | Várias instâncias de AAnF; persistência do contexto; desempenho (ADR-0001-R2 §5.4); verificação formal | — | sob demanda |

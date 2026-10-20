@@ -24,7 +24,7 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
 | F10 | UDM | `id-translation-result` só traduz GPSI → SUPI | aberto (plano, seção 5) |
 | F11 | NEF | sem a API `3gpp-akma` | corrigido, *patch* `nef/0001` (MVP-6) |
 | F12 | NEF | 401 do *middleware* OAuth2 sem `ProblemDetails` nem `WWW-Authenticate` | aberto; mantido no MVP-6 por decisão do responsável |
-| F13 | NEF | APIs do AF sem CAPIF e sem TLS mútuo | DV-9; CAPIF planejado (MVP-8) |
+| F13 | NEF | APIs do AF sem CAPIF e sem TLS mútuo | DV-9; CAPIF planejado (MVP-9) |
 | F14 | NEF | pede o *token* de `nnrf-nfm` para o tipo errado e não se descadastra | aberto |
 | F15 | NRF | `complexQuery` sem `routing-indicator` para `AANF` | aberto |
 
@@ -145,7 +145,7 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
 - **Como deve ser.** TLS com certificados de cliente e servidor entre o NEF e o AF. Autorização por OAuth2: com CAPIF, *token* do CAPIF Core Function, obtido por `Obtain_Authorization` (TS 29.222 §5.6.2.3.2); sem CAPIF, de um servidor de autorização definido por configuração local.
 - **No projeto.**
   - MVP-6: DV-9, com `http`, *token* do NRF e política local AF_ID ↔ endereço de origem no NEF. O NRF como servidor de autorização cabe no *"based on local configuration"* de TS 29.522 §6 (`nef.md` §2.1).
-  - MVP-8, planejado (pedido do responsável em 19/10/2026): um CAPIF Core Function para o free5GC, implementável com os serviços de TS 29.222. O NEF atua como APF, publicando `3gpp-akma` com `Publish_Service_API` (§5.3), e como AEF, conferindo o *token* como manda TS 29.522 §7.2. O AF atua como *API invoker*: entra no CCF (`CAPIF_API_Invoker_Management_API`), descobre a API (`Discover_Service_API`, §5.2) e obtém o *token* em `{apiRoot}/capif-security/v1/securities/{securityId}/token` (§5.6.2.3, TS 33.122 §6.5.2.3).
+  - MVP-9, planejado (pedido do responsável em 19/10/2026; MVP-8 até a renumeração de 20/10/2026): um CAPIF Core Function para o free5GC, implementável com os serviços de TS 29.222. O NEF atua como APF, publicando `3gpp-akma` com `Publish_Service_API` (§5.3), e como AEF, conferindo o *token* como manda TS 29.522 §7.2. O AF atua como *API invoker*: entra no CCF (`CAPIF_API_Invoker_Management_API`), descobre a API (`Discover_Service_API`, §5.2) e obtém o *token* em `{apiRoot}/capif-security/v1/securities/{securityId}/token` (§5.6.2.3, TS 33.122 §6.5.2.3).
 
 ## F14 — NEF pede o *token* de `nnrf-nfm` para o tipo errado
 

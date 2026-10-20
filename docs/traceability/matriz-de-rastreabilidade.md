@@ -60,7 +60,7 @@ Evidências: verificações da execução `20261019-213720` de `af/scripts/e2e.s
 | 204 quando o dado não existe | 29.522 tab. 5.14.3.2.2-2 | `nef/0001`: repassa o 204 do AAnF | teste `204 of the AAnF relayed` | **Verificado** — `[INTERPRETAÇÃO]`; o AAnF nunca emite 204 (DV-7) |
 | Acesso anônimo: K_AF sem identidade do UE; o AAnF guarda a validade | 33.535 6.2.2; 7.1.5; 29.535 4.2.2.3.2 | `free5gc/aanf/` (MVP-1); AF `anonymous`; NEF repassa `anonInd` | [N01c], [E03], [R2n.ua-anon], [R2n.ua-nef-anon]; 3H | **Verificado** |
 | Remoção do contexto AKMA pelo OAM | 33.535 6.6, tab. 7.1.1-1; 29.535 4.2.1.3.2, tab. 4.2.2.1-1 | `seed remove` no papel do OAM | [R6.removed], [R6.not-found] | **Verificado** |
-| Segurança NEF–AF: TLS mútuo e OAuth | 33.501 12.2 a 12.4 | `http`, *token* do NRF, política AF_ID ↔ endereço | [E04], [E06] | **Desvio DV-9**; CAPIF no MVP-8 |
+| Segurança NEF–AF: TLS mútuo e OAuth | 33.501 12.2 a 12.4 | `http`, *token* do NRF, política AF_ID ↔ endereço | [E04], [E06] | **Desvio DV-9**; CAPIF no MVP-9 |
 | UE em outra máquina: N2 e N3 entre máquinas | 23.501 (N2, N3); guia oficial do free5GC | configuração do AMF, do SMF, do UPF e dos gNB | 3H: NG Setup a partir de 192.168.16.131, mesmo A-KID no UE, no AUSF e no AAnF | **Verificado** |
 | Nenhuma chave em log, inclusive no NEF | plano, todos os MVPs | todos | [R7.no-key-*], [L1]; `TestAkmaNoKeyInLogs` do NEF; 3H | **Verificado** |
 
