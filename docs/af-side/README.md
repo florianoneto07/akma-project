@@ -12,5 +12,6 @@ Tudo o que é feito **fora** do núcleo para usar AKMA: o AF de teste, o protoco
 | `teste-ue.md` — autoteste, ponta a ponta, nova autenticação e critérios do MVP-4 | MVP-4 | escrito (18/10/2026) |
 | `e2e.md` — roteiro ponta a ponta, testes negativos e resultado | MVP-5, MVP-6 | escrito (18/10/2026); grupo do NEF e R2n em 19/10/2026 |
 | `teste-nef.md` — AF via NEF, acesso anônimo e UERANSIM em outra máquina | MVP-6 | escrito (19/10/2026) |
+| `teste-instalacao-github.md` — instalação numa VM limpa só com o repositório público; critério 6 do MVP-7 | MVP-7 | escrito (20/10/2026) |
 
 O que é comum aos dois lados — KDF, formatos de identificador, codificação, vetores — fica em `docs/shared/`.
