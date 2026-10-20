@@ -1,5 +1,4 @@
-// Package config reads the configuration of the AF (afcfg.yaml), whose
-// fields are those of docs/af-side/ua-star.md cl. 11.
+// Package config reads the configuration of the AF (afcfg.yaml).
 package config
 
 import (
@@ -30,7 +29,7 @@ const (
 	KafExpiryReject KafExpiry = "reject"
 )
 
-// Defaults of docs/af-side/ua-star.md cl. 11.
+// Defaults of the optional fields.
 const (
 	DefaultPath          = "/ua/v1/session"
 	DefaultNonceLifetime = 300 * time.Second
@@ -49,13 +48,15 @@ type Configuration struct {
 	// second part of the realm and the FQDN of the AF_ID.
 	FQDN string `yaml:"fqdn"`
 	// UaStarID is the Ua* security protocol identifier, ten hexadecimal
-	// digits (ADR-0003: FF00000001).
+	// digits: FF00000001, the private-range identifier of the simplified Ua*
+	// protocol (TS 33.220 H.2 NOTE 2).
 	UaStarID string `yaml:"uaStarId"`
 	// Listen is the address of the Ua* server.
 	Listen string `yaml:"listen"`
 	// Path of the protected resource.
 	Path string `yaml:"path,omitempty"`
-	// RealmPrefix is the first part of the realm (deviation DV-6).
+	// RealmPrefix is the first part of the realm; uastar.RealmPrefix when
+	// absent.
 	RealmPrefix string `yaml:"realmPrefix,omitempty"`
 	// Qop lists the qop values offered in the challenge.
 	Qop []string `yaml:"qop,omitempty"`
@@ -70,9 +71,9 @@ type Configuration struct {
 	// network and requests K_AF through the NEF (TS 33.535 cl. 6.3). Exactly
 	// one of aanfUri and nefUri is set.
 	NefURI string `yaml:"nefUri,omitempty"`
-	// NrfURI is the NRF that issues the access token of the NEF API, at
-	// which the AF registers (docs/free5gc-side/nef.md cl. 2.1). Required
-	// with nefUri.
+	// NrfURI is the NRF at which the AF registers and that issues the access
+	// token of the NEF API. Without CAPIF, TS 29.522 cl. 6 leaves the token
+	// issuer to local configuration. Required with nefUri.
 	NrfURI string `yaml:"nrfUri,omitempty"`
 	// NfInstanceID identifies the AF at the NRF; a random UUID when absent.
 	NfInstanceID string `yaml:"nfInstanceId,omitempty"`
@@ -80,8 +81,7 @@ type Configuration struct {
 	// SUPI (TS 33.535 cl. 6.2.2).
 	Anonymous bool `yaml:"anonymous,omitempty"`
 	// ClockOffset shifts the clock of the AF, a Go duration ("2h", "-2h").
-	// Test only: it simulates an AF whose clock disagrees with the AAnF's
-	// (MVP-5 negative tests).
+	// Test only: it simulates an AF whose clock disagrees with the AAnF's.
 	ClockOffset string `yaml:"clockOffset,omitempty"`
 }
 

@@ -1,6 +1,6 @@
 /*
- * AF: AKMA Application Function of the MVP (3GPP TS 33.535), serving the
- * Ua* protocol of docs/af-side/ua-star.md.
+ * AF: AKMA Application Function (3GPP TS 33.535) serving the simplified Ua*
+ * protocol of package uastar: HTTP Digest (RFC 7616) keyed with K_AF.
  */
 
 package main

@@ -158,7 +158,7 @@ func cause(t *testing.T, rsp *http.Response) string {
 }
 
 // TestInitiation: a request without AKMA parameters receives the challenge,
-// which is the AKMA initiation message (TS 33.535 cl. 6.5; criterion 6).
+// which is the AKMA initiation message (TS 33.535 cl. 6.5).
 func TestInitiation(t *testing.T) {
 	af := newTestAF(t, nil)
 	for _, ua := range []string{"akma-uaclient/0.1 3gpp-akma", "curl/8.0"} {
@@ -209,7 +209,7 @@ func TestAuthInt(t *testing.T) {
 	}
 }
 
-// TestWrongKafRejected: any other K_AF fails (criterion 3).
+// TestWrongKafRejected: any other K_AF fails.
 func TestWrongKafRejected(t *testing.T) {
 	af := newTestAF(t, nil)
 	wrong := testKaf
@@ -355,7 +355,7 @@ func TestStaleNonce(t *testing.T) {
 }
 
 // TestKafExpiryRefetch: an expired K_AF is never used; the AAnF is asked
-// again (criterion 5, policy refetch).
+// again (policy refetch).
 func TestKafExpiryRefetch(t *testing.T) {
 	af := newTestAF(t, func(c *config.Configuration) { c.NonceLifetime = "24h" })
 	af.aanf.lifetime = time.Minute
@@ -377,7 +377,7 @@ func TestKafExpiryRefetch(t *testing.T) {
 }
 
 // TestKafExpiryReject: with the reject policy, the expired K_AF gives
-// KAF_EXPIRED (TS 33.535 cl. 6.4.2; criterion 5).
+// KAF_EXPIRED (TS 33.535 cl. 6.4.2).
 func TestKafExpiryReject(t *testing.T) {
 	af := newTestAF(t, func(c *config.Configuration) {
 		c.NonceLifetime = "24h"
@@ -411,7 +411,7 @@ func TestExpiredOnArrival(t *testing.T) {
 }
 
 // TestNoKeyInLogs runs successful and failed exchanges at trace level and
-// looks for K_AF in hexadecimal and base64 (criterion 7).
+// looks for K_AF in hexadecimal and base64.
 func TestNoKeyInLogs(t *testing.T) {
 	var buf bytes.Buffer
 	out, level := logger.Log.Out, logger.Log.GetLevel()

@@ -1,7 +1,6 @@
 // Package aanf requests K_AF from the AAnF with
 // Naanf_AKMA_ApplicationKey_Get (TS 33.535 cl. 6.2.1 step 2; TS 29.535
-// cl. 4.2.2.3), using the Naanf_AKMA client of the patched free5gc/openapi
-// (decision D6).
+// cl. 4.2.2.3), using the Naanf_AKMA client of the patched free5gc/openapi.
 package aanf
 
 import (
@@ -54,7 +53,7 @@ func New(apiRoot string, id afid.AfID, anonymous bool) *Client {
 }
 
 // ApplicationKey requests the K_AF of aKid. The afId is sent in transport
-// form and the aKId exactly as received from the UE (MVP-3 criterion 2).
+// form and the aKId exactly as received from the UE.
 func (c *Client) ApplicationKey(ctx context.Context, aKid string) (Key, error) {
 	req := &Naanf_AKMA.GetAKMAAPPKeyMaterialRequest{}
 	req.SetAkmaAfKeyRequest(models.AkmaAfKeyRequest{AfId: c.afID.Transport(), AKId: aKid, AnonInd: c.anonymous})
@@ -63,7 +62,8 @@ func (c *Client) ApplicationKey(ctx context.Context, aKid string) (Key, error) {
 		return Key{}, classify(err)
 	}
 	if rsp.NoContent {
-		// Never sent by the AAnF of the project (deviation DV-7).
+		// Allowed by TS 29.535 cl. 4.2.2.3.2; the AAnF of this repository
+		// never sends it.
 		return Key{}, fmt.Errorf("%w: 204 No Content", ErrUnavailable)
 	}
 	d := rsp.AkmaAfKeyData

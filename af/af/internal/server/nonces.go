@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-// nonceCheck is the result of checking nonce, opaque and nc
-// (docs/af-side/ua-star.md cl. 5.4, checks 6 and 7).
+// nonceCheck is the result of checking nonce, opaque and nc (RFC 7616
+// cl. 3.4 and 5.4).
 type nonceCheck int
 
 const (

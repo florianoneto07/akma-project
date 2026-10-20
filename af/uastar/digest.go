@@ -1,10 +1,12 @@
-// Package uastar implements the Ua* protocol of the MVP
-// (docs/af-side/ua-star.md): HTTP Digest authentication (RFC 7616) with the
-// AKMA parameters of TS 24.109 K.2 and TS 33.535 B.1.2.2, without the TLS
-// tunnel, under the private Ua* security protocol identifier FF 00 00 00 01
-// (ADR-0003).
+// Package uastar implements a simplified Ua* protocol: HTTP Digest
+// authentication (RFC 7616) with the AKMA parameters of TS 24.109 K.2 and
+// TS 33.535 B.1.2.2, without the TLS tunnel, under the private Ua* security
+// protocol identifier FF 00 00 00 01 (TS 33.220 H.2 NOTE 2).
 //
-// Only the SHA-256 algorithm is supported (deviation DV-5; TS 33.222
+// The Digest is that of RFC 7616, as in TS 33.222 cl. 5.3.0, which
+// TS 33.535 B.1.2.2 adapts. TS 24.109 K.2 c) cites RFC 3310 (Digest AKA),
+// whose password comes from the RES; with base64(K_AF) as the password, only
+// RFC 7616 fits. Only the SHA-256 algorithm is supported (TS 33.222
 // cl. 5.3.0 NOTE 1b discourages MD5).
 package uastar
 
@@ -26,9 +28,10 @@ const (
 	// indicates AKMA based Digest (TS 24.109 K.2 b) 1)).
 	ProductToken = "3gpp-akma"
 	// RealmPrefix is the first part of the realm by which the AF selects
-	// AKMA (TS 33.535 B.1.2.2 step 3; deviation DV-6).
+	// AKMA (TS 33.535 B.1.2.2 step 3; TS 24.109 K.2 b)2)). TS 24.109
+	// K.2 c)3) uses "3gpp-akma" instead.
 	RealmPrefix = "3GPP-bootstrapping-akma"
-	// Algorithm is the only Digest algorithm of the MVP.
+	// Algorithm is the only Digest algorithm supported.
 	Algorithm = "SHA-256"
 	// QopAuth and QopAuthInt are the qop values of RFC 7616 cl. 3.3.
 	QopAuth    = "auth"
@@ -37,7 +40,8 @@ const (
 	Charset = "UTF-8"
 )
 
-// ErrUnsupported reports a Digest parameter value outside the MVP profile.
+// ErrUnsupported reports a Digest parameter value outside the supported
+// profile.
 var ErrUnsupported = errors.New("uastar: unsupported Digest parameter")
 
 // Realm returns the realm "<prefix>@<FQDN of the AF>" (TS 24.109 cl. 5.2.2.1

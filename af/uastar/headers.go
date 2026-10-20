@@ -104,8 +104,8 @@ func (c Credentials) String() string {
 var ErrNotDigest = fmt.Errorf("%w: not a Digest authorization", ErrMalformedHeader)
 
 // ParseCredentials reads an Authorization field value. Every parameter that
-// the MVP profile uses is required; username* and userhash=true are not
-// supported (docs/af-side/ua-star.md cl. 5.1).
+// the supported profile uses is required; username* and userhash=true are
+// not supported (RFC 7616 cl. 3.4 and 3.4.4).
 func ParseCredentials(v string) (Credentials, error) {
 	scheme, rest := splitScheme(v)
 	if !strings.EqualFold(scheme, "Digest") {

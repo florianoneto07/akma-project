@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Digest vectors for the Ua* of the MVP (docs/af-side/ua-star.md).
+"""Digest vectors for the simplified Ua* protocol (package uastar).
 
 An implementation of the RFC 7616 calculations independent from the Go one:
 response (cl. 3.4.1) and rspauth (cl. 3.5) with SHA-256. It checks the
-SHA-256 example of RFC 7616 cl. 3.9.1 and computes the project vectors from
+SHA-256 example of RFC 7616 cl. 3.9.1 and computes the AKMA vectors from
 the "testbed-ue" vector of shared/akma (A-KID as username, base64(K_AF) as
 password, TS 24.109 K.2 c)).
 
@@ -66,7 +66,7 @@ def rfc7616_example():
     return v
 
 
-def project_vectors(shared):
+def akma_vectors(shared):
     ue = next(x for x in shared["vectors"] if x["name"] == "testbed-ue")
     realm = "3GPP-bootstrapping-akma@" + ue["fqdn"]
     out = []
@@ -105,10 +105,10 @@ def main():
     with open(sys.argv[1], encoding="utf-8") as f:
         shared = json.load(f)
     doc = {
-        "description": "HTTP Digest (RFC 7616, SHA-256) vectors for the Ua* of the MVP. "
+        "description": "HTTP Digest (RFC 7616, SHA-256) vectors for the simplified Ua* protocol. "
                        "The password of the testbed-ue vectors is k_af_base64 of the shared "
                        "vector named in shared_vector; it is not repeated here.",
-        "vectors": [rfc7616_example()] + project_vectors(shared),
+        "vectors": [rfc7616_example()] + akma_vectors(shared),
     }
     with open(sys.argv[2], "w", encoding="utf-8") as f:
         json.dump(doc, f, indent=2)

@@ -1,7 +1,7 @@
-// Package uaclient is the UE side of the Ua* protocol of the MVP
-// (docs/af-side/ua-star.md): it establishes an application session with the
-// AF using the A-KID and K_AF, and accepts the AF only when it proves that it
-// holds the same K_AF (rspauth).
+// Package uaclient is the UE side of the simplified Ua* protocol of package
+// uastar: it establishes an application session with the AF using the A-KID
+// and K_AF, and accepts the AF only when it proves that it holds the same
+// K_AF (rspauth).
 package uaclient
 
 import (
@@ -28,8 +28,8 @@ const DefaultUserAgent = "akma-uaclient/0.1 " + uastar.ProductToken
 
 var (
 	// ErrChallenge reports a challenge that does not select AKMA for this AF
-	// (TS 33.535 B.1.2.2 step 4; TS 24.109 K.2 d)) or is outside the MVP
-	// profile. The A-KID is not sent.
+	// (TS 33.535 B.1.2.2 step 4; TS 24.109 K.2 d)) or is outside the
+	// supported profile. The A-KID is not sent.
 	ErrChallenge = errors.New("uaclient: challenge rejected")
 	// ErrServerAuth reports a 200 response without a valid
 	// Authentication-Info: the AF did not prove that it holds K_AF.
@@ -171,8 +171,9 @@ func (s *Session) Establish(ctx context.Context) (Result, error) {
 	}
 }
 
-// adopt checks a challenge (docs/af-side/ua-star.md cl. 5.2) and makes it
-// the one of the session.
+// adopt checks a challenge (TS 33.535 B.1.2.2 step 4: realm with the
+// expected prefix and the FQDN of the AF) and makes it the one of the
+// session.
 func (s *Session) adopt(rsp *http.Response) error {
 	c, err := uastar.ParseChallenge(rsp.Header.Get("WWW-Authenticate"))
 	if err != nil {
@@ -215,7 +216,7 @@ func (s *Session) send(ctx context.Context, authorization string) (*http.Respons
 }
 
 // verify checks the Authentication-Info of a 200 response: the AF proves
-// that it holds K_AF (RFC 7616 cl. 3.5; MVP-3 criterion 4).
+// that it holds K_AF (RFC 7616 cl. 3.5).
 func verify(rsp *http.Response, body []byte, in uastar.Input) (Result, error) {
 	info, err := uastar.ParseAuthInfo(rsp.Header.Get("Authentication-Info"))
 	if err != nil {

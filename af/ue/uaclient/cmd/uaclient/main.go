@@ -1,5 +1,5 @@
 // Command uaclient establishes an application session with the AF over the
-// Ua* protocol of the MVP (docs/af-side/ua-star.md). The A-KID and K_AF come
+// simplified Ua* protocol of package uastar. The A-KID and K_AF come
 // from the ME of UERANSIM through nr-cli (-nr-cli, -ue), from a shared/akma
 // vector (-vector) or from the command line. K_AF is never printed.
 package main
@@ -37,7 +37,7 @@ func main() {
 		bind      = flag.String("bind", "", "source address, e.g. the address of the PDU session on uesimtun0")
 		nrCli     = flag.String("nr-cli", "", "nr-cli of UERANSIM: take A-KID and K_AF from the ME")
 		ue        = flag.String("ue", "", "UE node name for nr-cli (e.g. imsi-208930000000001)")
-		uaStarID  = flag.String("ua-star-id", "FF00000001", "Ua* security protocol identifier (ADR-0003)")
+		uaStarID  = flag.String("ua-star-id", "FF00000001", "Ua* security protocol identifier")
 	)
 	flag.Parse()
 	o := options{

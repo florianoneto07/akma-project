@@ -1,5 +1,5 @@
 {
-  "description": "HTTP Digest (RFC 7616, SHA-256) vectors for the Ua* of the MVP. The password of the testbed-ue vectors is k_af_base64 of the shared vector named in shared_vector; it is not repeated here.",
+  "description": "HTTP Digest (RFC 7616, SHA-256) vectors for the simplified Ua* protocol. The password of the testbed-ue vectors is k_af_base64 of the shared vector named in shared_vector; it is not repeated here.",
   "vectors": [
     {
       "name": "rfc7616-3.9.1-sha256",

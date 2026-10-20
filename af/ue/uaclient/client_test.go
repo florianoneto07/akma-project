@@ -54,7 +54,7 @@ func (f *fakeAF) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(body)
 }
 
-// honest computes rspauth with K_AF, as the AF of the project does.
+// honest computes rspauth with K_AF, as the AF of this repository does.
 func honest(kaf kdf.Key) func(uastar.Credentials, []byte) string {
 	return func(c uastar.Credentials, body []byte) string {
 		in := uastar.Input{
@@ -95,8 +95,7 @@ func TestHonestAF(t *testing.T) {
 	}
 }
 
-// TestAFWithoutKaf: an AF that does not prove K_AF is refused (MVP-3
-// criterion 4).
+// TestAFWithoutKaf: an AF that does not prove K_AF is refused.
 func TestAFWithoutKaf(t *testing.T) {
 	other := testKaf
 	other[0] ^= 1

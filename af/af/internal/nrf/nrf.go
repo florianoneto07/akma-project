@@ -1,8 +1,7 @@
 // Package nrf registers the AF at the NRF and obtains its access tokens
 // (TS 29.510 cl. 5.2.2.2 and 5.4.2.2). Only the AF outside the operator
-// network uses it, to obtain the token of the NEF API: free5GC has no CAPIF,
-// and its NEF accepts tokens issued by the NRF (docs/free5gc-side/nef.md
-// cl. 2.1; deviation DV-9).
+// network uses it, to obtain the token of the NEF API: free5GC has no CAPIF
+// (TS 29.522 cl. 7.2), and its NEF accepts tokens issued by the NRF.
 package nrf
 
 import (

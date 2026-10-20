@@ -1,5 +1,5 @@
-// Package server is the Ua* server of the AF: HTTP Digest with the AKMA
-// parameters, as specified in docs/af-side/ua-star.md.
+// Package server is the Ua* server of the AF: HTTP Digest (RFC 7616) with
+// the AKMA parameters of TS 33.535 B.1.2.2 and TS 24.109 K.2, without TLS.
 package server
 
 import (
@@ -19,7 +19,7 @@ import (
 	"github.com/florianoneto07/akma-free5gc/shared/akma/akid"
 )
 
-// Causes of the error responses (docs/af-side/ua-star.md cl. 8).
+// Causes of the error responses, sent in a JSON body.
 const (
 	CauseInvalidRequest      = "INVALID_REQUEST"
 	CauseAkmaKeyNotAvailable = "AKMA_KEY_NOT_AVAILABLE"
@@ -66,8 +66,8 @@ func New(s *config.Settings, p KeyProvider) *Server {
 	}
 }
 
-// ServeHTTP checks the request in the order of docs/af-side/ua-star.md
-// cl. 5.4 and stops at the first failure.
+// ServeHTTP checks the request in the numbered order below and stops at the
+// first failure.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	now := s.now()
 	remote := r.RemoteAddr
@@ -100,7 +100,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Parameters of the MVP profile.
+	// 3. Parameters of the supported profile.
 	if err != nil {
 		logger.UaLog.Warnf("Invalid Authorization from %s: %v", remote, err)
 		writeError(w, http.StatusBadRequest, CauseInvalidRequest)
@@ -197,8 +197,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(rsp)
 }
 
-// challenge answers 401 with a new Digest challenge (docs/af-side/ua-star.md
-// cl. 5.1).
+// challenge answers 401 with a new Digest challenge (RFC 7616 cl. 3.3;
+// TS 33.535 B.1.2.2 step 3).
 func (s *Server) challenge(w http.ResponseWriter, now time.Time, stale bool) {
 	nonce, opaque := s.nonces.issue(now)
 	c := uastar.Challenge{
