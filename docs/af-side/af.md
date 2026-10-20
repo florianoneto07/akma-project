@@ -66,9 +66,9 @@ Mesmo formato das NFs do free5GC (MVP-3a), na categoria `UA` para o Ua\* e `Cons
 
 | Nível | Mensagem |
 |---|---|
-| `info` | `AF_ID …; realm "…"; qop […]; nonce lifetime …; K_AF expiry policy …; AAnF …` (partida) |
+| `info` | `AF_ID …; realm "…"; qop […]; nonce lifetime …; K_AF expiry policy …; anonymous …` e `AF inside the operator network: K_AF from the AAnF at …` ou `AF outside the operator network: K_AF through the NEF at …; registered at the NRF … as AF … (OAuth2 …)` (partida) |
 | `info` | `AKMA initiation: challenge sent to <endereço> (product token 3gpp-akma: true\|false)` |
-| `info` | `K_AF for A-KID <A-KID> obtained from the AAnF, expires <instante>` |
+| `info` | `K_AF for A-KID <A-KID> obtained from the AAnF, expires <instante>`; no modo externo, `obtained from the NEF` |
 | `info` | `UE with A-KID <A-KID> authenticated (nc <nc>, qop <qop>)` |
 | `info` | `No K_AKMA at the AAnF for A-KID <A-KID>: access rejected` |
 | `info` | `K_AF for A-KID <A-KID> expired at <instante>: requesting it again from the AAnF (policy refetch)` ou `…: access rejected (policy reject)` |

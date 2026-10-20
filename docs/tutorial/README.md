@@ -1,6 +1,6 @@
 # Tutorial — AKMA sobre o free5GC
 
-Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-5, o primeiro MVP funcional. Em 19/10/2026 ele foi seguido do início numa VM com o free5GC v4.2.3 recém-instalado, e o roteiro da parte 8 terminou com 63 verificações e nenhuma falha (critério 4 do MVP-5).
+Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-6. O MVP-5 foi o primeiro MVP funcional. Em 19/10/2026 ele foi seguido do início numa VM com o free5GC v4.2.3 recém-instalado, e o roteiro da parte 8 terminou com 63 verificações e nenhuma falha (critério 4 do MVP-5).
 
 | Parte | Conteúdo | Disponível |
 |---|---|---|
@@ -12,6 +12,7 @@ Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia of
 | 6 | Escrever um AF que usa AKMA | sim |
 | 7 | Preparar o UE (UERANSIM) para o Ua\* | sim |
 | 8 | Executar o fluxo de ponta a ponta | sim |
+| 9 | AF fora da rede do operador, acesso anônimo e UERANSIM em outra máquina | sim |
 
 ---
 
@@ -640,3 +641,136 @@ O `report.md` traz o A-KID de cada autenticação, a tabela de verificações e 
 
 Os testes negativos e o que cada um prova estão em `docs/af-side/e2e.md` §4. A rastreabilidade de cada etapa de TS 33.535 §6.1 e §6.2.1 até a verificação correspondente está na matriz, revisão 4.
 
+
+---
+
+## 9. AF fora da rede do operador, acesso anônimo e UERANSIM em outra máquina
+
+Até aqui o AF ficou dentro da rede do operador e pediu a K_AF direto ao AAnF. Esta parte mostra três coisas:
+
+- um AF de fora da rede pedindo a K_AF ao NEF (TS 33.535 §6.3);
+- o acesso anônimo, em que o AF recebe a K_AF sem o SUPI (§6.2.2);
+- o UERANSIM numa máquina separada, como no guia oficial do free5GC.
+
+A especificação do NEF está em `docs/free5gc-side/nef.md`, e o desvio de segurança entre o NEF e o AF, em `docs/conformidade/desvios.md` (DV-9).
+
+### 9.1 Preparar o NEF
+
+O NEF do free5GC não tem a API de AKMA. Com o free5GC parado, na máquina do free5GC:
+
+```bash
+~/akma-free5gc/free5gc/scripts/patch-nf.sh nef apply
+```
+
+O *patch* acrescenta ao NEF a operação `POST /3gpp-akma/v1/retrieve` (TS 29.522 §5.14) e recompila o NEF; o binário original fica em `bin/nef.orig`.
+
+A configuração do NEF muda pelo *patch* de configuração da parte 4 (`free5gc/patches/config/0002-nef-akma.patch`). Se você aplicou a configuração antes desta versão do tutorial, desfaça-a com a cópia antiga dos *patches* (`patch-nf.sh config revert`), atualize o repositório e aplique de novo. No `~/free5gc/config/nefcfg.yaml`, confira:
+
+- `sbi.registerIPv4` e `sbi.bindingIPv4`: o endereço da máquina do free5GC, que o AF externo alcança. A porta continua a 8000;
+- `3gpp-akma` em `serviceList`;
+- `akma.authorizedAfs`: cada AF_ID externo, com o endereço de origem do AF (§6.3 passo 2).
+
+O AAnF precisa aceitar os pedidos que chegam pelo NEF. No `~/free5gc/config/aanfcfg.yaml`, a lista `akma.authorizedNefs` dá o endereço do NEF e os AF_ID externos aceitos dele (`docs/free5gc-side/aanf.md` §2). O AAnF escuta na porta 8010.
+
+Suba o free5GC com `./run.sh -aanf`. Na tela do NEF deve aparecer `Start SBI server (listen on 192.168.16.130:8000)`; na do AAnF, `AF_IDs accepted from a NEF: [af1.akma.example.FF00000001]`.
+
+### 9.2 Rodar o AF fora da rede do operador
+
+O AF externo se registra no NRF para obter o *token* da API do NEF. No laboratório o NRF escuta num endereço de *loopback* da máquina do free5GC, e o AF o alcança por um túnel SSH (`nef.md` §2.1). Na máquina do AF, deixe o túnel aberto num terminal:
+
+```bash
+ssh -N -L 127.0.0.10:8000:127.0.0.10:8000 woca@192.168.16.130
+```
+
+A configuração do AF externo está em `af/config/afcfg-external.yaml`. Ela tem `nefUri` no lugar de `aanfUri`, além de `nrfUri` e da porta 8083. Em outro terminal:
+
+```bash
+af/build/bin/af -c af/config/afcfg-external.yaml
+```
+
+Na tela do AF:
+
+```
+[INFO][AF][Main] AF outside the operator network: K_AF through the NEF at http://192.168.16.130:8000; registered at the NRF http://127.0.0.10:8000 as AF … (OAuth2 true)
+```
+
+Com o UE no ar (parte 7), autentique o UE no AF externo:
+
+```bash
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -connect 192.168.16.129:8083 -n 3
+```
+
+A saída do cliente é a mesma da seção 7.3. Na tela do free5GC aparecem as linhas do NEF e do AAnF:
+
+```
+[INFO][NEF][AKMA] K_AF request from AF_ID af1.akma.example.FF00000001 for A-KID rid0000.atid…
+[INFO][AANF][AKMA] K_AF of imsi-208930000000001 provided to AF_ID af1.akma.example.FF00000001 for A-KID …, through the NEF at 192.168.16.130
+[INFO][NEF][AKMA] K_AF for A-KID rid0000.atid… relayed to AF_ID af1.akma.example.FF00000001, expires …
+```
+
+As linhas do NEF não mostram o SUPI. A resposta do NEF ao AF também não o traz (§6.3 passo 5).
+
+Ao encerrar o AF com Ctrl-C, ele se descadastra do NRF.
+
+### 9.3 Acesso anônimo
+
+Com `anonymous: true` na configuração, o AF pede a K_AF com `anonInd` e recebe só a K_AF e a validade, sem o SUPI (§6.2.2). Vale para o AF interno e para o externo. O A-KID serve ao AF como identificador temporário do usuário.
+
+Na tela do NEF, o pedido anônimo aparece como `K_AF request … , anonymous`. O AAnF continua sabendo de quem é o contexto: o anonimato é em relação ao AF.
+
+### 9.4 Remover o contexto do AAnF
+
+Quem pede a remoção do contexto, pela norma, é o OAM (TS 29.535 §4.2.1.3.2 e tab. 4.2.2.1-1). No laboratório, o `seed` faz esse papel, na máquina do free5GC:
+
+```bash
+~/akma-tools/seed remove --nrf http://127.0.0.10:8000 --aanf http://192.168.16.130:8010 --supi imsi-208930000000001
+```
+
+A resposta é `removed`. Depois disso, o AF recebe `403 AKMA_KEY_NOT_AVAILABLE` até uma nova autenticação primária do UE (seção 7.4).
+
+### 9.5 UERANSIM em outra máquina
+
+O guia oficial do free5GC instala o UERANSIM numa máquina separada. No laboratório: free5GC em 192.168.16.130, AF em 192.168.16.129 e UERANSIM em 192.168.16.131.
+
+**Na máquina do free5GC**, o N2 e o N3 saem do *loopback* para o endereço da máquina, como o guia oficial manda:
+
+| Arquivo | Campo | Valor |
+|---|---|---|
+| `config/amfcfg.yaml` | `ngapIpList` | `192.168.16.130` |
+| `config/smfcfg.yaml` | `endpoints` da interface N3 do UPF | `192.168.16.130` |
+| `config/upfcfg.yaml` | `gtpu.ifList[].addr` | `192.168.16.130` |
+
+Se a máquina do free5GC também roda um gNB, ele precisa de dois ajustes no `free5gc-gnb.yaml`:
+
+- `ngapIp`: o endereço da máquina. Um gNB em *loopback* não alcança o AMF em 192.168.16.130 (`Network is unreachable`);
+- `gtpIp`: `10.100.0.1`, o endereço da veth do *namespace*. Não pode ser `127.0.0.1`, pelo mesmo motivo. Também não pode ser o endereço da máquina, porque a porta 2152 desse endereço é do UPF.
+
+**Na máquina do UERANSIM**, siga as partes 5 e 7 com o repositório em `~/akma-free5gc`: *patches* do UERANSIM, *namespace* do UE e `uaclient`. No `config/free5gc-gnb.yaml`:
+
+| Campo | Valor |
+|---|---|
+| `linkIp` | `10.100.0.1` |
+| `ngapIp`, `gtpIp` | o endereço da máquina do UERANSIM, `192.168.16.131` |
+| `amfConfigs[].address` | o endereço da máquina do free5GC, `192.168.16.130` |
+
+O NAT do N6 continua na máquina do free5GC: a máquina do UERANSIM não precisa de NAT. Na máquina do UERANSIM, um terminal por comando:
+
+```bash
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh up
+```
+
+```bash
+~/UERANSIM/build/nr-gnb -c ~/UERANSIM/config/free5gc-gnb.yaml
+```
+
+```bash
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh ue
+```
+
+```bash
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -n 3
+```
+
+O gNB mostra `SCTP connection established (192.168.16.130:38412)` e `NG Setup procedure is successful`. O UE mostra o A-KID, que é o mesmo nas linhas do AUSF e do AAnF na tela do free5GC. Para o AF externo, use `ua -connect 192.168.16.129:8083`.
+
+Resultado do laboratório em 19/10/2026: com o UE na máquina 192.168.16.131, o Ua\* passou com o AF interno, com o AF externo via NEF e com o AF externo anônimo (`docs/af-side/teste-nef.md`).

@@ -38,6 +38,10 @@ Para desfazer: `remove`, que não mexe no `ip_forward`.
 
 `[MVP]` Com o NAT, o AF vê a requisição do UE vindo de 192.168.16.130, e não de 10.60.0.x. O Ua\* não depende do endereço de origem, ao contrário da política do AAnF, que vale entre o AF e o AAnF. A alternativa sem NAT é uma rota para 10.60.0.0/16 via 192.168.16.130 na VM do AF; ela não foi usada.
 
+### 2.1 N3 fora do *loopback* (MVP-6)
+
+Com o UERANSIM em outra máquina, o N3 do UPF passa de 127.0.0.8 para 192.168.16.130, no `upfcfg.yaml` (`gtpu.ifList`) e no `smfcfg.yaml` (N3 do UPF). O N2 do AMF também passa para 192.168.16.130. O NAT do N6 e o *namespace* do UE não mudam. O gNB da máquina do free5GC usa `gtpIp` 10.100.0.1 (`docs/af-side/ue-ueransim.md` §5.1).
+
 ## 3. Arquivos
 
 | Onde | Arquivo | Mudança |

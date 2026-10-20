@@ -1,7 +1,7 @@
 # Matriz de rastreabilidade
 
-**Revisão:** 4 (MVP-5: etapas mínimas do fluxo ligadas a evidências do roteiro ponta a ponta)
-**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 a 3.7 e 4 em 18 de outubro de 2026
+**Revisão:** 5 (MVP-6: K_AF via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina). Revisão 4 (MVP-5): etapas mínimas do fluxo ligadas a evidências do roteiro ponta a ponta
+**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 a 3.7 e 4 em 18 de outubro de 2026; revisão 5 em 19 de outubro de 2026
 
 *Nota (16/10/2026):* os caminhos da coluna "Implementação" seguem a estrutura anterior ao plano. A estrutura aprovada (plano §3) é: `akma/` → `shared/akma/`; `NFs/aanf/` → `free5gc/aanf/`; `patches/` → `free5gc/patches/`; `af/` → `af/af/`; `ue/` → `af/ue/`. Os caminhos serão atualizados linha a linha à medida que cada MVP os criar. Os desvios citados como DV-n estão em `docs/conformidade/desvios.md`.
 
@@ -43,6 +43,26 @@ Evidências: os identificadores entre colchetes são verificações da execuçã
 | Remoção do contexto AKMA | 6.6 | `free5gc/aanf/` | [R6.removed], [R6.not-found], [C1] | **Verificado** |
 | Aplicações do UE sem acesso à K_AKMA | 4.4.3 | `0003-…` (`akma-kaf`) | `docs/af-side/teste-ue.md` §4 | **Verificado** |
 | Nenhuma chave em log | plano, todos os MVPs | todos | [R7.no-key-*], [L1]; `TestNoKeyInLogs` | **Verificado** |
+
+## Procedimentos do MVP-6 e evidências (revisão 5)
+
+Evidências: verificações da execução `20261019-213720` de `af/scripts/e2e.sh` (`docs/af-side/e2e.md` §4.1 e §5.2). E e N01c são da máquina do AF; R2n, da do free5GC. "3H" é o teste com o UERANSIM em outra máquina (`docs/af-side/teste-nef.md`).
+
+| Etapa | Cláusula | Implementação | Evidência | Estado |
+|---|---|---|---|---|
+| AF de fora da rede pede a K_AF ao NEF com A-KID e AF_ID; sem CAPIF, ponto de terminação configurado | 33.535 6.3 passo 1 e NOTA; 29.522 4.4.23.2, 5.14 | `af/af/internal/nef`; `af/config/afcfg-external.yaml` | [E01]; [R2n.ua-nef]; 3H | **Verificado** |
+| NEF autoriza o AF, inclusive pelo AF_ID | 33.535 6.3 passo 2 | `free5gc/patches/nef/0001` (`AkmaAfPolicy`) | [E06]; [E04], [E05] (*token*) | **Verificado** — DV-9 |
+| NEF seleciona o AAnF pelo RID | 33.535 6.3 passo 2; 6.7 | `nef/0001` (`aanf_service.go`) | log do NEF e [R2n.aanf-via-nef]; teste `no AAnF at the NRF` | **Verificado** |
+| NEF pede a K_AF ao AAnF; o AAnF processa como em 6.2.1 | 33.535 6.3 passo 3 | `nef/0001`; `free5gc/aanf/` (`NefPolicy`) | [R2n.aanf-via-nef]; [E07] (fora da política do AAnF); [E08] (sem K_AKMA) | **Verificado** — P11 |
+| AAnF responde ao NEF com K_AF, validade e SUPI | 33.535 6.3 passo 4 | `free5gc/aanf/` | `TestRetrieveViaNef`; [E02] (a mesma K_AF entregue direto) | **Verificado** |
+| NEF responde ao AF sem o SUPI; GPSI opcional não enviado | 33.535 6.3 passo 5; 29.522 tab. 5.14.5.3.3-1 | `nef/0001` (`processor/akma.go`) | [E01]; [R2n.nef-no-supi] | **Verificado** — GPSI fora do escopo (F10) |
+| NEF repassa `403 K_AKMA_NOT_PRESENT` | 29.522 4.4.23.2 | `nef/0001` | [E08] | **Verificado** |
+| 204 quando o dado não existe | 29.522 tab. 5.14.3.2.2-2 | `nef/0001`: repassa o 204 do AAnF | teste `204 of the AAnF relayed` | **Verificado** — `[INTERPRETAÇÃO]`; o AAnF nunca emite 204 (DV-7) |
+| Acesso anônimo: K_AF sem identidade do UE; o AAnF guarda a validade | 33.535 6.2.2; 7.1.5; 29.535 4.2.2.3.2 | `free5gc/aanf/` (MVP-1); AF `anonymous`; NEF repassa `anonInd` | [N01c], [E03], [R2n.ua-anon], [R2n.ua-nef-anon]; 3H | **Verificado** |
+| Remoção do contexto AKMA pelo OAM | 33.535 6.6, tab. 7.1.1-1; 29.535 4.2.1.3.2, tab. 4.2.2.1-1 | `seed remove` no papel do OAM | [R6.removed], [R6.not-found] | **Verificado** |
+| Segurança NEF–AF: TLS mútuo e OAuth | 33.501 12.2 a 12.4 | `http`, *token* do NRF, política AF_ID ↔ endereço | [E04], [E06] | **Desvio DV-9**; CAPIF no MVP-8 |
+| UE em outra máquina: N2 e N3 entre máquinas | 23.501 (N2, N3); guia oficial do free5GC | configuração do AMF, do SMF, do UPF e dos gNB | 3H: NG Setup a partir de 192.168.16.131, mesmo A-KID no UE, no AUSF e no AAnF | **Verificado** |
+| Nenhuma chave em log, inclusive no NEF | plano, todos os MVPs | todos | [R7.no-key-*], [L1]; `TestAkmaNoKeyInLogs` do NEF; 3H | **Verificado** |
 
 ## Derivação criptográfica
 

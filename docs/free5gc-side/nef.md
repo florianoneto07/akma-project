@@ -1,6 +1,6 @@
 # NEF — API `3gpp-akma`: especificação
 
-**MVP:** MVP-6 · **Data:** 19 de outubro de 2026 · **Estado:** aprovada pelo responsável em 19/10/2026, com as decisões da seção 9. Em implementação.
+**MVP:** MVP-6 · **Data:** 19 de outubro de 2026 · **Estado:** aprovada pelo responsável em 19/10/2026, com as decisões da seção 9. Implementada e verificada (seções 10 e 11).
 
 Este documento define o que muda no NEF do free5GC, no AAnF e no AF para que um AF fora da rede do operador obtenha a K_AF pelo NEF (TS 33.535 §6.3). O *patch* no NEF, a mudança no AAnF e o modo externo do AF são implementados a partir dele. As decisões P11 (b) e DV-9 (b) já foram tomadas (plano, MVP-6); os pontos ainda abertos estão na seção 9.
 
@@ -243,3 +243,26 @@ Respostas do responsável em 19/10/2026:
 | 4 | Códigos de erro `[INTERPRETAÇÃO]` da seção 3.3 | **decidido:** a tabela da seção 3.3 |
 | 5 | Como o AAnF reconhece o NEF | **decidido:** endereço de origem, *token* e lista de AF_ID (seções 4 e 4.1) |
 | 6 | 401 do *middleware* sem `ProblemDetails` | **decidido:** mantido no MVP-6 e documentado (seção 3.2; F12 de `correcoes-free5gc.md`) |
+
+## 10. Implementação
+
+| Onde | O quê |
+|---|---|
+| `free5gc/patches/nef/0001-akma-api.patch` | seções 3 e 6. Arquivos novos: `internal/context/akma.go`, `internal/sbi/api_akma.go`, `internal/sbi/consumer/aanf_service.go`, `internal/sbi/processor/akma.go` e `akma_test.go`. Alterados: `go.mod`, `go.sum`, `nef_context.go`, `logger.go`, `consumer.go`, `server.go`, `config.go` |
+| `free5gc/patches/config/0002-nef-akma.patch` | `nefcfg.yaml`: endereço 192.168.16.130, `3gpp-akma`, `akma.authorizedAfs` com `af1` e a entrada de teste `af3` (aceita pelo NEF e não pelo AAnF, para o negativo E07) |
+| `free5gc/aanf/` | `akma.authorizedNefs` e porta 8010 (seção 4) |
+| `af/af/internal/nef`, `af/af/internal/nrf` | cliente da API do NEF e registro do AF no NRF (seção 5) |
+
+`[FREE5GC]` Como os outros clientes do NEF, o cliente do AAnF usa `http.DefaultClient` e o *hook* de métricas do free5GC. É também o que permite simular o NRF e o AAnF com `gock` nos testes do NEF.
+
+Como reproduzir, na máquina do free5GC, com o free5GC parado: `patch-nf.sh nef apply`, depois `patch-nf.sh config apply` (tutorial, parte 9.1).
+
+## 11. Verificação
+
+| O quê | Onde | Resultado em 19/10/2026 |
+|---|---|---|
+| seção 3.2, as respostas da seção 3.3, `anonInd` repassado, sem `supi` e sem chave no log | `akma_test.go` do NEF (12 casos); a suíte original do NEF continua passando | passa, também com `-race` |
+| regra da seção 4 | `TestRetrieveViaNef`, `TestNefPolicy` e os testes de configuração do AAnF | passa, também com `-race` |
+| cliente do NEF, registro no NRF, `anonymous` | testes de `af/af/internal/{nef,nrf,aanf,config}` | passa, também com `-race` |
+| Ua\* do UE em outra máquina com o AF interno, o externo e o externo anônimo | `docs/af-side/teste-nef.md` | atendido |
+| negativos da API do NEF (E00 a E12) e o Ua\* do UE com os AF extras (R2n) | `af/scripts/e2e.sh` | 83 verificações, nenhuma falha (execução `20261019-213720`; `docs/af-side/e2e.md` §4.1 e §5.2) |

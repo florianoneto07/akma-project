@@ -156,6 +156,29 @@ Divergências do tutorial no lado free5GC, corrigidas no tutorial:
 - o `seed` fica em `~/akma-tools/`, fora do `PATH`;
 - sem `--aanf`, o `seed` vai ao AAnF do laboratório (`aanf.md` §9).
 
+### 5.2 MVP-6 (19/10/2026)
+
+O que mudou no free5GC da VM 192.168.16.130:
+
+- **NEF:** *patch* `nef/0001-akma-api.patch` aplicado com `patch-nf.sh nef apply`; o binário original fica em `bin/nef.orig`.
+- **Configuração:** `patch-nf.sh config apply` aplica `0001` e `0002`. O NEF fica em 192.168.16.130:8000, com `3gpp-akma`.
+- **AAnF:** porta 8010 e `authorizedNefs`; a configuração anterior fica em `config/aanfcfg.yaml.mvp5`.
+- **N2 e N3 em 192.168.16.130:** `ngapIpList` no `amfcfg.yaml`, N3 do UPF no `smfcfg.yaml`, `gtpu` no `upfcfg.yaml`. A mudança não é *patch*: é a configuração do guia oficial para o UERANSIM em outra máquina, e o `git diff` de `~/free5gc/config` a mostra.
+- **gNB local:** `ngapIp` 192.168.16.130 e `gtpIp` 10.100.0.1 (tutorial 9.5); a configuração anterior fica em `free5gc-gnb.yaml.mvp5`.
+
+Resultados:
+
+- **Regressão** do MVP-5 com a configuração nova: 63 verificações e nenhuma falha (execução `20261019-203849`).
+- **Roteiro estendido:** 83 verificações e nenhuma falha (execução `20261019-213720`; `docs/af-side/e2e.md` §5.2).
+- **Na tela do `run.sh`:** o NEF mostra `Start SBI server (listen on 192.168.16.130:8000)` e, a cada pedido, as linhas `[INFO][NEF][AKMA]` da seção 7 do `nef.md`.
+
+Como desfazer:
+
+- `patch-nf.sh nef revert`;
+- `patch-nf.sh config revert`;
+- `git checkout config/amfcfg.yaml config/smfcfg.yaml config/upfcfg.yaml`;
+- copiar de volta as configurações `.mvp5`.
+
 ## 6. Observações de operação
 
 - **UE em `LIMITED-SERVICE`.** O UE do UERANSIM às vezes fica em `MM-DEREGISTERED/LIMITED-SERVICE` na primeira partida, por uma corrida na seleção de célula ("no SI"). Basta reiniciá-lo; não tem relação com o AKMA.

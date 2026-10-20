@@ -119,7 +119,8 @@ As fases passaram a MVPs no [plano de desenvolvimento](docs/plano/plano-de-desen
 | F5 | MVP-3 | AF e Ua* simplificado | **Concluída** em 18/10/2026 |
 | F6 | MVP-4 | UE (K_AF no ME do UERANSIM e cliente Ua*) | **Concluída** em 18/10/2026 (derivação de K_AKMA e A-KID antecipada no MVP-3a) |
 | F7 | MVP-5 | Ponta a ponta e testes negativos — primeiro MVP funcional | **Concluída** em 18/10/2026 (63 verificações); reproduzida numa instalação limpa em 19/10/2026 |
-| F8+ | MVP-6+ | Acesso anônimo, remoção de contexto, NEF, *roaming*, TLS, desempenho, verificação formal, *upstream* | |
+| F8 | MVP-6 | AF externo via NEF, acesso anônimo, remoção por OAM, UERANSIM em outra máquina | **Concluída** em 19/10/2026 (83 verificações) |
+| F9+ | MVP-7+ | Repositório público, CAPIF, Ua\* sobre TLS, GPSI, TLS no SBI, *roaming*, desempenho, verificação formal, *upstream* | |
 
 ---
 

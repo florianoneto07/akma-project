@@ -22,7 +22,7 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
 | F8 | AUSF | não gera K_AKMA nem registra no AAnF | corrigido, *patch* `ausf` |
 | F9 | *webconsole* | sem `akmaAllowed` e `routingId`; a edição os apaga | contornado por *script* |
 | F10 | UDM | `id-translation-result` só traduz GPSI → SUPI | aberto (plano, seção 5) |
-| F11 | NEF | sem a API `3gpp-akma` | em andamento (MVP-6) |
+| F11 | NEF | sem a API `3gpp-akma` | corrigido, *patch* `nef/0001` (MVP-6) |
 | F12 | NEF | 401 do *middleware* OAuth2 sem `ProblemDetails` nem `WWW-Authenticate` | aberto; mantido no MVP-6 por decisão do responsável |
 | F13 | NEF | APIs do AF sem CAPIF e sem TLS mútuo | DV-9; CAPIF planejado (MVP-8) |
 | F14 | NEF | pede o *token* de `nnrf-nfm` para o tipo errado e não se descadastra | aberto |
@@ -119,7 +119,7 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
 - **O que o free5GC faz.** `[FREE5GC]` O NEF v1.2.5 não tem nada de AKMA.
 - **Onde a norma diz.** `[3GPP]` TS 33.535 §6.3 e §7.3.2; TS 29.522 §4.4.23.2 e §5.14: `POST {apiRoot}/3gpp-akma/v1/retrieve`. O NEF autoriza o AF, pede a K_AF ao AAnF com `Naanf_AKMA_ApplicationKey_Get` e nunca repassa o SUPI ao AF.
 - **Como deve ser.** `nef.md`.
-- **No projeto.** Em andamento, MVP-6.
+- **No projeto.** *Patch* `free5gc/patches/nef/0001-akma-api.patch`, com a configuração em `free5gc/patches/config/0002-nef-akma.patch` (`nef.md` §10).
 
 ## F12 — 401 do *middleware* OAuth2 do NEF sem `ProblemDetails` nem `WWW-Authenticate`
 
@@ -131,7 +131,7 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
 - **Como deve ser.** O 401 leva:
   - `WWW-Authenticate: Bearer realm="<URI da API>"`, com `error="invalid_token"` quando o pedido trazia *token*;
   - corpo `ProblemDetails` (`status: 401` e `detail`) em `application/problem+json`.
-- **No projeto.** Aberto. Mantido no MVP-6 por decisão do responsável (19/10/2026), porque corrigir muda todas as APIs do NEF.
+- **No projeto.** Aberto. Mantido no MVP-6 por decisão do responsável (19/10/2026), porque corrigir muda todas as APIs do NEF. Observado no laboratório em 19/10/2026: `401` com `{"error":"verify OAuth Authorization header invalid"}` em `application/json` e sem `WWW-Authenticate` (`docs/af-side/teste-nef.md`).
 
 ## F13 — APIs do AF no NEF sem CAPIF e sem TLS mútuo
 

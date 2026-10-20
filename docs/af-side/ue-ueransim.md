@@ -87,6 +87,23 @@ Os demais dados vêm do que o UE já tem:
 
 O *namespace* e o `veth` não sobrevivem a uma reinicialização da VM: rode `up` de novo.
 
+### 5.1 gNB e UE em outra máquina (MVP-6)
+
+O *namespace* funciona igual numa máquina só do UERANSIM. No laboratório essa máquina é a 192.168.16.131, com o free5GC na 192.168.16.130. No `free5gc-gnb.yaml` dessa máquina:
+
+- `ngapIp` e `gtpIp` passam a ser o endereço dela;
+- o AMF passa a ser `192.168.16.130`;
+- o `linkIp` continua `10.100.0.1`.
+
+Ela não precisa de NAT: o N6 continua na máquina do free5GC.
+
+Na máquina do free5GC, o gNB local, se houver, precisa de `ngapIp` igual ao endereço da máquina e de `gtpIp` 10.100.0.1:
+
+- um endereço de *loopback* não alcança o AMF nem o UPF em 192.168.16.130;
+- o próprio 192.168.16.130 conflita com a porta 2152 do UPF.
+
+Procedimento: tutorial, parte 9.5. Resultado: `teste-nef.md`.
+
 ## 6. Autoteste com os vetores do projeto
 
 `[MVP]` O executável `nr-akma-selftest` confere as derivações do ME (K_AKMA, A-KID, K_AF) contra os vetores do MVP-0 (`shared/akma/testdata/vectors.json`), lidos com o *parser* YAML do UERANSIM:

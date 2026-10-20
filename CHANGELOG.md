@@ -2,6 +2,28 @@
 
 ## [Não lançado]
 
+### MVP-6 — AF externo via NEF, acesso anônimo e UERANSIM em outra máquina (19/10/2026)
+- **NEF:** `free5gc/patches/nef/0001-akma-api.patch` acrescenta ao NEF do free5GC a API `3gpp-akma` (TS 29.522 §5.14; TS 33.535 §6.3). O NEF:
+  - autoriza o AF por AF_ID e endereço de origem;
+  - descobre o AAnF pelo RID;
+  - nunca repassa o SUPI;
+  - repassa `403 K_AKMA_NOT_PRESENT` e o 204 do AAnF.
+- **Configuração:** `free5gc/patches/config/0002-nef-akma.patch` põe o NEF em 192.168.16.130:8000, com `3gpp-akma` e a política de AF_ID.
+- **AAnF:** passa para a porta 8010, fora das portas do free5GC. Aceita pedidos vindos do NEF pela lista `akma.authorizedNefs`, com endereço de origem e *token* (P11).
+- **AF:**
+  - modo externo (`nefUri`, `nrfUri`, `nfInstanceId`): registro no NRF e *token* `3gpp-akma`;
+  - `anonymous` (TS 33.535 §6.2.2);
+  - `af/config/afcfg-external.yaml`.
+- **Roteiro:** `e2e.sh` com o grupo do NEF (`af/scripts/negative/nef_api.py`, E00 a E12) e o passo R2n. Execução de 19/10/2026: 83 verificações, nenhuma falha.
+- **UERANSIM em outra máquina:** gNB e UE na VM 192.168.16.131, com o N2 e o N3 do free5GC em 192.168.16.130 (`docs/af-side/teste-nef.md`).
+- **Documentos:**
+  - `docs/free5gc-side/nef.md` e `docs/free5gc-side/correcoes-free5gc.md`, este com 15 pontos do free5GC com a cláusula e a forma da norma;
+  - DV-9;
+  - tutorial, parte 9;
+  - matriz revisão 5;
+  - o CAPIF planejado para o MVP-8 e o repositório público para o MVP-7.
+
+
 ### MVP-5 — ponta a ponta e testes negativos (18/10/2026)
 - `af/scripts/e2e.sh` e `af/scripts/e2e-remote.sh`: o fluxo AKMA inteiro, nas duas máquinas, com uma senha de `sudo`. A sequência:
   - autoteste do ME;

@@ -1,6 +1,6 @@
 # Plano de desenvolvimento por MVPs
 
-**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) aprovado (19/10/2026), em especificação.
+**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) implementado e verificado, com 83 verificações e nenhuma falha (19/10/2026).
 **Data:** 15 de outubro de 2026; revisão 3 em 16 de outubro de 2026; aprovação em 16 de outubro de 2026
 **Base:** documentos `00` a `04`, Adendo E, ADR-0001-R2, ADR-0002, ADR-0003, `docs/baseline/ambiente-verificado.md`, `docs/baseline/conferencia-normativa.md`, `docs/literatura/analise-dos-artigos.md`, `docs/conformidade/desvios.md`
 **Revisão 2 (15/10/2026):** conferido contra as normas do acervo (hoje em `specs/`).
@@ -575,7 +575,25 @@ Divergências que a reprodução em instalação limpa achou no tutorial (crité
 
 ### MVP-6 — AF externo via NEF, acesso anônimo e remoção por OAM
 
-**Estado (19/10/2026):** **aprovado** pelo responsável, com P11 (b) e DV-9 (b). Na aprovação, o responsável acrescentou o item 7: UERANSIM em outra máquina. Especificação `docs/free5gc-side/nef.md` aprovada em 19/10/2026, com todos os pontos da seção 9 decididos; o *token* do AF externo vem do NRF no MVP-6 e do CAPIF no MVP-8. Também decidido: o AAnF passa para a porta 8010, fora das portas do free5GC. Nada implementado.
+**Estado (19/10/2026):** **aprovado** pelo responsável, com P11 (b) e DV-9 (b). Na aprovação, o responsável acrescentou o item 7: UERANSIM em outra máquina. Especificação `docs/free5gc-side/nef.md` aprovada em 19/10/2026, com todos os pontos da seção 9 decididos; o *token* do AF externo vem do NRF no MVP-6 e do CAPIF no MVP-8. Também decidido: o AAnF passa para a porta 8010, fora das portas do free5GC.
+
+**Estado (19/10/2026, fim do dia):** implementado e verificado no laboratório. `e2e.sh`: 83 verificações e nenhuma falha (execução `20261019-213720`; `docs/af-side/e2e.md` §5.2).
+
+| Critério | Resultado |
+|---|---|
+| 1 | Atendido: a mesma K_AF via NEF e direto do AAnF [E02]; resposta do NEF sem `supi` e sem `gpsi` [E01] |
+| 2 | Atendido: Ua\* do UE com o AF externo, pelo plano de usuário [R2n.ua-nef]; também com o UE em outra máquina (`docs/af-side/teste-nef.md`) |
+| 3 | Atendido: sem *token* e com *token* de outro serviço, 401 [E04, E05]; AF_ID fora da política do NEF, 403 [E06]; fora da política do AAnF, 403 [E07]; A-KID desconhecido, `403 K_AKMA_NOT_PRESENT` [E08]; 400 e 415 [E09 a E11] |
+| 4 | Atendido: acesso anônimo direto [N01c, R2n.ua-anon] e via NEF [E03, R2n.ua-nef-anon], sem `supi` nem `gpsi` |
+| 5 | Atendido: código 0 com os grupos novos e as 63 verificações do MVP-5; NEF sem SUPI no log [R2n.nef-no-supi]; nenhuma chave nos logs [R7, L1] |
+| 6 | Atendido em 19/10/2026: gNB e UE na VM 192.168.16.131, free5GC na 192.168.16.130 e AF na 192.168.16.129; mesmo A-KID no UE, no AUSF e no AAnF; Ua\* com o AF interno, o externo e o externo anônimo; nenhuma chave nos logs das três máquinas (`teste-nef.md`) |
+
+Diferenças em relação ao que foi proposto:
+
+- **gNB na máquina do free5GC.** Com o N2 e o N3 em 192.168.16.130, o gNB local precisa de `ngapIp` 192.168.16.130 e de `gtpIp` 10.100.0.1. Um endereço de *loopback* não alcança 192.168.16.130. O endereço da máquina conflita com a porta 2152 do UPF.
+- **N2 e N3 sem *patch*.** A mudança é a configuração que o guia oficial manda fazer quando o UERANSIM fica em outra máquina, e o tutorial a descreve (parte 9.5).
+- **Entrada de teste no NEF.** `af3.akma.example.FF00000001` está no `nefcfg.yaml` e não no `aanfcfg.yaml`, para o negativo E07.
+- **Log do AF externo.** Diz `obtained from the NEF`.
 
 **Por que este escopo.**
 

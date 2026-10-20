@@ -15,7 +15,7 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-6 | `realm` do Digest conforme TS 33.535 | **implementado** (MVP-3, 18/10/2026) | MVP-3 |
 | DV-7 | Nunca emitir 204 em `retrieve-applicationkey` | **implementado** (MVP-1, 17/10/2026) | MVP-1 |
 | DV-8 | `aud` vazio tolerado no token OAuth2 | **encerrado** em 17/10/2026 (MVP-1b: NRF corrigido, AAnF estrito) | MVP-1 |
-| DV-9 | NEF–AF externo sem TLS nem certificado de cliente | **decidido** em 19/10/2026 | MVP-6 |
+| DV-9 | NEF–AF externo sem TLS nem certificado de cliente | **implementado** (MVP-6, 19/10/2026) | MVP-6 |
 
 **Consolidação (MVP-5, 18/10/2026).** Nenhum desvio novo surgiu no MVP-5. Estado e evidência de cada um no roteiro ponta a ponta (`docs/af-side/e2e.md`, execução `20261018-171510`):
 
@@ -186,4 +186,4 @@ O certificado de cliente exige mudar o servidor SBI comum do NEF do free5GC. O T
 - **Autenticação do AF.** Ela se apoia no *token* e no endereço de origem, e não num certificado. O risco é o mesmo do DV-1, agora do lado do NEF: um AF que obtenha *token* para `3gpp-akma` e esteja num endereço autorizado pode apresentar o AF_ID de outro.
 - **Origem do *token*.** `[MVP]` O AF externo obtém o *token* no NRF do operador, o que um AF fora da rede não faria. Fora do laboratório, quem emite o *token* é o CAPIF ou o servidor de autorização do NEF (§12.4, §12.5). Sem CAPIF, TS 29.522 §6 deixa o servidor de autorização para a configuração local. O CAPIF está planejado para o MVP-8 (plano, seção 5) e fecha esta parte do desvio.
 
-**Implementação.** Pendente (MVP-6, `docs/free5gc-side/nef.md`).
+**Implementação (19/10/2026).** `free5gc/patches/nef/0001-akma-api.patch` e `free5gc/patches/config/0002-nef-akma.patch` (`docs/free5gc-side/nef.md` §10). O NEF serve `3gpp-akma` em `http` em 192.168.16.130:8000. O AF de fora da rede obtém o *token* no NRF pelo túnel SSH. Verificação: o NEF responde 401 sem *token* (E04, `docs/af-side/teste-nef.md`) e 403 a um AF_ID fora da política (E06).
