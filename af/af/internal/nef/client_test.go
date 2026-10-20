@@ -63,7 +63,7 @@ func fakeNef(t *testing.T, got *request, handler func(w http.ResponseWriter)) st
 
 func newClient(t *testing.T, apiRoot string, anonymous bool, tokens TokenSource) *Client {
 	t.Helper()
-	id, err := afid.New("af1.akma.example", afid.UaStarMVP)
+	id, err := afid.New("af1.akma.example", afid.UaStarDigest)
 	if err != nil {
 		t.Fatal(err)
 	}

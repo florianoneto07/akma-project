@@ -12,7 +12,7 @@ Cada vetor traz as entradas (K_AUSF, SUPI, MCC, MNC, RID, FQDN, identificador Ua
 
 | Vetor | O que exercita |
 |---|---|
-| `baseline-2.5` | o exemplo de `docs/00-baseline-normativo.md` §2.5 |
+| `worked-example` | o exemplo de `docs/00-baseline-normativo.md` §2.5 (chamado `baseline-2.5` até 20/10/2026) |
 | `testbed-ue` | o assinante do testbed (`imsi-208930000000001`, RID `"0000"`) |
 | `rid-012` | RID com zero à esquerda; MCC 345, MNC 12 (exemplo de TS 23.003 §28.2) |
 | `mnc-3-digits` | MNC de três dígitos; RID de um dígito |
@@ -20,7 +20,7 @@ Cada vetor traz as entradas (K_AUSF, SUPI, MCC, MNC, RID, FQDN, identificador Ua
 | `nfkc-composed`, `nfkc-decomposed` | FQDN com `é` composto e decomposto |
 | `nfkc-fullwidth` | FQDN em caracteres de largura total |
 
-K_AUSF de cada vetor, exceto `baseline-2.5`, é `SHA-256("akma-free5gc test vector: <nome>")` — determinístico e reproduzível.
+K_AUSF de cada vetor, exceto `worked-example`, é `SHA-256("akma-free5gc test vector: <nome>")` — determinístico e reproduzível.
 
 O arquivo também registra:
 

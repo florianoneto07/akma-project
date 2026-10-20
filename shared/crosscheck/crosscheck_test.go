@@ -1,6 +1,6 @@
-// Package crosscheck compares the project's KDF with the KDF that free5GC
-// already uses for K_SEAF, ueauth.GetKDFValue (free5gc/util v1.3.2), on the
-// project's test vectors. It lives in its own module so that the library in
+// Package crosscheck compares the KDF of shared/akma with the KDF that
+// free5GC already uses for K_SEAF, ueauth.GetKDFValue (free5gc/util v1.3.2),
+// on the test vectors of shared/akma. It lives in its own module so that
 // shared/akma does not depend on free5gc/util.
 package crosscheck
 

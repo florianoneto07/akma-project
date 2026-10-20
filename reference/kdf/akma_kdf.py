@@ -15,7 +15,7 @@ def kdf(key: bytes, fc: int, params: list) -> tuple[bytes, bytes]:
     return hmac.new(key, S, hashlib.sha256).digest(), S
 
 if __name__ == "__main__":
-    # Example inputs chosen by the project; NOT 3GPP test vectors
+    # Illustrative inputs (vector "worked-example"); NOT 3GPP test vectors
     K_AUSF = bytes.fromhex("5c7c9be7bf6a1a1a2c0b0f6d4c9c2f81"
                            "9c1a3b4d5e6f708192a3b4c5d6e7f809")
     SUPI_IMSI = "208930000000003"          # TS 33.501 A.7.0 -> IMSI per TS 23.003 cl. 2.2 (no "imsi-" prefix)
@@ -31,5 +31,5 @@ if __name__ == "__main__":
 
     for name, S, out in (("K_AKMA", s1, k_akma), ("A-TID", s2, a_tid), ("K_AF", s3, k_af)):
         print(f"{name:7s} S = {S.hex()}")
-        print(f"{'':7s} L(S) = {len(S)} octetos")
+        print(f"{'':7s} L(S) = {len(S)} octets")
         print(f"{'':7s} out = {out.hex()}  ({len(out)*8} bits)\n")

@@ -7,7 +7,7 @@ import (
 )
 
 func TestTransportUppercase(t *testing.T) {
-	a, err := New("af1.akma.example", UaStarMVP)
+	a, err := New("af1.akma.example", UaStarDigest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestParseEitherCase(t *testing.T) {
 // TestKDFParam checks P0 = FQDN || five raw octets and L0 = len(FQDN) + 5
 // (TS 33.535 A.4).
 func TestKDFParam(t *testing.T) {
-	a, _ := New("af1.akma.example", UaStarMVP)
+	a, _ := New("af1.akma.example", UaStarDigest)
 	want := append([]byte("af1.akma.example"), 0xFF, 0x00, 0x00, 0x00, 0x01)
 	if !bytes.Equal(a.KDFParam(), want) {
 		t.Fatalf("KDFParam = %x, want %x", a.KDFParam(), want)
@@ -73,7 +73,7 @@ func TestParseMalformed(t *testing.T) {
 }
 
 func TestRoundTrip(t *testing.T) {
-	for _, p := range []UaStarID{UaStarMVP, UaStarTLS13, {}} {
+	for _, p := range []UaStarID{UaStarDigest, UaStarTLS13, {}} {
 		a, _ := New("af.example", p)
 		b, err := Parse(a.Transport())
 		if err != nil || a != b {

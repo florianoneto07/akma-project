@@ -19,7 +19,7 @@ func TestFromSBI(t *testing.T) {
 	}
 }
 
-// TestUnsupportedTypes checks deviation DV-3: only IMSI-type SUPI.
+// TestUnsupportedTypes checks that only IMSI-type SUPI is supported.
 func TestUnsupportedTypes(t *testing.T) {
 	for _, s := range []string{"nai-user@example.org", "gci-x@example.org", "gli-x@example.org"} {
 		if _, err := FromSBI(s); !errors.Is(err, ErrUnsupportedType) {
@@ -44,7 +44,8 @@ func TestMalformed(t *testing.T) {
 }
 
 // TestPrefixRejectedAtKDFLayer checks that a parameter still carrying the SBI
-// prefix is refused (docs/00-baseline-normativo.md section 2.3).
+// prefix is refused: P0 is the IMSI of TS 23.003 cl. 2.2, digits only
+// (TS 33.501 A.7.0).
 func TestPrefixRejectedAtKDFLayer(t *testing.T) {
 	if err := Param("imsi-208930000000001").Validate(); !errors.Is(err, ErrMalformed) {
 		t.Fatalf("Validate: err = %v, want ErrMalformed", err)

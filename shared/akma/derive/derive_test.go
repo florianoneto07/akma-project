@@ -13,7 +13,7 @@ import (
 var kAusf = kdf.Key{1, 2, 3, 4, 5, 6, 7, 8}
 
 // TestSBIPrefixRejected checks that the SBI form of the SUPI cannot reach the
-// KDF (TS 33.501 A.7.0; docs/00-baseline-normativo.md section 2.3).
+// KDF (TS 33.501 A.7.0: P0 is the IMSI of TS 23.003 cl. 2.2, digits only).
 func TestSBIPrefixRejected(t *testing.T) {
 	bad := supi.Param("imsi-208930000000001")
 	if _, err := KAkma(kAusf, bad); !errors.Is(err, supi.ErrMalformed) {
@@ -33,9 +33,9 @@ func TestKeySeparation(t *testing.T) {
 	if k == a {
 		t.Fatal("K_AKMA equals A-TID")
 	}
-	mvp, _ := afid.New("af1.akma.example", afid.UaStarMVP)
+	digest, _ := afid.New("af1.akma.example", afid.UaStarDigest)
 	tls, _ := afid.New("af1.akma.example", afid.UaStarTLS13)
-	k1, _ := KAf(k, mvp)
+	k1, _ := KAf(k, digest)
 	k2, _ := KAf(k, tls)
 	if k1 == k2 {
 		t.Fatal("different Ua* identifiers give the same K_AF")

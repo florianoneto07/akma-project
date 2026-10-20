@@ -1,41 +1,48 @@
-# Implementação de referência da KDF do AKMA
+# Reference implementation of the AKMA KDF
 
-Oráculo para validação cruzada com a implementação em Go.
+A small Python oracle used to cross-check the Go library in `shared/akma`.
 
-Escrito diretamente a partir de **TS 33.220 V19.1.0, Anexo B.2**, sem consultar outra implementação. O propósito é que as duas implementações sejam independentes, de modo que a concordância entre elas seja evidência de correção.
+It is written directly from **TS 33.220 V19.1.0, Annex B.2**, without looking at any other implementation. The point is to have two independent implementations, so that agreement between them is evidence that both are right.
 
-## Uso
+## Usage
 
 ```
 python3 akma_kdf.py
 ```
 
-Mostra a cadeia `S` e o resultado de K_AKMA, A-TID e K_AF para o exemplo de `docs/00-baseline-normativo.md` §2.5.
+Prints the `S` string and the result of K_AKMA, A-TID and K_AF for a worked example (the `worked-example` vector).
 
-## Gerador de vetores
+## Vector generator
 
 ```
 python3 reference/kdf/gen_vectors.py > shared/akma/testdata/vectors.json
 ```
 
-`gen_vectors.py` usa as funções de `akma_kdf.py` e acrescenta, escritos também a partir das normas e sem consultar o código Go: SUPI como parâmetro (TS 33.501 A.7.0), Home Network Domain (TS 23.003 §28.2), A-KID (TS 29.522) nas três codificações do ADR-0002 e as duas formas do AF_ID. Produz 8 vetores, as igualdades esperadas e dois contraexemplos. Ver `docs/shared/vetores.md`.
+`gen_vectors.py` uses the functions of `akma_kdf.py` and adds, also written from the specifications and not from the Go code:
 
-## O que implementa
+- the SUPI as KDF parameter (TS 33.501 A.7.0);
+- the Home Network Domain (TS 23.003 cl. 28.2);
+- the A-KID (TS 29.522 table 5.14.5.4.2-1) in three encodings of the A-TID: base64, base64url and hex;
+- the two forms of the AF_ID: KDF parameter and transport string.
 
-| Derivação | FC | Norma |
+It produces 8 vectors, the expected equalities between them and two counterexamples.
+
+## What it implements
+
+| Derivation | FC | Specification |
 |---|---|---|
-| K_AKMA | `0x80` | TS 33.535 Anexo A.2 |
-| A-TID | `0x81` | TS 33.535 Anexo A.3 |
-| K_AF | `0x82` | TS 33.535 Anexo A.4 |
+| K_AKMA | `0x80` | TS 33.535 Annex A.2 |
+| A-TID | `0x81` | TS 33.535 Annex A.3 |
+| K_AF | `0x82` | TS 33.535 Annex A.4 |
 
-A KDF genérica é `HMAC-SHA-256(Key, S)` com `S = FC ‖ P0 ‖ L0 ‖ … ‖ Pn ‖ Ln`, `Li` em dois octetos *big-endian*, cadeias de caracteres em UTF-8 com normalização NFKC (TS 33.220 B.2.1.2).
+The generic KDF is `HMAC-SHA-256(Key, S)` with `S = FC ‖ P0 ‖ L0 ‖ … ‖ Pn ‖ Ln`. Each `Li` is two octets, big-endian. Character strings are UTF-8 with NFKC normalization (TS 33.220 B.2.1.2).
 
-## Aviso sobre os valores
+## About the values
 
-**TS 33.535 V19.0.0 não fornece vetores de teste.** Os valores no arquivo são escolhidos pelo projeto e servem apenas para exercitar a construção da cadeia `S`. Não têm autoridade normativa e não devem ser citados como vetores 3GPP.
+**TS 33.535 V19.0.0 has no test vectors.** The inputs here are made up to exercise the construction of `S`. They are not 3GPP test vectors and should not be quoted as such.
 
-## Advertências reproduzidas no código
+## Pitfalls the code makes explicit
 
-- O SUPI é passado sem o prefixo `imsi-`. Ver ADR-0002 e `docs/00-baseline-normativo.md` §2.3.
-- O `AF_ID` é montado como `UTF-8(FQDN) ‖ 5 octetos brutos`, não como a cadeia de transporte com ponto e hexadecimal. Ver ADR-0002 §2.
-- O identificador Ua* é da faixa privada. Ver ADR-0003.
+- **SUPI.** The SUPI goes into the KDF without the `imsi-` prefix: P0 is the IMSI of TS 23.003 cl. 2.2, digits only (TS 33.501 A.7.0). The counterexample `supi-with-imsi-prefix` shows the wrong K_AKMA you get otherwise.
+- **AF_ID.** The `AF_ID` parameter is `UTF-8(FQDN) ‖ 5 raw octets` (TS 33.535 A.4). It is not the transport string `<FQDN>.<10 hex digits>` of TS 29.522. The counterexample `af-id-transport-as-p0` shows the wrong K_AF.
+- **Ua\* identifier.** The Ua\* identifier `FF00000001` is in the private range (TS 33.220 H.2 NOTE 2).

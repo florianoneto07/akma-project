@@ -9,9 +9,9 @@ import (
 	"testing"
 )
 
-// TestSBaseline checks the S string of K_AKMA in docs/00-baseline-normativo.md
-// section 2.5 (vector produced by the project, not a 3GPP vector).
-func TestSBaseline(t *testing.T) {
+// TestSWorkedExample checks the S string of K_AKMA for the worked example of
+// testdata/vectors.json (not a 3GPP vector: TS 33.535 publishes none).
+func TestSWorkedExample(t *testing.T) {
 	s, err := S(FCKAkma, String("AKMA"), String("208930000000003"))
 	if err != nil {
 		t.Fatal(err)

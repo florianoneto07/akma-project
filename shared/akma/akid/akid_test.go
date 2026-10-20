@@ -99,7 +99,8 @@ func TestEncodings(t *testing.T) {
 	}
 }
 
-// TestLabels checks defect D-A handling: "atid" written, "akid" accepted.
+// TestLabels checks the labels: "atid" written, "akid" (the example of
+// TS 29.522 table 5.14.5.4.2-1) accepted.
 func TestLabels(t *testing.T) {
 	o := DefaultOptions()
 	a := AKID{RID: "012", ATID: testKey(), Realm: "5gc.mnc012.mcc345.3gppnetwork.org"}

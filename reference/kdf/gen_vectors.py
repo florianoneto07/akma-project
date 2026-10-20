@@ -7,12 +7,13 @@ Written from the specifications, independently of the Go code:
   - Home Network Domain: TS 23.003 cl. 28.2
   - A-KID: TS 29.522 table 5.14.5.4.2-1, "rid<RID>.atid<A-TID>@<realm>"
   - AfId transport form: TS 29.522 table 5.14.5.4.2-1, "<FQDN>.<Ua* id>"
-
-Project decisions (not 3GPP requirements) are marked as such:
-  - A-TID text encoding: base64 per RFC 4648 by default (ADR-0002)
-  - kAkma / kaf over SBI: lowercase hex (ADR-0002)
-  - Ua* id in AfId written as 10 uppercase hex characters (plan, P9)
   - K_AF as Digest password: base64 per RFC 4648 (TS 24.109 K.2 c)2))
+
+Encodings that no specification fixes are listed in "implementation_choices":
+  - A-TID text encoding: base64 per RFC 4648 by default, by analogy with the
+    GBA B-TID (TS 33.220 cl. 4.5.2)
+  - kAkma / kaf over SBI: lowercase hex, as Kausf in TS 29.503
+  - Ua* id in AfId written as 10 uppercase hex characters
 
 These are NOT 3GPP test vectors: TS 33.535 V19.0.0 publishes none.
 
@@ -89,13 +90,13 @@ def seed(label: str) -> bytes:
 
 
 def main():
-    baseline_kausf = bytes.fromhex("5c7c9be7bf6a1a1a2c0b0f6d4c9c2f81"
-                                   "9c1a3b4d5e6f708192a3b4c5d6e7f809")
+    worked_kausf = bytes.fromhex("5c7c9be7bf6a1a1a2c0b0f6d4c9c2f81"
+                                 "9c1a3b4d5e6f708192a3b4c5d6e7f809")
     testbed = dict(k_ausf=seed("testbed-ue"), supi="imsi-208930000000001",
                    mcc="208", mnc="93", rid="0000")
     vectors = [
-        vector("baseline-2.5", "Vector of docs/00-baseline-normativo.md section 2.5",
-               baseline_kausf, "imsi-208930000000003", "208", "93", "0",
+        vector("worked-example", "Worked example of akma_kdf.py: illustrative K_AUSF, SUPI and AF",
+               worked_kausf, "imsi-208930000000003", "208", "93", "0",
                "af.akma.free5gc.org", "FF00000001"),
         vector("testbed-ue", "Testbed UE subscriber with RID 0000 (UERANSIM configuration)",
                fqdn="af1.akma.example", ua_star_id="FF00000001", **testbed),
@@ -141,14 +142,14 @@ def main():
         assert (by[e["a"]][e["field"]] == by[e["b"]][e["field"]]) == e["equal"], e
 
     doc = {
-        "description": "AKMA test vectors produced by the project's reference oracle "
+        "description": "AKMA test vectors produced by an independent Python oracle "
                        "(reference/kdf/gen_vectors.py). NOT 3GPP test vectors: "
                        "TS 33.535 V19.0.0 publishes none.",
-        "project_decisions": {
-            "a_kid_default_encoding": "base64 (RFC 4648 section 4), ADR-0002",
-            "a_kid_label": "atid, ADR-0002",
-            "key_encoding_sbi": "lowercase hex, 64 characters, ADR-0002",
-            "af_id_ua_star_case": "uppercase hex on write, plan P9",
+        "implementation_choices": {
+            "a_kid_default_encoding": "base64 (RFC 4648 section 4), by analogy with the GBA B-TID (TS 33.220 cl. 4.5.2)",
+            "a_kid_label": "atid, as the text of TS 29.522 table 5.14.5.4.2-1; its example uses akid",
+            "key_encoding_sbi": "lowercase hex, 64 characters, as Kausf in TS 29.503",
+            "af_id_ua_star_case": "uppercase hex on write",
         },
         "vectors": vectors,
         "equalities": equalities,

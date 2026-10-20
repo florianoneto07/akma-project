@@ -14,13 +14,15 @@ import (
 var ErrMalformedAKID = errors.New("akid: malformed A-KID")
 
 // Encoding is the textual encoding of the A-TID value inside the A-KID. No
-// specification fixes it (open question C); base64 is the project's choice
-// by analogy with the GBA B-TID (ADR-0002).
+// specification fixes it: TS 33.535 cl. 6.1 and TS 29.522 table
+// 5.14.5.4.2-1 only require an NAI whose username holds the A-TID. Base64 is
+// the default by analogy with the GBA B-TID, base64encode(RAND)
+// (TS 33.220 cl. 4.5.2).
 type Encoding int
 
 const (
 	// EncodingBase64 is base64 per RFC 4648 section 4, with padding: 44
-	// characters for a 32-octet A-TID. Project default (ADR-0002).
+	// characters for a 32-octet A-TID. Default.
 	EncodingBase64 Encoding = iota
 	// EncodingBase64URL is base64url per RFC 4648 section 5, with padding.
 	EncodingBase64URL
@@ -28,19 +30,19 @@ const (
 	EncodingHex
 )
 
-// Options configure the A-KID format (ADR-0002 section 4).
+// Options configure the A-KID format.
 type Options struct {
 	// Encoding of the A-TID value.
 	Encoding Encoding
-	// Label written before the A-TID value. TS 29.522 prescribes "atid"; its
-	// example uses "akid" (defect D-A).
+	// Label written before the A-TID value. TS 29.522 table 5.14.5.4.2-1
+	// prescribes "atid"; the example in the same table uses "akid".
 	Label string
 	// AcceptLabels lists the labels accepted when parsing.
 	AcceptLabels []string
 }
 
-// DefaultOptions returns the project defaults: base64, label "atid" on write,
-// "atid" and "akid" accepted on read (ADR-0002).
+// DefaultOptions returns the defaults: base64, label "atid" on write,
+// "atid" and "akid" accepted on read.
 func DefaultOptions() Options {
 	return Options{
 		Encoding:     EncodingBase64,

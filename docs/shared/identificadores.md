@@ -57,7 +57,7 @@ O AAnF recebe a forma de transporte e reconstrói a forma da KDF (`afid.Parse` �
 
 | Constante | Valor | Uso |
 |---|---|---|
-| `afid.UaStarMVP` | `FF 00 00 00 01` | Ua\* simplificado do MVP (ADR-0003) |
+| `afid.UaStarDigest` | `FF 00 00 00 01` | Ua\* simplificado do MVP (ADR-0003); chamado `afid.UaStarMVP` até 20/10/2026 |
 | `afid.UaStarTLS13` | `01 00 00 00 07` | TLS 1.3 com chave compartilhada (H.3) — evolução futura |
 
 Identificadores diferentes dão K_AF diferentes para o mesmo AF (vetores `testbed-ue` e `ua-tls13`).

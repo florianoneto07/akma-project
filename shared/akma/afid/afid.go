@@ -63,7 +63,7 @@ func (a AfID) Transport() string {
 // string (UTF-8 with NFKC, TS 33.220 B.2.1.2) followed by the five raw octets
 // of the Ua* security protocol identifier. Encoding the FQDN as a character
 // string follows the NAF_Id of GBA (TS 33.220 B.3); TS 33.535 does not state
-// it explicitly [interpretation, docs/00-baseline-normativo.md section 2.4].
+// it explicitly.
 func (a AfID) KDFParam() []byte {
 	return append(kdf.String(a.FQDN), a.Protocol[:]...)
 }

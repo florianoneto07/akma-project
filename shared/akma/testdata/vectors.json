@@ -1,15 +1,15 @@
 {
-  "description": "AKMA test vectors produced by the project's reference oracle (reference/kdf/gen_vectors.py). NOT 3GPP test vectors: TS 33.535 V19.0.0 publishes none.",
-  "project_decisions": {
-    "a_kid_default_encoding": "base64 (RFC 4648 section 4), ADR-0002",
-    "a_kid_label": "atid, ADR-0002",
-    "key_encoding_sbi": "lowercase hex, 64 characters, ADR-0002",
-    "af_id_ua_star_case": "uppercase hex on write, plan P9"
+  "description": "AKMA test vectors produced by an independent Python oracle (reference/kdf/gen_vectors.py). NOT 3GPP test vectors: TS 33.535 V19.0.0 publishes none.",
+  "implementation_choices": {
+    "a_kid_default_encoding": "base64 (RFC 4648 section 4), by analogy with the GBA B-TID (TS 33.220 cl. 4.5.2)",
+    "a_kid_label": "atid, as the text of TS 29.522 table 5.14.5.4.2-1; its example uses akid",
+    "key_encoding_sbi": "lowercase hex, 64 characters, as Kausf in TS 29.503",
+    "af_id_ua_star_case": "uppercase hex on write"
   },
   "vectors": [
     {
-      "name": "baseline-2.5",
-      "note": "Vector of docs/00-baseline-normativo.md section 2.5",
+      "name": "worked-example",
+      "note": "Worked example of akma_kdf.py: illustrative K_AUSF, SUPI and AF",
       "k_ausf": "5c7c9be7bf6a1a1a2c0b0f6d4c9c2f819c1a3b4d5e6f708192a3b4c5d6e7f809",
       "supi": "imsi-208930000000003",
       "supi_kdf_param": "208930000000003",

@@ -10,7 +10,7 @@
 //   - derive: K_AKMA, A-TID and K_AF derivations (TS 33.535 Annex A)
 //   - codec: key encodings per layer (SBI hexadecimal, Digest base64)
 //
-// The test vectors in testdata/vectors.json are produced by the project's
-// reference oracle (reference/kdf/gen_vectors.py); they are not 3GPP test
+// The test vectors in testdata/vectors.json are produced by an independent
+// Python oracle (reference/kdf/gen_vectors.py); they are not 3GPP test
 // vectors.
 package akma

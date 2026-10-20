@@ -2,9 +2,9 @@
 // as 32 octets internally (kdf.Key); the textual form depends on the layer:
 //
 //   - SBI attributes kAkma (TS 29.535) and kaf (TS 29.522): 64 hexadecimal
-//     characters, lowercase on write. No specification fixes it; the project
-//     follows the precedent of Kausf in TS 29.503 ("^[A-Fa-f0-9]{64}$") and of
-//     Kseaf in TS 29.509 (ADR-0002).
+//     characters, lowercase on write. No specification fixes it; this
+//     follows the precedent of Kausf in TS 29.503 ("^[A-Fa-f0-9]{64}$") and
+//     of Kseaf in TS 29.509.
 //   - K_AF as HTTP Digest password on Ua*: base64 per RFC 4648
 //     (TS 24.109 K.2 c)2)).
 package codec
@@ -21,7 +21,8 @@ import (
 // ErrMalformedKey reports a key that is not 64 hexadecimal characters.
 var ErrMalformedKey = errors.New("codec: key must be 64 hexadecimal characters")
 
-// hexKeyPattern is anchored, unlike the TS 29.509 patterns (defect D-D).
+// hexKeyPattern is anchored, as Kausf in TS 29.503 and unlike the TS 29.509
+// patterns.
 var hexKeyPattern = regexp.MustCompile(`^[A-Fa-f0-9]{64}$`)
 
 // HexKey encodes k for the SBI attributes kAkma and kaf.

@@ -46,7 +46,7 @@ func client(t *testing.T, apiRoot string) *Client {
 
 func clientAnon(t *testing.T, apiRoot string, anonymous bool) *Client {
 	t.Helper()
-	id, err := afid.New("af1.akma.example", afid.UaStarMVP)
+	id, err := afid.New("af1.akma.example", afid.UaStarDigest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,8 +59,8 @@ func writeJSON(w http.ResponseWriter, status int, contentType string, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
-// TestApplicationKey: afId in transport form, aKId exactly as given
-// (MVP-3 criterion 2); K_AF, expiry and SUPI read from AkmaAfKeyData.
+// TestApplicationKey: afId in transport form, aKId exactly as given; K_AF,
+// expiry and SUPI read from AkmaAfKeyData.
 func TestApplicationKey(t *testing.T) {
 	kaf := kdf.Key{1, 2, 3}
 	exp := time.Date(2026, 10, 18, 13, 0, 0, 0, time.UTC)

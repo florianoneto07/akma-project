@@ -11,7 +11,7 @@ import (
 
 var (
 	// ErrUnsupportedType reports a SUPI that is not of type IMSI. Only IMSI is
-	// supported in the MVP (deviation DV-3).
+	// supported; TS 33.501 A.7.0 also defines P0 for NAI, GLI and GCI SUPIs.
 	ErrUnsupportedType = errors.New("supi: only IMSI-type SUPI is supported")
 	// ErrMalformed reports a value that is not a valid IMSI-type SUPI. Error
 	// messages never include the SUPI itself.
