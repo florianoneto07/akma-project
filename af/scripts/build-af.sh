@@ -4,7 +4,7 @@
 # Usage: af/scripts/build-af.sh
 #   Output: af/build/bin/af and af/build/bin/uaclient (static binaries).
 #   Prepares the patched free5gc/openapi first when it is missing: the AF
-#   uses its Naanf_AKMA client (decision D6).
+#   uses its Naanf_AKMA client.
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")/.." && pwd)"

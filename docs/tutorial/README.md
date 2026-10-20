@@ -533,7 +533,7 @@ O autoteste compara as derivações do UE com os vetores do projeto, os mesmos d
 ~/UERANSIM/build/nr-akma-selftest ~/akma-free5gc/shared/akma/testdata/vectors.json
 ```
 
-O resultado esperado é `5 passed, 3 refused (DV-4), 0 failed`. Os três recusados têm FQDN não ASCII, que o UE não deriva, porque não aplica NFKC.
+O resultado esperado é `5 passed, 3 refused (FQDN not ASCII), 0 failed`. Os três recusados têm FQDN não ASCII, que o UE não deriva, porque não aplica NFKC.
 
 ### 7.3 Autenticar no AF a partir do UE
 

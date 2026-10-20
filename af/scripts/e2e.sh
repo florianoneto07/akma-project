@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
-# End-to-end run of AKMA on the laboratory (MVP-5): free5GC with the AAnF,
-# UERANSIM with the AKMA ME, the AF and the Ua* client of the UE, plus the
-# negative tests. Runs on the AF machine; drives the free5GC host by SSH and
-# asks once, there, for the sudo password (af/scripts/e2e-remote.sh).
+# End-to-end run of AKMA: free5GC with the AAnF, UERANSIM with the AKMA ME,
+# the AF and the Ua* client of the UE, plus the negative tests. Runs on the AF
+# machine; drives the free5GC host by SSH and asks once, there, for the sudo
+# password (af/scripts/e2e-remote.sh).
 #
 # Usage: af/scripts/e2e.sh [--keep] [user@host]
 #   --keep     leave free5GC, the gNB and the UE running at the end
-#   user@host  free5GC host (default: woca@192.168.16.130)
+#   user@host  free5GC host; FREE5GC_HOST when absent
 #
-# Prerequisites (docs/af-side/e2e.md): the repository at ~/akma-free5gc on the
-# free5GC host with the patches applied (tutorial parts 3 to 7);
-# af/scripts/build-af.sh and free5gc/scripts/build-aanf.sh run here; the AF
-# configuration of af/config/afcfg.yaml.
+# Prerequisites: on the free5GC host, the repository at ~/akma-free5gc, the
+# free5GC and UERANSIM patches applied, the AAnF installed and the seed tool
+# at ~/akma-tools/seed; here, af/scripts/build-af.sh and
+# free5gc/scripts/build-aanf.sh run, and the AF configuration of
+# af/config/afcfg.yaml.
 #
 # The AAnF address is the aanfUri of af/config/afcfg.yaml, and the address of
 # the extra AFs is the one of its listen; the AAnF of the free5GC host must
@@ -22,13 +23,14 @@
 set -uo pipefail
 
 keep=""
-host="woca@192.168.16.130"
+host="${FREE5GC_HOST:-}"
 for a in "$@"; do
     case "$a" in
     --keep) keep=--keep ;;
     *) host="$a" ;;
     esac
 done
+[ -n "$host" ] || { echo "usage: $0 [--keep] user@host (or set FREE5GC_HOST)" >&2; exit 2; }
 
 here="$(cd "$(dirname "$0")/.." && pwd)"
 repo="$(cd "$here/.." && pwd)"
@@ -116,7 +118,7 @@ group_A() { # system up, A_KID_1 registered
     akid12="${akid012/rid012./rid12.}"
     expect N21 "retrieve with RID 12, same A-TID: 403 K_AKMA_NOT_PRESENT" "$(retrieve "$akid12")" "^403 (K_AKMA_NOT_PRESENT)"
 
-    # AF with a shifted clock (deliberate deviation; TS 33.535 cl. 4.4.0).
+    # AF with a deliberately shifted clock (TS 33.535 cl. 4.4.0).
     # Context of the vector mnc-3-digits, whose K_AF is the one of
     # af1.akma.example and whose SUPI is not the one of the UE.
     supi3="$(vec mnc-3-digits supi)"
@@ -147,10 +149,9 @@ group_A() { # system up, A_KID_1 registered
 }
 
 # The AF outside the operator network, through the NEF (TS 33.535 cl. 6.3),
-# and anonymous access (cl. 6.2.2), MVP-6. The extra AFs stay up for the Ua*
-# of the UE (R2n) and are stopped in group B. The NRF listens on a loopback
-# address of the free5GC host: the AFs reach it through an SSH tunnel
-# (docs/free5gc-side/nef.md cl. 2.1).
+# and anonymous access (cl. 6.2.2). The extra AFs stay up for the Ua* of the
+# UE (R2n) and are stopped in group B. The NRF listens on a loopback address
+# of the free5GC host: the AFs reach it through an SSH tunnel.
 group_nef() {
     local akid1="$1" out
     echo "== A (NEF): AF outside the operator network and anonymous access"
@@ -207,7 +208,7 @@ done
 ssh_b true || { echo "cannot reach $host by SSH" >&2; exit 1; }
 for f in akma-free5gc/af/scripts/e2e-remote.sh akma-free5gc/af/scripts/ue-netns.sh akma-free5gc/af/build/bin/uaclient \
     akma-tools/seed UERANSIM/build/nr-akma-selftest; do
-    ssh_b "test -e $f" || { echo "$host:$f missing (docs/af-side/e2e.md, prerequisites)" >&2; exit 1; }
+    ssh_b "test -e $f" || { echo "$host:$f missing (see the prerequisites in $0)" >&2; exit 1; }
 done
 [ -n "$aanf" ] && [ -n "$af_ip" ] || { echo "aanfUri or listen missing in $afcfg" >&2; exit 1; }
 bind="$(ssh_b "sed -n 's/^ *bindingIPv4: *\([0-9.]*\).*/\1/p' ~/free5gc/config/aanfcfg.yaml" | head -1)"
@@ -220,7 +221,7 @@ bind="$(ssh_b "sed -n 's/^ *bindingIPv4: *\([0-9.]*\).*/\1/p' ~/free5gc/config/a
 } | tee "$L/preflight.txt"
 out="$(ssh_b "~/UERANSIM/build/nr-akma-selftest ~/akma-free5gc/shared/akma/testdata/vectors.json" 2>&1)"
 echo "$out" >"$L/selftest.txt"
-expect S1 "self-test of the ME against the vectors of MVP-0 (TS 33.535 A.2-A.4)" "$out" "5 passed, 3 refused (DV-4), 0 failed"
+expect S1 "self-test of the ME against the shared vectors (TS 33.535 A.2-A.4)" "$out" "5 passed, 3 refused.*, 0 failed"
 
 # ---------------------------------------------------------------- run
 "$here/build/bin/af" -c "$here/config/afcfg.yaml" -l "$L/af.log" >"$L/af.out" 2>&1 &

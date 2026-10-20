@@ -26,7 +26,7 @@ index 0000000..85de76a
 @@ -0,0 +1,97 @@
 +//
 +// AKMA self-test of the ME: checks the K_AKMA, A-TID, A-KID and K_AF derivations of nr-ue (3GPP TS 33.535 Annex A)
-+// against the vectors of the project (shared/akma/testdata/vectors.json).
++// against the AKMA test vectors (shared/akma/testdata/vectors.json).
 +//
 +// Usage: nr-akma-selftest <vectors.json>
 +//
@@ -97,8 +97,8 @@ index 0000000..85de76a
 +        }
 +        if (!keys::IsValidAfFqdn(fqdn))
 +        {
-+            // No NFKC in the UE (deviation DV-4): a non-ASCII FQDN is refused.
-+            std::printf("%s %s: K_AF not derived, FQDN not ASCII (DV-4)\n", ok ? "REFUSED" : "FAIL", name.c_str());
++            // No NFKC in the UE (TS 33.220 B.2.1.2): a non-ASCII FQDN is refused.
++            std::printf("%s %s: K_AF not derived, FQDN not ASCII (no NFKC in the UE)\n", ok ? "REFUSED" : "FAIL", name.c_str());
 +            if (ok)
 +                refused++;
 +            else
@@ -118,7 +118,7 @@ index 0000000..85de76a
 +        else
 +            failed++;
 +    }
-+    std::printf("%d passed, %d refused (DV-4), %d failed\n", passed, refused, failed);
++    std::printf("%d passed, %d refused (FQDN not ASCII), %d failed\n", passed, refused, failed);
 +    return failed == 0 && passed > 0 ? 0 : 1;
 +}
 diff --git a/src/ue/nas/keys.hpp b/src/ue/nas/keys.hpp
@@ -237,7 +237,7 @@ index ca6325e..563ba14 100644
 +        if (options.positionalCount() > 2)
 +            CMD_ERR("Only the AF FQDN and the Ua* security protocol identifier are expected")
 +        cmd->afFqdn = options.getPositional(0);
-+        // Private range identifier of the Ua* protocol of the project (ADR-0003)
++        // Private-range identifier of the simplified Ua* protocol (TS 33.220 H.2 NOTE 2)
 +        cmd->uaStarId = options.positionalCount() == 2 ? options.getPositional(1) : "FF00000001";
 +        return cmd;
 +    }

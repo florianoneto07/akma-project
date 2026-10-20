@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply or revert the project patches on a network function of free5GC, and
+# Apply or revert the AKMA patches on a network function of free5GC, and
 # rebuild it. Runs on the free5GC host.
 #
 # Usage: patch-nf.sh <nf> apply|revert|status [patch-dir]

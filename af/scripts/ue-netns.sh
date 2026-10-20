@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# The UE of UERANSIM in a network namespace of its own, on the host where
-# free5GC runs (decision D5). In the host namespace the address of the PDU
+# The UE of UERANSIM in a network namespace of its own. On the host where
+# free5GC runs it is required: in the host namespace the address of the PDU
 # session (10.60.0.1) would be local to the host, and the kernel would drop
 # the packets that the UPF delivers from upfgtp; in its own namespace the UE
 # reaches the data network through the user plane: uesimtun0 -> gNB -> UPF ->

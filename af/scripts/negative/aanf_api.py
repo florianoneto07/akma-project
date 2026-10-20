@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Negative tests of Naanf_AKMA against the AAnF in operation (MVP-5).
+"""Negative tests of Naanf_AKMA against the AAnF in operation.
 
 Raw HTTP/1.1 requests from the AF machine, which the local policy of the
 AAnF authorizes for af1.akma.example.FF00000001. Independent of the Go code
-of the project: the expected answers come from TS 29.500 cl. 5.2.7,
-TS 29.535 cl. 4.2.2 and 5.1.7.3 and the AAnF document (docs/free5gc-side/
-aanf.md cl. 6).
+of this repository: the expected answers come from TS 29.500 cl. 5.2.7 and
+TS 29.535 cl. 4.2.2 and 5.1.7.3.
 
 Usage: aanf_api.py <AAnF host:port> <registered A-KID>
 Prints one PASS or FAIL line per test; exits 1 when any fails.
@@ -96,7 +95,7 @@ def main():
     globals()["failures"] += 0 if ok else 1
 
     s, d = retrieve(aanf, AF_ID, akid.replace(".atid", ".akid", 1))
-    check("N02", 'A-KID with the label "akid" accepted (TS 29.522 example; ADR-0002)', s, d, 200)
+    check("N02", 'A-KID with the label "akid" accepted (example of TS 29.522 table 5.14.5.4.2-1)', s, d, 200)
 
     s, d = retrieve(aanf, "af2.akma.example.FF00000001", akid)
     check("N03", "AF_ID not authorized by the local policy (TS 33.535 cl. 6.2.1 step 2)", s, d, 403, "")
@@ -109,7 +108,7 @@ def main():
 
     unknown = akid.split(".atid", 1)[0] + ".atid" + "A" * 43 + "=@" + akid.split("@", 1)[1]
     s, d = retrieve(aanf, AF_ID, unknown)
-    check("N06", "unknown A-KID (TS 29.535 cl. 4.2.2.3.2; never 204, DV-7)", s, d, 403, "K_AKMA_NOT_PRESENT")
+    check("N06", "unknown A-KID (TS 29.535 cl. 4.2.2.3.2; never 204)", s, d, 403, "K_AKMA_NOT_PRESENT")
 
     s, d = request(aanf, "POST", API + "/retrieve-applicationkey", json.dumps({"afId": AF_ID}).encode())
     check("N07", "aKId missing", s, d, 400, "MANDATORY_IE_MISSING")

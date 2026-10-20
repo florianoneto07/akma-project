@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
-# End-to-end run of MVP-5 on the free5GC host, driven by af/scripts/e2e.sh on
+# End-to-end run on the free5GC host, driven by af/scripts/e2e.sh on
 # the AF machine through "ssh -t". Asks for the sudo password once.
 #
 # Usage: e2e-remote.sh <run directory> [--keep]
 #   --keep  leave free5GC, the gNB and the UE running at the end
 #
-# Steps (docs/af-side/e2e.md):
+# Steps:
 #   R1  free5GC (run.sh -aanf), gNB, UE in its namespace, subscriber provisioned
 #   R2  registration; A-KID of the UE = AUSF = AAnF; Ua* from the UE
 #       -> sync A (checks from the AF machine)
 #   R3  new authentication: new A-KID; Ua* with it; Ua* with the previous
 #       A-KID and K_AF, still valid at the AF until expiry
 #       -> sync B
-#   R4  AAnF down during a primary authentication (D9)
+#   R4  AAnF down during a primary authentication: the authentication
+#       succeeds and the registration in the AAnF fails (TS 33.535 cl. 6.1)
 #   R5  subscriber without AKMA subscription, then restored
 #   R6  remove-context
 #       -> sync C
@@ -168,7 +169,7 @@ sync_point A
 # ---------------------------------------------------------------- R2n
 # The AF machine has started, in group A, an AF outside the operator network
 # (8083), the same AF with anonymous access (8084) and an anonymous AF inside
-# the operator network (8085). MVP-6.
+# the operator network (8085).
 step "R2n AF outside the operator network (NEF) and anonymous access"
 ua -connect "$af_ip:8083" -n 1 >"$run/ua-nef.out" 2>&1
 check R2n.ua-nef "Ua* with the AF outside the operator network, K_AF through the NEF (TS 33.535 cl. 6.3)" \
@@ -206,7 +207,7 @@ check R3.ua-old "Ua* with the previous A-KID and K_AF: still accepted by the AF 
 sync_point B
 
 # ---------------------------------------------------------------- R4
-step "R4 AAnF down during a primary authentication (D9)"
+step "R4 AAnF down during a primary authentication"
 failed_before="$(count "$f5log" "Naanf_AKMA_AnchorKey_Register for $supi failed")"
 pkill -INT -x aanf
 for ((i = 0; i < 15; i++)); do pgrep -x aanf >/dev/null || break; sleep 1; done

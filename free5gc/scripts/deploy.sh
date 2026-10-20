@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Copy the AAnF to the free5GC host of the lab (ADR-0001-R2): only new files.
+# Copy the AAnF and the seed tool to the free5GC host. Only new files: no
+# file of free5GC is modified.
 #
 # Usage: free5gc/scripts/deploy.sh [user@host] [--force-config]
-#   user@host       default: woca@192.168.16.130
+#   user@host       free5GC host; FREE5GC_HOST when absent
 #   --force-config  replace an existing ~/free5gc/config/aanfcfg.yaml (its
 #                   differences are shown first)
 #
@@ -10,11 +11,10 @@
 #   ~/free5gc/bin/aanf                 AAnF binary (replaced on each deploy)
 #   ~/free5gc/config/aanfcfg.yaml      AAnF configuration (kept if present)
 #   ~/akma-tools/seed                  test tool (outside the free5GC tree)
-# No file of free5GC is modified.
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")/.." && pwd)"
-target="woca@192.168.16.130"
+target="${FREE5GC_HOST:-}"
 force_config=no
 for a in "$@"; do
     case "$a" in
@@ -23,6 +23,7 @@ for a in "$@"; do
     *) target="$a" ;;
     esac
 done
+[ -n "$target" ] || { echo "usage: $0 user@host [--force-config] (or set FREE5GC_HOST)" >&2; exit 2; }
 ssh_opts=(-o BatchMode=yes -o ConnectTimeout=10)
 
 for f in "$here/build/bin/aanf" "$here/build/bin/seed"; do

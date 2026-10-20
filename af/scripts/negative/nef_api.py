@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Tests of the AKMA API of the NEF in operation (MVP-6).
+"""Tests of the AKMA API of the NEF in operation.
 
-Raw HTTP/1.1 requests from the AF machine, independent of the Go code of the
-project. The script registers a temporary AF at the NRF to obtain access
-tokens, as the AF outside the operator network does in the laboratory
-(docs/free5gc-side/nef.md cl. 2.1), and deregisters it at the end. The
-expected answers come from TS 29.522 cl. 4.4.23.2 and 5.14, TS 29.122
-cl. 5.2.6, TS 33.535 cl. 6.2.2 and 6.3, and nef.md cl. 3.
+Raw HTTP/1.1 requests from the AF machine, independent of the Go code of
+this repository. The script registers a temporary AF at the NRF to obtain
+access tokens, as the AF outside the operator network does (free5GC has no
+CAPIF, so the NEF accepts tokens issued by the NRF), and deregisters it at
+the end. The expected answers come from TS 29.522 cl. 4.4.23.2 and 5.14,
+TS 29.122 cl. 5.2.6 and TS 33.535 cl. 6.2.2 and 6.3.
 
 Usage: nef_api.py <NRF host:port> <NEF host:port> <AAnF host:port> <AF address> <registered A-KID>
 Prints one PASS or FAIL line per test; exits 1 when any fails. No key is
@@ -153,7 +153,8 @@ def run(nrf, nef, aanf, akid):
            s == 403 and not as_json(d).get("cause") and ct.startswith("application/problem+json"),
            problem(s, ct, d))
 
-    # E07: AF_ID authorized by the NEF and not accepted from the NEF by the AAnF (P11): 403 relayed.
+    # E07: AF_ID authorized by the NEF and not accepted from the NEF by the local policy of the
+    # AAnF (TS 33.535 cl. 6.3 step 3, cl. 6.2.1 step 2): 403 relayed.
     s, ct, d = retrieve(nef, token, {"afId": AF_ID_NEF_ONLY, "aKId": akid})
     report("E07", "AF_ID not accepted from the NEF by the AAnF: 403 without cause",
            s == 403 and not as_json(d).get("cause"), problem(s, ct, d))

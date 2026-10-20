@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Apply or revert the project patches on UERANSIM, and rebuild nr-ue. Runs on
-# the host where UERANSIM is built (the free5GC host, decision D5).
+# Apply or revert the AKMA patches on UERANSIM, and rebuild nr-ue. Runs on
+# the host where UERANSIM is built: the free5GC host or a separate host.
 #
 # Usage: patch-ueransim.sh apply|revert|status [patch-dir]
 #   patch-dir     default: af/ue/ueransim/patches in the repository
