@@ -385,12 +385,23 @@ On the UERANSIM host, apply the UE patches. The script keeps `build/nr-ue.orig` 
 ~/akma-free5gc/af/scripts/patch-ueransim.sh apply
 ```
 
-The patches change two things in `config/free5gc-ue.yaml`:
+The patches change three things in `config/free5gc-ue.yaml`:
 
 - they turn on the option `akma: true`;
-- they make the UE look for the gNB at 10.100.0.1.
+- they make the UE look for the gNB at 10.100.0.1;
+- they add the policy of the AKMA key service of the ME, which gives an application only the K_AF of its own AF_IDs (TS 33.535 cl. 4.4.3):
 
-If you use another configuration file, do the same there.
+  ```yaml
+  akmaKeyService:
+    applications:
+      - name: uaclient
+        uid: 1000            # the user that runs the application
+        afIds:
+          - af1.akma.example.FF00000001
+  akmaCliKaf: false
+  ```
+
+If the user that runs the Ua\* client is not uid 1000 (`id -u`), change `uid`. If you use another configuration file, do the same there. `executable`, optional, also ties the application to the absolute path of its executable. An AF_ID given to two applications makes `nr-ue` refuse the configuration.
 
 10.100.0.1 is the host side of a `veth` pair that links the host to the network namespace of the UE. With UERANSIM and free5GC on the same host, the UE needs that namespace for the PDU session to work: in the host namespace, the address of the PDU session would be local to the host, and the kernel would drop the packets that the UPF delivers. Make the gNB listen there, and create the namespace once per boot:
 
@@ -563,7 +574,7 @@ sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -n 3
 
 The client runs in the namespace of the UE, as your user:
 
-- it asks the UE, through `nr-cli`, for the A-KID and the K_AF of `af1.akma.example`;
+- it asks the AKMA key service of the ME, on `/run/ueransim/akma-<SUPI>.sock`, for the A-KID and the K_AF of `af1.akma.example`;
 - it goes to the AF from the address of the PDU session;
 - it checks `rspauth`.
 
@@ -592,7 +603,9 @@ The UE registers again by itself, with a new authentication. What changes:
 
 ### 7.5 Limitations
 
-`nr-cli` is a test interface: it hands the K_AF of any AF to any local process. K_AKMA never leaves the UE (TS 33.535 cl. 4.4.3).
+The key service tells applications apart by user. The executable in the policy is a best-effort check: a process of the same user can replace or inject into an application. K_AKMA never leaves the UE (TS 33.535 cl. 4.4.3).
+
+`nr-cli akma-kaf` also gives the K_AF of any AF, but only with `akmaCliKaf: true`, for tests: it answers any local process.
 
 ---
 
@@ -646,7 +659,7 @@ Each check prints `PASS` or `FAIL`, and the end shows the total:
 
 ```
 report: …/af/build/e2e/<date-time>/report.md
-83 passed, 0 failed
+88 passed, 0 failed
 ```
 
 ### 8.3 Read the report

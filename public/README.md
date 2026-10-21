@@ -10,7 +10,7 @@ After a successful primary authentication, the UE and the network derive K_AKMA 
 |---|---|
 | `free5gc/aanf/` | **AAnF**, the AKMA Anchor Function (TS 33.535 cl. 4.2.1, Naanf_AKMA of TS 29.535). A new NF with the same layout as the free5GC NFs. It installs as a binary in `bin/` and a file in `config/`, and changes no file of free5GC |
 | `free5gc/patches/` | Patches for free5GC: NRF, UDM, AUSF, NEF, `openapi` (Naanf_AKMA models and client), configuration, `run.sh` and the Go test bench |
-| `af/ue/ueransim/patches/` | Patches for UERANSIM: the ME derives K_AKMA, the A-KID and K_AF, `nr-cli` hands A-KID and K_AF to an application, and `nr-akma-selftest` checks the derivations |
+| `af/ue/ueransim/patches/` | Patches for UERANSIM: the ME derives K_AKMA, the A-KID and K_AF; a key service gives each application only the K_AF of its own AF_IDs; `nr-akma-selftest` checks the derivations |
 | `af/af/`, `af/uastar/`, `af/ue/uaclient/` | A test AF and a Ua\* client, with a simplified Ua\* protocol: HTTP Digest (RFC 7616) keyed with K_AF, without TLS |
 | `shared/akma/` | Go library shared by all of the above: the KDF, the SUPI as KDF parameter, the A-KID, the AF_ID and the key encodings |
 | `reference/kdf/` | Independent Python implementation of the KDF that generates the test vectors |
@@ -29,7 +29,7 @@ Tested on free5GC v4.2.3 and UERANSIM v3.2.6 (commit `85a0fbf`, the one of the f
 | AKMA context removal | cl. 6.6 | requested by the `seed` test tool in the role of the OAM |
 | Ua\* between the UE and the AF over the PDU session | cl. 6.2.1 steps 1 and 9 | simplified protocol, see the limitations |
 
-The derivations agree in four implementations: the Python oracle, `shared/akma`, the KDF that free5GC already uses for K_SEAF, and the patched UERANSIM. `af/scripts/e2e.sh` runs 83 checks against a running core: the flows above, re-authentication, the AAnF down during an authentication, a subscriber without AKMA, the negative cases of the AAnF and NEF APIs, and no key in any log.
+The derivations agree in four implementations: the Python oracle, `shared/akma`, the KDF that free5GC already uses for K_SEAF, and the patched UERANSIM. `af/scripts/e2e.sh` runs 88 checks against a running core: the flows above, re-authentication, the AAnF down during an authentication, a subscriber without AKMA, the key service of the UE refusing other AF_IDs and other users, the negative cases of the AAnF and NEF APIs, and no key in any log.
 
 ## Architecture
 
@@ -88,7 +88,7 @@ Read these before you use any of it outside a test bed.
 - **No TLS.** The SBI runs on h2c, and the NEF–AF interface on plain HTTP. TS 33.535 cl. 4.4.0 and TS 33.501 cl. 12 and 13.1 require protection. The AAnF and the NEF bind each AF_ID to source addresses (local policy). That limits which AF_ID a host can ask for, but it does not authenticate the AF.
 - **Simplified Ua\*.** The test AF and client use the HTTP Digest of TS 24.109 K.2 without the TLS tunnel, under the private-range Ua\* identifier `FF00000001`. It is not one of the normative profiles (TS 33.535 Annex B, TS 24.109 Annex K). See [docs/ua-star.md](docs/ua-star.md).
 - **Token issuer of the external AF.** free5GC has no CAPIF, so the AF outside the operator network gets its NEF access token from the NRF. The specified path is the CAPIF Core Function (TS 29.522 cl. 7.2).
-- **`nr-cli` as the application interface of the UE.** It hands the K_AF of any AF to any local process. K_AKMA never leaves the ME.
+- **Applications in the UE.** The key service of the ME tells applications apart by user (uid). The executable is checked on a best-effort basis. K_AKMA never leaves the ME.
 - **Not implemented:**
   - the ROAMING_STATUS subscription (TS 33.535 cl. 6.2.1 step 5) and the `RoamingRestriction` feature;
   - GPSI, i.e. the `AKMA_GPSI_Support` feature and the GPSI to the external AF;

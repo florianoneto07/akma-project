@@ -132,7 +132,7 @@ With `--keep`, free5GC, the gNB and the UE stay up at the end. The files go to `
 | `remote/` | `free5gc.log`, `ue.log`, `gnb.log`, outputs of the Ua\* client and of `seed`, `state` (the A-KIDs) |
 | `af.log`, `af-*.log` | the AF, and the extra AFs |
 
-The exit code is 0 only when every check passes. It takes about two minutes and runs 83 checks: 36 on the free5GC host and 47 on the AF host.
+The exit code is 0 only when every check passes. It takes about two minutes and runs 88 checks: 41 on the free5GC host and 47 on the AF host.
 
 ### 5.2 Groups
 
@@ -141,6 +141,7 @@ The exit code is 0 only when every check passes. It takes about two minutes and 
 | S | AF host, before the run | self-test of the ME against the vectors |
 | R1 | free5GC host | N6 NAT, namespace of the UE, `linkIp` of the gNB, AKMA subscription; free5GC with `-aanf`, the gNB and the UE up |
 | R2 | free5GC host | registration; A-KID of the UE = of the AUSF = of the AAnF; Ua\* from the UE over the user plane, 3 requests |
+| R2k | free5GC host | the key service of the ME (TS 33.535 cl. 4.4.3): `uaclient` got the K_AF of its AF_ID; another AF_ID, another user and `nr-cli akma-kaf` are refused; a configuration that gives one AF_ID to two applications does not start |
 | N (point A) | AF host | negative tests of the AAnF API, of `register-anchorkey`, of the RID and of the AF; anonymous access directly at the AAnF |
 | E (point A) | AF host | tunnel to the NRF; three extra AFs (external on 8083, external anonymous on 8084, internal anonymous on 8085); the NEF API |
 | R2n | free5GC host | Ua\* from the UE with the three extra AFs; the AAnF hands K_AF through the NEF; the NEF relays it and does not log the SUPI |
