@@ -1,7 +1,8 @@
 // Command uaclient establishes an application session with the AF over the
-// simplified Ua* protocol of package uastar. The A-KID and K_AF come
-// from the ME of UERANSIM through nr-cli (-nr-cli, -ue), from a shared/akma
-// vector (-vector) or from the command line. K_AF is never printed.
+// simplified Ua* protocol of package uastar. The A-KID and K_AF come from
+// the AKMA key service of the ME of UERANSIM (-me-socket), from nr-cli for
+// tests (-nr-cli, -ue), from a shared/akma vector (-vector) or from the
+// command line. K_AF is never printed.
 package main
 
 import (
@@ -35,7 +36,8 @@ func main() {
 		count     = flag.Int("n", 1, "number of requests in the session")
 		userAgent = flag.String("user-agent", uaclient.DefaultUserAgent, "User-Agent")
 		bind      = flag.String("bind", "", "source address, e.g. the address of the PDU session on uesimtun0")
-		nrCli     = flag.String("nr-cli", "", "nr-cli of UERANSIM: take A-KID and K_AF from the ME")
+		meSocket  = flag.String("me-socket", "", "AKMA key service of the ME: take A-KID and K_AF from it")
+		nrCli     = flag.String("nr-cli", "", "nr-cli of UERANSIM: take A-KID and K_AF from the ME (test only, akmaCliKaf)")
 		ue        = flag.String("ue", "", "UE node name for nr-cli (e.g. imsi-208930000000001)")
 		uaStarID  = flag.String("ua-star-id", "FF00000001", "Ua* security protocol identifier")
 	)
@@ -43,7 +45,7 @@ func main() {
 	o := options{
 		fqdn: *fqdn, connect: *connect, path: *path, aKid: *aKid, kafHex: *kafHex, kafB64: *kafB64, kafFile: *kafFile,
 		vector: *vector, vectors: *vectors, qop: *qop, userAgent: *userAgent, count: *count,
-		bind: *bind, nrCli: *nrCli, ue: *ue, uaStarID: *uaStarID,
+		bind: *bind, meSocket: *meSocket, nrCli: *nrCli, ue: *ue, uaStarID: *uaStarID,
 	}
 	if err := run(o); err != nil {
 		msg := err.Error()
@@ -58,7 +60,7 @@ func main() {
 type options struct {
 	fqdn, connect, path, aKid, kafHex, kafB64, kafFile, vector, vectors, qop, userAgent string
 	count                                                                               int
-	bind, nrCli, ue, uaStarID                                                           string
+	bind, meSocket, nrCli, ue, uaStarID                                                 string
 }
 
 func run(o options) error {
@@ -66,7 +68,9 @@ func run(o options) error {
 	var err error
 	aKid := o.aKid
 	// An explicit key or vector takes precedence over the ME, so that a test
-	// can present an earlier A-KID and K_AF from the namespace of the UE.
+	// can present an earlier A-KID and K_AF from the namespace of the UE; and
+	// an explicit -nr-cli (test only) over the -me-socket that ue-netns.sh
+	// always passes.
 	switch {
 	case o.kafHex != "":
 		kaf, err = codec.ParseHexKey(o.kafHex)
@@ -89,8 +93,15 @@ func run(o options) error {
 		if err == nil {
 			fmt.Printf("ME: K_AF derived for AF_ID %s.%s\n", o.fqdn, o.uaStarID)
 		}
+	case o.meSocket != "":
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		aKid, kaf, err = uaclient.FromKeyService(ctx, o.meSocket, o.fqdn, o.uaStarID)
+		cancel()
+		if err == nil {
+			fmt.Printf("ME: K_AF derived for AF_ID %s.%s\n", o.fqdn, o.uaStarID)
+		}
 	default:
-		err = errors.New("give -nr-cli, -vector, -kaf, -kaf-base64 or -kaf-file")
+		err = errors.New("give -me-socket, -nr-cli, -vector, -kaf, -kaf-base64 or -kaf-file")
 	}
 	if err != nil {
 		return err
