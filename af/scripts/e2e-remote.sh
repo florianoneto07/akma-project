@@ -9,6 +9,8 @@
 #   R1  free5GC (run.sh -aanf), gNB, UE in its namespace, subscriber provisioned
 #   R2  registration; A-KID of the UE = AUSF = AAnF; Ua* from the UE
 #   R2k AKMA key service of the ME: K_AF only to the application of the AF_ID
+#   R2t Ua* from the UE over the TLS profiles: K.2 in TLS 1.3 and 1.2, PSK
+#       TLS 1.3 and 1.2, each resumed on a second connection
 #       -> sync A (checks from the AF machine)
 #   R3  new authentication: new A-KID; Ua* with it; Ua* with the previous
 #       A-KID and K_AF, still valid at the AF until expiry
@@ -34,6 +36,7 @@ nrf="http://127.0.0.10:8000"
 supi="imsi-208930000000001"
 fqdn="af1.akma.example"
 af_ip="${AF_IP:-192.168.16.129}" # the AF machine; the extra AFs of the NEF group listen there
+ca="${CA:-$repo/af/build/cert/ca.pem}" # the test CA of the certificate of the AF (digest-tls)
 # Where the AAnF listens: sbi.bindingIPv4 and sbi.port of its configuration
 aanf="$(sed -n 's/^ *bindingIPv4: *\([0-9.]*\).*/\1/p' "$f5/config/aanfcfg.yaml" | head -1):$(
     sed -n 's/^ *port: *\([0-9]*\).*/\1/p' "$f5/config/aanfcfg.yaml" | head -1)"
@@ -124,7 +127,9 @@ sudo -v || exit 1
 (while true; do sudo -n -v 2>/dev/null; sleep 50; done) &
 keepalive=$!
 trap 'kill $keepalive 2>/dev/null' EXIT
-set -m # background jobs in their own process groups
+# No job control (set -m): with it, Ctrl-C and the end of the SSH session
+# reach only the command running at the time, and the script would go on
+# alone, up to stopping free5GC under the next run.
 
 # ---------------------------------------------------------------- R1
 step "R1 setup"
@@ -139,8 +144,12 @@ check R1.gnb-link "gNB radio link on the veth (linkIp: 10.100.0.1)" \
 check R1.subscriber "AKMA subscription of $supi provisioned (akmaAllowed, routingId 0000)" \
     grep -q "routingId: '0000'" "$run/provision.out"
 
+# free5GC in a process group of its own, which the stop at the end signals;
+# in the same terminal, for the sudo of run.sh.
+set -m
 ./run.sh -aanf >"$run/run.out" 2>&1 </dev/null &
 runpid=$!
+set +m
 wait_for "$run/run.out" "log path:" 20
 f5log="$f5/$(sed -n 's/^log path: \.\///p' "$run/run.out" | head -1)free5gc.log"
 setstate FREE5GC_LOG "$f5log"
@@ -173,9 +182,18 @@ check R2.ua "Ua* from the UE, through the user plane, with the K_AF of the ME (3
 step "R2k AKMA key service of the ME"
 check R2k.given "the ME gave uaclient the K_AF of its AF_ID" \
     grep -aqF "K_AF for AF_ID[af1.akma.example.FF00000001] given to application [uaclient]" "$run/ue.log"
-ua -fqdn af2.akma.example -n 1 >"$run/ua-k-afid.out" 2>&1
+# The user of uaclient asks for the K_AF of an AF_ID outside its list. The
+# client itself asks the ME only after the AF has chosen AKMA, and the AF
+# refuses another FQDN first.
+python3 -c 'import socket, sys
+s = socket.socket(socket.AF_UNIX)
+s.connect(sys.argv[1])
+s.sendall(b"KAF af2.akma.example FF00000001\n")
+print(s.makefile().readline().strip())' "/run/ueransim/akma-$supi.sock" >"$run/ua-k-afid.out" 2>&1
 check R2k.af-id "an AF_ID outside the list of uaclient is refused (cl. 4.4.3)" \
-    grep -q "not authorized for this AF_ID" "$run/ua-k-afid.out"
+    bash -c 'grep -qx "ERR NOT_AUTHORIZED" "$1" &&
+        grep -aqF "Application [uaclient] not authorized for AF_ID[af2.akma.example.FF00000001]" "$2"' _ \
+    "$run/ua-k-afid.out" "$run/ue.log"
 sudo -u nobody python3 -c 'import socket, sys
 s = socket.socket(socket.AF_UNIX)
 s.connect(sys.argv[1])
@@ -189,12 +207,40 @@ awk '{print} /^akmaKeyService:/ {svc=1} svc && /^  applications:/ {print "    - 
 timeout 5 "$uer/build/nr-ue" -c "$run/ue-duplicate.yaml" >"$run/ua-k-dup.out" 2>&1
 check R2k.duplicate "a configuration that gives one AF_ID to two applications is refused" \
     grep -q "is given to more than one application" "$run/ua-k-dup.out"
+
+# ---------------------------------------------------------------- R2t
+# The TLS profiles of TS 24.109 Annex K, with the K_AF of the ME for the AF_ID
+# of each profile and cipher suite (TS 33.220 H.3). -reconnect: the second
+# request goes on a new connection that resumes the TLS session.
+step "R2t Ua* over the TLS profiles"
+ua -profile digest-tls -ca "$ca" -connect "$af_ip" -reconnect -n 2 >"$run/ua-t-k2.out" 2>&1
+check R2t.k2-tls13 "K.2: Digest inside TLS 1.3, the AF authenticated by its certificate (TS 24.109 K.2)" \
+    grep -q "session established (nc 00000002).*AF_ID $fqdn.01000113.*TLS 1.3" "$run/ua-t-k2.out"
+check R2t.k2-resumed "K.2: the second connection resumed the TLS session (TS 33.222 cl. 5.3.1.5)" \
+    grep -q "(nc 00000002).*resumed true" "$run/ua-t-k2.out"
+ua -profile digest-tls -tls12 -ca "$ca" -connect "$af_ip" -n 1 >"$run/ua-t-k2-12.out" 2>&1
+check R2t.k2-tls12 "K.2 inside TLS 1.2: AF_ID of TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256" \
+    grep -q "session established (nc 00000001).*AF_ID $fqdn.010001C02B.*TLS 1.2" "$run/ua-t-k2-12.out"
+ua -profile psk-tls13 -connect "$af_ip" -reconnect -n 2 >"$run/ua-t-psk13.out" 2>&1
+check R2t.psk13 "PSK TLS 1.3 with K_AF, AF_ID $fqdn.0100000007 (TS 24.109 K.3.3), two connections" \
+    test "$(grep -c "AF authenticated by the TLS handshake with K_AF.*AF_ID $fqdn.0100000007; TLS 1.3, cipher suite 1301" "$run/ua-t-psk13.out")" -eq 2
+ua -profile psk-tls12 -connect "$af_ip" -reconnect -n 2 >"$run/ua-t-psk12.out" 2>&1
+check R2t.psk12 "PSK TLS 1.2 with K_AF, TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256, AF_ID $fqdn.010001D001 (K.3.2)" \
+    grep -q "AF authenticated by the TLS handshake with K_AF.*AF_ID $fqdn.010001D001; TLS 1.2, cipher suite D001, resumed false" "$run/ua-t-psk12.out"
+check R2t.psk12-resumed "PSK TLS 1.2: the second connection resumed the session (TS 33.222 cl. 5.4.1.4)" \
+    grep -q "AF_ID $fqdn.010001D001; TLS 1.2, cipher suite D001, resumed true" "$run/ua-t-psk12.out"
+check R2t.me "the ME gave uaclient the K_AF of each AF_ID of the TLS profiles" \
+    bash -c 'for id in 01000113 010001C02B 0100000007 010001D001; do grep -aqF "K_AF for AF_ID[$2.$id" "$1" || exit 1; done' _ "$run/ue.log" "$fqdn"
+ua -profile psk-tls13 -psk-ke-only -connect "$af_ip" -n 1 >"$run/ua-t-psk-ke.out" 2>&1
+check R2t.psk-ke "a ClientHello with psk_ke only is refused (TS 33.210 cl. 6.2.2)" \
+    grep -q "wolftls: handshake" "$run/ua-t-psk-ke.out"
 sync_point A
 
 # ---------------------------------------------------------------- R2n
 # The AF machine has started, in group A, an AF outside the operator network
-# (8083), the same AF with anonymous access (8084) and an anonymous AF inside
-# the operator network (8085).
+# (8083), the same AF with anonymous access (8084), an anonymous AF inside
+# the operator network (8085) and an AF outside the operator network with the
+# PSK TLS 1.3 profile (8456).
 step "R2n AF outside the operator network (NEF) and anonymous access"
 ua -connect "$af_ip:8083" -n 1 >"$run/ua-nef.out" 2>&1
 check R2n.ua-nef "Ua* with the AF outside the operator network, K_AF through the NEF (TS 33.535 cl. 6.3)" \
@@ -209,6 +255,11 @@ check R2n.aanf-via-nef "the AAnF provides K_AF through the NEF (cl. 6.3 step 4)"
     bash -c 'grep -aF "for A-KID $1, expires" "$2" | grep -qF "through the NEF at"' _ "$akid1" "$f5log"
 check R2n.nef-relayed "the NEF relays K_AF to the AF" \
     grep -aqF "K_AF for A-KID $akid1 relayed to AF_ID $fqdn." "$f5log"
+ua -profile psk-tls13 -connect "$af_ip:8456" -n 1 >"$run/ua-nef-psk.out" 2>&1
+check R2n.ua-nef-psk "PSK TLS 1.3 with the AF outside the operator network, K_AF through the NEF" \
+    grep -q "AF authenticated by the TLS handshake with K_AF.*AF_ID $fqdn.0100000007" "$run/ua-nef-psk.out"
+check R2n.nef-psk-relayed "the NEF relays the K_AF of the AF_ID of the PSK profile" \
+    grep -aqF "K_AF for A-KID $akid1 relayed to AF_ID $fqdn.0100000007" "$f5log"
 check R2n.nef-no-supi "no SUPI in the AKMA lines of the NEF (cl. 6.3 step 5)" \
     bash -c '! grep -a "CAT=\"AKMA\" NF=\"NEF\"" "$1" | grep -q "imsi-"' _ "$f5log"
 
