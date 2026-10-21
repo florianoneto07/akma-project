@@ -17,11 +17,12 @@ O cliente `uaclient` (`af/ue/uaclient/`) faz o papel da aplicação do UE no Ua\
 
 | Opção | Fonte | MVP |
 |---|---|---|
-| `-nr-cli <nr-cli> -ue <imsi-…>` | o ME do UERANSIM, pelo comando `akma-kaf` (`ue-ueransim.md` §3) | MVP-4 |
+| `-me-socket <caminho>` | o serviço de chaves do ME (`ue-ueransim.md` §3), que só entrega a K_AF dos AF_IDs da aplicação (TS 33.535 §4.4.3) | MVP-8 |
+| `-nr-cli <nr-cli> -ue <imsi-…>` | o ME do UERANSIM, pelo comando `akma-kaf`; só para teste, com `akmaCliKaf: true` no UE | MVP-4 |
 | `-vector <nome> [-vectors <arquivo>]` | um vetor de `shared/akma` | MVP-3 |
 | `-akid <A-KID> -kaf <hex>` ou `-kaf-base64 <base64>` | linha de comando, para testes negativos | MVP-3 |
 
-Com `-nr-cli`, a K_AF chega ao cliente pela saída do `nr-cli` e nunca aparece numa linha de comando nem na tela. O cliente nunca imprime a K_AF.
+Com `-me-socket`, a K_AF chega pelo *socket* do ME; com `-nr-cli`, pela saída do `nr-cli`. Ela nunca aparece numa linha de comando nem na tela: o cliente nunca imprime a K_AF. Se o ME recusar o AF_ID, o cliente para com *"application not authorized for this AF_ID by the ME"*.
 
 ## 3. Pelo plano de usuário
 
@@ -30,7 +31,7 @@ Com `-nr-cli`, a K_AF chega ao cliente pela saída do `nr-cli` e nunca aparece n
 O *script* `af/scripts/ue-netns.sh ua` junta tudo:
 
 - pega o SUPI na configuração do UE e o endereço do `uesimtun0` no *namespace*;
-- roda o cliente no *namespace*, com o seu usuário, e não como `root`, com `-nr-cli`, `-ue` e `-bind`.
+- roda o cliente no *namespace*, com o seu usuário, e não como `root`, com `-me-socket /run/ueransim/akma-<SUPI>.sock` (ou `AKMA_SOCKET`) e `-bind`. É o *uid* desse usuário que a política do ME confere.
 
 ```bash
 sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -n 3
@@ -65,13 +66,13 @@ Uma K_AF dada explicitamente (`-kaf`, `-kaf-base64`, `-kaf-file`) ou um vetor t�
 | Caminho | Conteúdo |
 |---|---|
 | `af/ue/uaclient/client.go` | sessão Digest: desafio, credenciais, `rspauth`, `stale`; endereço de origem |
-| `af/ue/uaclient/me.go` | `FromME`: chama o `nr-cli` e lê `a-kid` e `k-af` |
+| `af/ue/uaclient/me.go` | `FromKeyService`: pede a K_AF ao serviço de chaves do ME; `FromME`: chama o `nr-cli` (teste) |
 | `af/ue/uaclient/cmd/uaclient/` | o comando |
 | `af/scripts/ue-netns.sh` | `ua`: o cliente no *namespace* do UE |
 
-Testes: `TestHonestAF`, `TestAFWithoutKaf`, `TestChallengeChecks`, `TestHostAndProductToken`, `TestParseAkmaKaf`, `TestFromME` (com um `nr-cli` falso), `TestFromMERefused` e `TestLocalAddr`.
+Testes: `TestHonestAF`, `TestAFWithoutKaf`, `TestChallengeChecks`, `TestHostAndProductToken`, `TestParseAkmaKaf`, `TestFromME` (com um `nr-cli` falso), `TestFromMERefused`, `TestParseKeyService`, `TestFromKeyService` (com um serviço de chaves falso) e `TestLocalAddr`.
 
 ## 6. Limitações
 
-- **`nr-cli` como interface de teste.** Entrega a K_AF de qualquer AF a qualquer processo local (`ue-ueransim.md` §3).
+- **Identidade da aplicação.** O ME separa as aplicações pelo usuário; o executável é conferência de melhor esforço (`ua-star-norma.md` §2.2). Até o MVP-7, o `nr-cli` entregava a K_AF de qualquer AF a qualquer processo local; desde o MVP-8 isso só acontece com `akmaCliKaf: true`.
 - **Sem TLS.** Ver `ua-star.md` §10.

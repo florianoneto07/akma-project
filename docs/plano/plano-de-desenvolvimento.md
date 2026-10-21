@@ -1,6 +1,6 @@
 # Plano de desenvolvimento por MVPs
 
-**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) implementado e verificado, com 83 verificações e nenhuma falha (19/10/2026). MVP-7 (repositório público) concluído: publicado no GitHub e instalado numa VM limpa só pelo guia, com 83 verificações e nenhuma falha (20/10/2026). MVP-8 (Ua\* da norma e autorização por aplicação no UE) com a organização aprovada (20/10/2026); o CAPIF passou a MVP-9.
+**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) implementado e verificado, com 83 verificações e nenhuma falha (19/10/2026). MVP-7 (repositório público) concluído: publicado no GitHub e instalado numa VM limpa só pelo guia, com 83 verificações e nenhuma falha (20/10/2026). MVP-8 (Ua\* da norma e autorização por aplicação no UE): organização e especificação das fases (a) e (b) aprovadas; fase (a), o serviço de chaves do ME, implementada e verificada, com 88 verificações e nenhuma falha (20/10/2026); o CAPIF passou a MVP-9.
 **Data:** 15 de outubro de 2026; revisão 3 em 16 de outubro de 2026; aprovação em 16 de outubro de 2026
 **Base:** documentos `00` a `04`, Adendo E, ADR-0001-R2, ADR-0002, ADR-0003, `docs/baseline/ambiente-verificado.md`, `docs/baseline/conferencia-normativa.md`, `docs/literatura/analise-dos-artigos.md`, `docs/conformidade/desvios.md`
 **Revisão 2 (15/10/2026):** conferido contra as normas do acervo (hoje em `specs/`).
@@ -803,6 +803,23 @@ Os documentos públicos ficam em `public/`: `README.md`, `docs/install.md` (o tu
 ### MVP-8 — Ua\* da norma e autorização por aplicação no UE
 
 **Estado (20/10/2026):** organização **aprovada** pelo responsável. O escopo detalhado de cada fase sai de uma especificação aprovada antes do código, como `ua-star.md` no MVP-3 e `nef.md` no MVP-6.
+
+**Estado (20/10/2026, noite):** especificação das fases (a) e (b) aprovada (`docs/af-side/ua-star-norma.md`, pontos U1 a U12). **Fase (a) implementada e verificada.** `e2e.sh` com 88 verificações e nenhuma falha (execução `20261020-215257`; `docs/af-side/e2e.md` §5.3). O *patch* é o `af/ue/ueransim/patches/0005-akma-key-service.patch`.
+
+| Caso da especificação (§2.6) | Resultado |
+|---|---|
+| aplicação e AF_ID da política | atendido: K_AF entregue ao `uaclient` [R2k.given]; Ua\* passa [R2.ua] |
+| AF_ID fora da lista da aplicação | atendido: `ERR NOT_AUTHORIZED` e `warn` no log do UE [R2k.af-id] |
+| outro usuário | atendido: `nobody` recusado [R2k.uid] |
+| outro executável do mesmo usuário | atendido à mão em 21/10/2026: `python3` recusado com `executable` na política (`e2e.md` §5.3) |
+| AF_ID em duas aplicações | atendido: o `nr-ue` não sobe [R2k.duplicate] |
+| `akma-kaf` sem `akmaCliKaf` | atendido: comando recusado [R2k.nr-cli] |
+| nenhuma K_AKMA nas respostas; nenhuma K_AF em log | atendido: as respostas só têm A-KID, AF_ID e K_AF; nenhuma cadeia de 64 hexadecimais nos logs [R7] |
+
+Diferenças em relação à especificação, registradas nela:
+
+- o *socket* padrão leva o SUPI, `/run/ueransim/akma-<SUPI>.sock`, porque o `nr-ue -n` roda vários UEs num processo;
+- entra a causa `UNAVAILABLE`, para quando o ME não consegue pausar as tarefas a tempo.
 
 **Pedido** (responsável, 20/10/2026):
 

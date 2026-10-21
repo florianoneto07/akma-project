@@ -1,6 +1,6 @@
 # Ua\* da norma e autorização por aplicação no UE: especificação
 
-**MVP:** MVP-8 · **Data:** 20 de outubro de 2026 · **Estado:** proposta das fases (a) e (b), para aprovação do responsável. As fases (c), DTLS, e (d), OSCORE, entram neste documento depois, com os pontos 3 a 7 do plano.
+**MVP:** MVP-8 · **Data:** 20 de outubro de 2026 · **Estado:** fases (a) e (b) aprovadas pelo responsável em 20/10/2026, com os pontos U1 a U12 como propostos. A fase (a) está em implementação. As fases (c), DTLS, e (d), OSCORE, entram neste documento depois, com os pontos 3 a 7 do plano.
 
 Decisões já tomadas pelo responsável em 20/10/2026 (plano, MVP-8):
 
@@ -91,7 +91,7 @@ Na configuração do UE (`free5gc-ue.yaml`):
 ```yaml
 akma: true
 akmaKeyService:
-  socket: /run/ueransim/akma.sock     # padrão; criado pelo nr-ue, que roda como root
+  socket: /run/ueransim/akma-imsi-208930000000001.sock   # opcional; padrão /run/ueransim/akma-<SUPI>.sock
   applications:
     - name: uaclient
       uid: 1000
@@ -126,6 +126,7 @@ ERR <causa>
 | `NO_KEY_MATERIAL` | ainda não houve autenticação primária bem-sucedida |
 | `BAD_REQUEST` | FQDN que não é nome DNS ASCII (DV-4), ou identificador que não tem 10 hexadecimais |
 | `NOT_AUTHORIZED` | *uid* ou executável fora da política, ou AF_ID fora da lista da aplicação |
+| `UNAVAILABLE` | o ME não conseguiu pausar as tarefas a tempo para ler o contexto de segurança NAS, como acontece com o `nr-cli` |
 
 O *socket* fica em caminho do sistema de arquivos, então vale entre *namespaces* de rede: o cliente no *namespace* do UE o alcança. Permissão `0666`: a autorização é a da política, não a do arquivo.
 
@@ -287,7 +288,7 @@ Ficam para a próxima revisão deste documento, depois das fases (a) e (b):
 | U1 | Como derivar da K_AF a PSK do TLS 1.3 e o *premaster* do TLS 1.2 | A K_AF, os 32 octetos, é a PSK. No TLS 1.2, a K_AF entra como o PSK da RFC 5489 §2; no TLS 1.3, como a PSK externa, com SHA-256. Nenhuma KDF a mais | `[LACUNA]` TS 33.222 §5.4, TS 24.109 K.3 e TS 33.535 B.1.3 dizem só "derivar da K_AF", e TS 33.210 não define nada. A separação de chaves por protocolo já está na K_AF, pelo identificador Ua\* no AF_ID (TS 33.220 H.2). Uma KDF a mais seria invenção. A análise formal de Ko et al. (2024, artigo 13 da literatura) usa a própria K_AF como PSK (*"compute KAF as the pre-shared key PSK"*), e o `adaptive-security` do responsável também |
 | U2 | Separador da identidade PSK no TLS 1.2 | `3GPP-AKMA;<A-KID>`, em UTF-8 (RFC 4279 §5.1) | `[LACUNA]` TS 24.109 K.3.2 e) não dá o separador; o GBA usa `;` (TS 24.109 §5.3.3.1.2), e o TLS 1.3 do AKMA também (K.3.3) |
 | U3 | Identidade da aplicação no ME | *uid* como fronteira; executável como conferência de melhor esforço (seção 2.2) | `[INTERPRETAÇÃO]` NOTA de TS 33.535 §4.4.3 |
-| U4 | Canal e protocolo do serviço de chaves | *socket* Unix em `/run/ueransim/akma.sock`, protocolo de linha (seção 2.4) | — |
+| U4 | Canal e protocolo do serviço de chaves | *socket* Unix em `/run/ueransim/akma-<SUPI>.sock`, protocolo de linha (seção 2.4). Na implementação, o nome leva o SUPI, porque o `nr-ue -n` roda vários UEs num processo; o `socket` da configuração continua valendo para um UE só | — |
 | U5 | Um AF_ID por aplicação | a configuração do UE recusa AF_ID repetido | TS 33.535 §4.4.3 item 3 |
 | U6 | Uma porta por perfil no AF | sim (seção 3.5). Uma porta que negociasse K.2 ou K.3 no mesmo `ClientHello` (TS 33.222 §5.4.0.1 NOTA 3) fica fora: o K.2 é do `crypto/tls`, e o K.3 do wolfSSL | `[MVP]` |
 | U7 | *Cipher suites* | os de TS 33.210 §6.2 (seções 3.2 a 3.4); cada um vira um AF_ID nas políticas do AAnF, do NEF e do UE | `[3GPP]` TS 33.220 H.3; TS 33.210 §6.2 |

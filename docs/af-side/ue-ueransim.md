@@ -32,24 +32,31 @@ Isso atende ao "antes de comunicar com um AF" do §6.1: nenhuma aplicação fala
 
 O material fica no contexto de segurança NAS (`UeKeys`) e é descartado com ele. A K_AF é derivada sob demanda, a cada pedido de uma aplicação, a partir da K_AKMA corrente.
 
-## 3. Entrega à aplicação: comando `akma-kaf` do `nr-cli`
+## 3. Entrega à aplicação: serviço de chaves do ME
 
-`[MVP]` A aplicação (o cliente Ua\*, `ua-client.md`) pede ao ME o A-KID e a K_AF de um AF:
+**Desde o MVP-8, fase (a)** (`ua-star-norma.md` §2; *patch* `0005`). `[3GPP]` TS 33.535 §4.4.3: a aplicação só obtém a K_AF dos AF_IDs a que tem direito e não acessa a K_AF de outra aplicação. A forma de garantir isso fica fora do escopo 3GPP.
+
+**Como funciona.**
+
+- **Canal.** O `nr-ue` atende num *socket* Unix, `/run/ueransim/akma-<SUPI>.sock`.
+- **Quem pede.** O kernel diz ao ME o usuário e o processo de quem conecta (`SO_PEERCRED`). O ME confere o *uid* e, se a política trouxer, o executável do processo.
+- **O que pode receber.** A política na configuração do UE dá a lista de AF_IDs de cada aplicação. Fora dela, o ME responde `ERR NOT_AUTHORIZED` e registra um `warn`.
+- **Protocolo.** Uma linha por pedido:
+
+```
+KAF af1.akma.example FF00000001
+OK a-kid=rid0000.atid…=@5gc.mnc093.mcc208.3gppnetwork.org af-id=af1.akma.example.FF00000001 k-af=<64 hexadecimais>
+```
+
+- A K_AKMA nunca sai do ME: nenhuma resposta a leva.
+- **Erros:** `AKMA_DISABLED`, `NO_KEY_MATERIAL` (antes de uma autenticação primária), `BAD_REQUEST` (FQDN que não é nome DNS ASCII, ou identificador sem dez hexadecimais), `NOT_AUTHORIZED` e `UNAVAILABLE`.
+- **Cliente.** O cliente Ua\* (`ua-client.md`) usa o serviço com `-me-socket`, que o `ue-netns.sh ua` passa.
+
+**O `akma-kaf` do `nr-cli`.** Até o MVP-7, era o caminho da aplicação. Agora só funciona com `akmaCliKaf: true` (teste), e o `nr-ue` avisa na partida que a K_AF fica exposta a qualquer processo local. Sem a opção, o comando responde *"akma-kaf is disabled"*.
 
 ```bash
 nr-cli imsi-208930000000001 -e "akma-kaf af1.akma.example"
 ```
-
-```
-a-kid: rid0000.atid…=@5gc.mnc093.mcc208.3gppnetwork.org
-af-id: af1.akma.example.FF00000001
-k-af: <64 hexadecimais>
-```
-
-- O segundo argumento, opcional, é o identificador Ua\*; o padrão é `FF00000001` (ADR-0003).
-- A K_AKMA nunca sai do ME, como manda o §4.4.3; nenhum comando do `nr-cli` a mostra.
-- O UE responde erro sem AKMA ligado, antes de uma autenticação primária, com FQDN que não seja nome DNS ASCII ou com identificador que não tenha dez hexadecimais.
-- `[MVP]` **Limitação.** O `nr-cli` é interface de teste, não interface 3GPP: entrega a K_AF a qualquer processo local que o chame, para qualquer AF. Na norma, cada aplicação só obtém a K_AF dos AF a que tem direito (§4.4.3), e como garantir isso fica fora do escopo 3GPP.
 
 ## 4. Configuração
 
@@ -65,6 +72,22 @@ Os demais dados vêm do que o UE já tem:
 - `supi`: só IMSI, como na rede (DV-3); com outro tipo de SUPI, o UE registra um aviso e não deriva;
 - `routingIndicator`: o mesmo que vai no SUCI. `[FREE5GC]` Sem o campo, o UERANSIM põe `"0000"` no SUCI, e o A-KID usa o mesmo valor;
 - `mcc` e `mnc`: o comprimento do MNC vem da configuração, e não do IMSI.
+
+**Política do serviço de chaves (MVP-8).** O *patch* `0005` acrescenta ao `free5gc-ue.yaml`:
+
+```yaml
+akmaKeyService:
+  applications:
+    - name: uaclient
+      uid: 1000            # o usuário que roda a aplicação (id -u)
+      afIds:
+        - af1.akma.example.FF00000001
+akmaCliKaf: false
+```
+
+- `executable`, opcional: o caminho absoluto do executável da aplicação.
+- `socket`, opcional: outro caminho para o *socket*.
+- Um AF_ID em duas aplicações faz o `nr-ue` recusar a configuração (TS 33.535 §4.4.3, item 3).
 
 ## 5. O UE no próprio *namespace* de rede
 

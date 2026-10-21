@@ -23,6 +23,7 @@ As duas máquinas se sincronizam por arquivos-marcadores em três pontos (A, B, 
 | R2 | free5GC | registro; A-KID do UE = do AUSF = do AAnF; Ua\* do UE pelo plano de usuário, 3 requisições |
 | N (ponto A) | AF | testes negativos da API do AAnF, do `register-anchorkey`, do RID e do AF (seção 4); acesso anônimo direto ao AAnF (N01c, MVP-6) |
 | E (ponto A) | AF | MVP-6: túnel até o NRF; três AF extras (externo na 8083, externo anônimo na 8084, interno anônimo na 8085); API do NEF (seção 4.1) |
+| R2k | free5GC | MVP-8, fase (a): serviço de chaves do ME (TS 33.535 §4.4.3). O `uaclient` recebeu a K_AF do seu AF_ID; outro AF_ID, outro usuário e o `akma-kaf` do `nr-cli` são recusados; a configuração com um AF_ID em duas aplicações não sobe |
 | R2n | free5GC | MVP-6: Ua\* do UE com os três AF extras; o AAnF entrega via NEF; o NEF repassa a K_AF e não registra o SUPI |
 | R3 | free5GC | nova autenticação: A-KID novo, contexto substituído, Ua\* com o novo; Ua\* com o A-KID e a K_AF anteriores, ainda aceitos pelo AF até `expiry` |
 | B (ponto B) | AF | os AF extras se descadastram do NRF (E12); o AAnF recusa o A-KID anterior e aceita o novo |
@@ -179,6 +180,17 @@ Antes dela, duas execuções no mesmo dia:
 - **`20261019-213431` (80/3):** as três falhas eram do roteiro, não do sistema. A função que gera as configurações dos AF extras falhava com `set -u` quando chamada com três argumentos, e o AF externo da porta 8083 não subiu. Corrigido.
 
 O teste com o UERANSIM em outra máquina (critério 6) está em `docs/af-side/teste-nef.md`. O roteiro supõe o gNB e o UE na máquina do free5GC.
+
+### 5.3 MVP-8, fase (a), em 20/10/2026
+
+`88 passed, 0 failed` na execução `20261020-215257`: 41 verificações na máquina do free5GC e 47 na do AF. Mesma montagem do MVP-6, com o UERANSIM nos *patches* 0001 a 0005 (serviço de chaves do ME).
+
+- **Verificações novas.** As cinco do R2k: K_AF ao `uaclient` para o seu AF_ID; outro AF_ID recusado; outro usuário (`nobody`) recusado; `akma-kaf` desligado; configuração com um AF_ID em duas aplicações recusada.
+- **Execução anterior, `20261020-203951` (87/1).** A falha foi do roteiro: o R3.ua-old guardava a K_AF anterior pelo `akma-kaf`, agora desligado. O roteiro passou a pedir a K_AF ao serviço de chaves, como o usuário do `uaclient`.
+- **Conferência à mão do executável** (em 21/10/2026, na VM do free5GC, com um `nr-ue` avulso e uma política com `executable`):
+  - o `uaclient` passou pela política e recebeu `NO_KEY_MATERIAL`, porque não havia registro;
+  - o `python3` do mesmo usuário recebeu `ERR NOT_AUTHORIZED`;
+  - ao encerrar, o `nr-ue` apagou o *socket*.
 
 ## 6. Limitações
 

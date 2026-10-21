@@ -365,12 +365,13 @@ Na máquina do UERANSIM, aplique os *patches* do UE. O *script* guarda `build/nr
 ~/akma-free5gc/af/scripts/patch-ueransim.sh apply
 ```
 
-Os *patches* mudam duas coisas no `config/free5gc-ue.yaml`:
+Os *patches* mudam três coisas no `config/free5gc-ue.yaml`:
 
 - ligam a opção `akma: true`;
-- fazem o UE procurar o gNB em 10.100.0.1.
+- fazem o UE procurar o gNB em 10.100.0.1;
+- desde o MVP-8, põem a política do serviço de chaves do ME: cada aplicação só recebe a K_AF dos seus AF_IDs (TS 33.535 §4.4.3; `docs/af-side/ue-ueransim.md` §3). O exemplo autoriza o `uaclient` do usuário de *uid* 1000 para `af1.akma.example.FF00000001`.
 
-Se você usa outro arquivo de configuração, faça o mesmo nele.
+Se o usuário que roda o cliente Ua\* não tem *uid* 1000 (`id -u`), troque o `uid`. Se você usa outro arquivo de configuração, faça o mesmo nele.
 
 O endereço 10.100.0.1 é o lado do host de um par `veth` que liga o host ao *namespace* de rede do UE. Com o UERANSIM e o free5GC na mesma máquina, o UE precisa desse *namespace* para que a sessão PDU funcione (parte 7; `docs/af-side/ue-ueransim.md` §5). Faça o gNB escutar nesse endereço e crie o *namespace*, uma vez por inicialização da máquina:
 
@@ -545,7 +546,7 @@ sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -n 3
 
 O cliente roda no *namespace* do UE, com o seu usuário:
 
-- pede ao UE, pelo `nr-cli`, o A-KID e a K_AF de `af1.akma.example`;
+- pede o A-KID e a K_AF de `af1.akma.example` ao serviço de chaves do ME, em `/run/ueransim/akma-<SUPI>.sock`;
 - vai ao AF a partir do endereço da sessão PDU;
 - confere o `rspauth`.
 
@@ -576,7 +577,7 @@ A sequência completa e os resultados do laboratório estão em `docs/af-side/te
 
 ### 7.5 Limitações
 
-O `nr-cli` é uma interface de teste: entrega a K_AF de qualquer AF a qualquer processo local da máquina. A K_AKMA nunca sai do UE (TS 33.535 §4.4.3).
+Desde o MVP-8, o ME separa as aplicações pelo usuário; o executável da política é conferência de melhor esforço (`docs/af-side/ua-star-norma.md` §2.2). O `nr-cli akma-kaf`, que entrega a K_AF de qualquer AF a qualquer processo local, só funciona com `akmaCliKaf: true`, para testes. A K_AKMA nunca sai do UE (TS 33.535 §4.4.3).
 
 ---
 
@@ -628,7 +629,7 @@ Cada verificação aparece como `PASS` ou `FAIL`, e o fim mostra o total:
 
 ```
 report: …/af/build/e2e/<data-hora>/report.md
-63 passed, 0 failed
+88 passed, 0 failed
 ```
 
 ### 8.3 Ler o relatório
