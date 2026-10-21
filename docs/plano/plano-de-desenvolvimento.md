@@ -837,6 +837,12 @@ Diferenças em relação à especificação, registradas nela:
 
 Diferenças em relação à especificação, registradas nela (§3.8): wolfSSL 5.9.4 em vez de 5.8.4; sem a suíte `D0 02`, que o wolfSSL não tem; sem OCSP *stapling*; o UE dos perfis PSK só aceita PSK (U6); o UE pede a K_AF ao ME só depois do desafio. A `D0 02` e o OCSP *stapling* são recomendados (*should*) por TS 33.210 §6.2; as duas ausências foram registradas como DV-10, por decisão do responsável em 21/10/2026.
 
+**Estado (21/10/2026, fase (c)):** especificação do DTLS **aprovada** (`ua-star-norma.md` §4), com os pontos U13 a U21 como propostos. Os principais:
+- U13: o DTLS 1.2, que TS 33.210 exige de quem tem DTLS e TS 33.535 Anexo C não descreve;
+- U14: CoAP dentro do DTLS;
+- U15: a suíte obrigatória do CoAP, sem ECDHE, contra TS 33.210;
+- U21: o OpenSSL 4.1 como conferência independente do DTLS 1.3.
+
 **Pedido** (responsável, 20/10/2026):
 
 - o Ua\* completo, não o simplificado, já com TLS, DTLS e OSCORE conforme a norma;

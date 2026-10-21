@@ -1,6 +1,6 @@
 # Ua\* da norma e autorização por aplicação no UE: especificação
 
-**MVP:** MVP-8 · **Data:** 20 de outubro de 2026 · **Estado:** fases (a) e (b) aprovadas pelo responsável em 20/10/2026, com os pontos U1 a U12 como propostos. A fase (a) está implementada e verificada (20/10/2026). A fase (b) está implementada e verificada (21/10/2026): a implementação e as diferenças em relação a este texto estão na seção 3.8, e a verificação, com 115 verificações e nenhuma falha, na seção 3.9. As fases (c), DTLS, e (d), OSCORE, entram neste documento depois, com os pontos 3 a 7 do plano.
+**MVP:** MVP-8 · **Data:** 20 de outubro de 2026 · **Estado:** fases (a) e (b) aprovadas pelo responsável em 20/10/2026, com os pontos U1 a U12 como propostos. A fase (a) está implementada e verificada (20/10/2026). A fase (b) está implementada e verificada (21/10/2026): a implementação e as diferenças em relação a este texto estão na seção 3.8, e a verificação, com 115 verificações e nenhuma falha, na seção 3.9. A fase (c), DTLS, está especificada na seção 4, com os pontos U13 a U21 aprovados pelo responsável em 21/10/2026 como propostos. A fase (d), OSCORE, entra depois (seção 7).
 
 Decisões já tomadas pelo responsável em 20/10/2026 (plano, MVP-8):
 
@@ -332,22 +332,86 @@ O `e2e.sh` ganha um grupo T, com o UE no seu *namespace* passando pelos três pe
 
 **Como a expiração foi testada.** O AAnF dá a K_AF com validade de 1 hora e devolve a mesma enquanto ela vale. O roteiro sobe AF extras com o relógio adiantado em 3590 s: o AF vê a K_AF vencer em 10 s. Para o `refetch` ter uma K_AF nova, o roteiro remove o contexto no AAnF e o registra de novo com o `seed`, como faria uma nova autenticação primária. Sem isso, o AAnF devolve a mesma K_AF, que o AF, com o relógio adiantado, já acha vencida. É o mesmo efeito que o N22 mostra de propósito.
 
-## 4. Fases (c) e (d)
+## 4. Fase (c): DTLS
 
-Ficam para a próxima revisão deste documento, depois das fases (a) e (b):
+**Estado (21/10/2026):** **aprovada** pelo responsável, com os pontos U13 a U21 como propostos (seção 5): DTLS 1.3 e DTLS 1.2, CoAP dentro do DTLS.
 
-- **DTLS 1.3**, TS 33.535 Anexo C: com o wolfSSL e o mesmo *callback* de PSK do TLS 1.3, identificador `01 00 00 00 09`. Pontos a decidir:
-  - `[LACUNA]` o DTLS 1.2. TS 33.210 §6.2.1 o exige quando há DTLS, e TS 33.535 C.1.1 diz que a identidade PSK de B.1, que inclui o TLS 1.2, vale para o DTLS; mas C.2 só descreve o procedimento do DTLS 1.3;
-  - o protocolo de aplicação sobre o DTLS.
-- **OSCORE**, TS 33.535 Anexo D: CoAP, OSCORE (RFC 8613) e CBOR. Duas opções:
-  - em Go, conferido com os vetores do RFC 8613 Apêndice C;
-  - a libcoap (`--enable-oscore`, sobre o wolfSSL), como no `adaptive-security` do responsável. Lá o contexto OSCORE é estático; o estabelecimento AKMA de D.3 (`POST /akma`, CBOR e HKDF) teria de ser escrito nas duas opções.
+### 4.1 Situação normativa
 
-  Pontos a decidir:
-  - os parâmetros do HKDF;
-  - a forma do HPLMN-ID no A-KID em CBOR;
-  - a remissão de D.3.2 ao "Anexo Y";
-  - o campo que D.3.2 lista e D.3.5 não tem.
+`[3GPP]` TS 33.535 Anexo C, *"AKMA Ua\* protocol based on DTLS"*:
+
+- C.1: o DTLS é **opcional** no UE e no AF; se suportado, valem as cláusulas seguintes;
+- C.1.1: o UE é o cliente DTLS. *"The PSK identity specified in B.1 for TLS is also applicable for DTLS"*;
+- C.1.2: o AF *"should be able to require that a certain key (i.e., KAF) used to secure the Ua reference point based on DTLS"*;
+- C.2.1: *"The TLS profile specified in TS 33.210 clause 6.2 apply to DTLS 1.3"*;
+- C.2.2: *"The procedures given in B.1.3.2.2 for TLS 1.3 is also applicable for DTLS 1.3"*. *"AKMA PSK identity should be delivered via DTLS message."*
+
+`[3GPP]` TS 33.220 H.3: `( 0x01,0x00,0x00,0x00,0x09 )` *"Ua security protocol for DTLS according to Annex O"*. O Anexo O é o DTLS do GBA, que o Anexo C do AKMA reproduz: só DTLS 1.3, com o procedimento do TLS 1.3 de TS 33.222 §5.4.0.2; e *"It does not have any dependency on the application layer protocol"* (O.2.2). TS 33.535 A.4 manda tirar o identificador Ua\* do Anexo H.
+
+`[3GPP]` TS 33.210 §6.2.1: *"If DTLS is supported then DTLS 1.2 as specified in RFC 6347 shall be supported and DTLS 1.3 as specified in RFC 9147 should be supported"*; NOTA 2: os requisitos do perfil valem para o DTLS.
+
+`[LACUNA]` **DTLS 1.2.** TS 33.210 o exige de quem tem DTLS; TS 33.535 C.1.1 aceita a identidade de B.1, que inclui o TLS 1.2; mas C.2 só descreve o DTLS 1.3, e H.3 não dá identificador Ua\* para o DTLS 1.2: o `…09` é do Anexo O, que só tem DTLS 1.3, e o `01 00 01 yy zz` é dito *"for TLS 1.2"*. Ponto U13.
+
+`[3GPP]` RFC 9147 §5.1: contra negação de serviço, o servidor *"MAY respond with a HelloRetryRequest"* com um *cookie* sem estado, e o cliente *"MUST send a new ClientHello with the cookie"*. No DTLS 1.2, a mesma função é do `HelloVerifyRequest` (RFC 6347 §4.2.1).
+
+`[3GPP]` RFC 8446 Apêndice E.7: *"Implementations can ensure safety from cross-protocol related output by not reusing PSKs between TLS 1.3 and TLS 1.2"*.
+
+### 4.2 Protocolo de aplicação
+
+`[LACUNA]` Nem o Anexo C nem o Anexo O dizem o que vai dentro do DTLS. Proposta (U14): **CoAP** (RFC 7252) sobre DTLS, o esquema `coaps`, porta UDP 5684. É o protocolo de aplicação usual do DTLS, e a fase (d), OSCORE, precisa dele de qualquer modo.
+
+O UE faz `GET coaps://af1.akma.example/ua/v1/session`:
+
+- mensagem confirmável (CON) com *token* aleatório e as opções `Uri-Host` (o FQDN) e `Uri-Path` (`ua`, `v1`, `session`);
+- o AF responde no ACK (*piggybacked*) com `2.05 Content`, `Content-Format` 50 (`application/json`) e o mesmo corpo dos perfis TLS, `{"aKid": …, "kafExpiry": …}`; o *handshake* já autenticou os dois lados, como no PSK TLS;
+- erros: `4.04 Not Found` para outro recurso ou outro `Uri-Host`, `4.05 Method Not Allowed`, `4.03 Forbidden` com `{"cause": "KAF_EXPIRED"}`;
+- retransmissão do CON com os parâmetros padrão de RFC 7252 §4.8 (`ACK_TIMEOUT` 2 s, `MAX_RETRANSMIT` 4); o DTLS retransmite o *handshake* com os temporizadores do wolfSSL.
+
+O CoAP fica num pacote Go próprio, `af/coap` (Apache-2.0), só com o necessário: codificação da mensagem (RFC 7252 §3), opções, CON e ACK.
+
+`[DIVERGÊNCIA]` RFC 7252 §9.1.3.1: no modo PSK, as implementações de CoAP *"MUST support the mandatory-to-implement cipher suite TLS_PSK_WITH_AES_128_CCM_8"*, uma suíte de DTLS 1.2 sem ECDHE. TS 33.210 §6.2.3 só admite suítes AEAD com ECDHE, e TS 33.535 C.2.1 aplica TS 33.210 ao DTLS. Proposta (U15): seguir TS 33.210 e não ter `TLS_PSK_WITH_AES_128_CCM_8`, registrando a escolha em `desvios.md`.
+
+### 4.3 DTLS 1.3
+
+`[3GPP]` C.2.2, com B.1.3.2.2 e TS 24.109 K.3.3, como o PSK TLS 1.3 da seção 3.3:
+
+- **UE:** deriva a K_AF com o identificador `01 00 00 00 09` antes do `ClientHello`, pelo serviço de chaves do ME; oferece `3GPP-AKMA;<A-KID>` em `psk_identities` (a identidade vai *"via DTLS message"*), só `psk_dhe_ke`, o `server_name` com o FQDN e nenhum *early data*;
+- **AF:** responde ao primeiro `ClientHello` com `HelloRetryRequest` e *cookie* (U16); no segundo, lê o A-KID, pede ao AAnF a K_AF de `<FQDN>.0100000009` e a usa como PSK externa, com SHA-256 e `TLS_AES_128_GCM_SHA256`. Sem K_AF, recusa a identidade;
+- AF_ID: `af1.akma.example.0100000009`, nas políticas do AAnF, do NEF e do UE.
+
+### 4.4 DTLS 1.2
+
+Se o ponto U13 ficar na proposta (b): o procedimento do PSK TLS 1.2 da seção 3.4, sobre DTLS 1.2 (RFC 6347):
+
+- o AF manda `HelloVerifyRequest` com *cookie* antes de qualquer estado;
+- a suíte é `TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256`, que RFC 8442 define para o TLS 1.2 e o DTLS 1.2; *hint* `3GPP-AKMA`; identidade `3GPP-AKMA;<A-KID>`;
+- o identificador Ua\* é `01 00 01 D0 01`, o da suíte, como no TLS 1.2. A K_AF é a mesma do perfil `psk-tls12`: o AF_ID é o mesmo. Cada sessão (D)TLS 1.2 tira as suas chaves dos números aleatórios das duas pontas, e a K_AF não é repartida com o DTLS 1.3 (RFC 8446 E.7).
+
+### 4.5 Retomada, expiração e o que mais muda
+
+- **Portas:** `psk-dtls13` em UDP 5684, a porta padrão do `coaps`; `psk-dtls12` em UDP 5685. Um perfil por porta, como na U6.
+- **Retomada:** como nos perfis PSK TLS (U8): *tickets* até a expiração da K_AF e no máximo 24 horas.
+- **K_AF vencida:** como na U9: o AF encerra a associação DTLS com o alerta `close_notify`; o *handshake* seguinte segue a política `refetch` ou `reject`.
+- **MTU:** 1200 octetos, abaixo do MTU do túnel GTP; o *handshake* com PSK cabe com folga.
+- **Connection ID** (RFC 9147 §9): não (U20). O endereço do UE é fixo enquanto dura a sessão PDU. Atrás do NAT do N6, o mapeamento UDP pode expirar com a associação parada; o AF passa a ver outra porta de origem, e o UE faz um novo *handshake*, retomado pelo *ticket*.
+- **Ligação `af/wolftls`:** passa a ter DTLS. No servidor, um *socket* UDP recebe os datagramas de todos os UEs e os separa pelo endereço de origem, uma associação por endereço; o wolfSSL lê um datagrama inteiro por vez, e a ligação trata os temporizadores de retransmissão.
+- **Cliente:** `uaclient -profile psk-dtls13` ou `psk-dtls12`, com o CoAP do `af/coap`.
+
+### 4.6 Verificação prevista
+
+| Caso | Esperado |
+|---|---|
+| UE → AF por DTLS 1.3, CoAP GET | `HelloRetryRequest` com *cookie*; `psk_dhe_ke`; `2.05` com o A-KID; AF_ID `…0100000009` no log do AAnF |
+| UE → AF por DTLS 1.2 (se U13 b) | `HelloVerifyRequest`; suíte `D0 01`; *hint* `3GPP-AKMA`; `2.05`; AF_ID `…010001D001` |
+| segunda associação | retomada pelo *ticket* |
+| `ClientHello` que só oferece `psk_ke` | recusado (TS 33.210 §6.2.2) |
+| K_AF errada; A-KID desconhecido; AF_ID fora da política | *handshake* recusado |
+| `ClientHello` sem o *cookie* | o AF não pede nada ao AAnF antes do segundo `ClientHello` |
+| K_AF vencida, `refetch` e `reject` | associação encerrada; novo *handshake* conforme a política |
+| conferência independente (U21) | o `openssl s_client -dtls1_3` do OpenSSL 4.1 com `-psk_identity` e a K_AF de um vetor, mandando o GET em CoAP, recebe `2.05` |
+| logs | nenhuma chave |
+
+O `e2e.sh` ganha o passo R2d, com o UE no seu *namespace*, e um grupo D na máquina do AF.
 
 ## 5. Pontos para aprovação
 
@@ -366,6 +430,20 @@ Ficam para a próxima revisão deste documento, depois das fases (a) e (b):
 | U11 | ADR | ADR-0003 revisto: a faixa privada fica para o Ua\* simplificado; os perfis da norma usam os identificadores de TS 33.220 H.3 | — |
 | U12 | 0-RTT | desligado nos perfis PSK | `[MVP]` sem sigilo futuro e sujeito a repetição (artigo 13 da literatura); TS 33.210 §6.2 não o exige |
 
+**Fase (c), DTLS** (aprovados pelo responsável em 21/10/2026, como propostos):
+
+| Nº | Ponto | Proposta | Base |
+|---|---|---|---|
+| U13 | DTLS 1.2 | **(b)** DTLS 1.2 com o procedimento do TLS 1.2 e o identificador `01 00 01 yy zz` da suíte (`…010001D001`), no perfil `psk-dtls12`. Alternativas: (a) só DTLS 1.3, registrando em `desvios.md` a falta do DTLS 1.2 que TS 33.210 exige; (c) DTLS 1.2 com o `…09` do DTLS 1.3, o que repartiria a mesma K_AF entre o DTLS 1.2 e o 1.3, contra RFC 8446 E.7 | `[LACUNA]` TS 33.210 §6.2.1 (*shall*); TS 33.535 C.1.1 e C.2; TS 33.220 H.3. `[INTERPRETAÇÃO]` na (b): H.3 dá `01 00 01 yy zz` ao TLS 1.2, e o DTLS 1.2 é o TLS 1.2 sobre datagramas (TS 33.210 §6.2.1 NOTA 2) |
+| U14 | Protocolo dentro do DTLS | CoAP (RFC 7252), `coaps`, `GET /ua/v1/session` com resposta `2.05` em JSON (seção 4.2); pacote `af/coap` | `[LACUNA]` Anexos C e O não o fixam (*"no dependency on the application layer protocol"*). O CoAP é também a base da fase (d) |
+| U15 | Suíte obrigatória do CoAP | não ter `TLS_PSK_WITH_AES_128_CCM_8`; registrar em `desvios.md` a escolha de TS 33.210 sobre RFC 7252 | `[DIVERGÊNCIA]` RFC 7252 §9.1.3.1 contra TS 33.210 §6.2.3 e TS 33.535 C.2.1 |
+| U16 | *Cookie* contra negação de serviço | sempre: `HelloRetryRequest` no DTLS 1.3, `HelloVerifyRequest` no DTLS 1.2; o AF só pede a K_AF ao AAnF depois do *cookie* | RFC 9147 §5.1 (*MAY*); RFC 6347 §4.2.1. Sem ele, um endereço forjado faria o AF consultar o AAnF |
+| U17 | Portas | UDP 5684 (`psk-dtls13`, porta do `coaps`) e 5685 (`psk-dtls12`) | RFC 7252 §6.2; U6 |
+| U18 | Identificador do DTLS 1.3 | `01 00 00 00 09`, AF_ID `<FQDN>.0100000009` | `[INTERPRETAÇÃO]` TS 33.220 H.3 dá o `…09` ao DTLS do Anexo O, que o Anexo C do AKMA reproduz; TS 33.535 A.4 remete ao Anexo H. O TLS 1.3 do AKMA usa o `…07` do GBA da mesma forma |
+| U19 | Retomada, expiração, MTU | como U8 e U9; MTU de 1200 octetos | TS 33.222 §5.4.1.4; TS 33.535 §6.4.2 |
+| U20 | *Connection ID* | não | `[MVP]` RFC 9147 §9 o deixa opcional. O endereço do UE não muda durante a sessão PDU; se o mapeamento do NAT do N6 expirar, um novo *handshake* retomado pelo *ticket* resolve |
+| U21 | Conferência independente | compilar à parte, só para o teste, o OpenSSL 4.1 (a versão final, se já tiver saído; senão a *beta* mais nova), que traz o DTLS 1.3, e usar o `s_client -dtls1_3 -psk` contra o AF, como o T05 fez com o TLS 1.3. Não vai para o repositório nem para o guia | o OpenSSL 3.0 da VM do AF não tem DTLS 1.3, e nenhum deles tem `D0 01` no DTLS 1.2: o DTLS 1.2 fica sem conferência independente |
+
 ## 6. Arquivos previstos
 
 - **Fase (a):**
@@ -381,3 +459,24 @@ Ficam para a próxima revisão deste documento, depois das fases (a) e (b):
   - `af/scripts/e2e.sh` (grupo T);
   - `docs/decisions/` (ADR-0003 revisto) e `desvios.md`, se algum ponto virar desvio.
 - **Nas duas:** matriz de rastreabilidade revisão 6; tutorial, parte 10.
+- **Fase (c):**
+  - `af/coap` (novo, Apache-2.0) e `af/wolftls` (DTLS);
+  - `af/af` (perfis `psk-dtls13` e `psk-dtls12`) e `af/ue/uaclient`;
+  - `af/config/afcfg*.yaml`, `free5gc/config/aanfcfg.yaml`, o `nefcfg.yaml` do *patch* de configuração e o *patch* 0005 (AF_ID `…0100000009`);
+  - `af/scripts/e2e.sh` e `e2e-remote.sh` (R2d e grupo D);
+  - `desvios.md` (U15 e, se for a escolha, U13);
+  - tutorial, guia público e matriz revisão 7.
+
+## 7. Fase (d): OSCORE
+
+Fica para a próxima revisão deste documento, depois da fase (c):
+
+- **OSCORE**, TS 33.535 Anexo D: CoAP, OSCORE (RFC 8613) e CBOR. Duas opções:
+  - em Go, sobre o `af/coap` da fase (c), conferido com os vetores do RFC 8613 Apêndice C;
+  - a libcoap (`--enable-oscore`, sobre o wolfSSL), como no `adaptive-security` do responsável. Lá o contexto OSCORE é estático; o estabelecimento AKMA de D.3 (`POST /akma`, CBOR e HKDF) teria de ser escrito nas duas opções.
+
+  Pontos a decidir:
+  - os parâmetros do HKDF;
+  - a forma do HPLMN-ID no A-KID em CBOR;
+  - a remissão de D.3.2 ao "Anexo Y";
+  - o campo que D.3.2 lista e D.3.5 não tem.
