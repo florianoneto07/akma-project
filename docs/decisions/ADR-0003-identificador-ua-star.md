@@ -1,6 +1,6 @@
 # ADR-0003 — Identificador de protocolo de segurança Ua* do MVP
 
-**Estado:** Aceito — com a aprovação do plano de desenvolvimento, em 16/10/2026
+**Estado:** Aceito — com a aprovação do plano de desenvolvimento, em 16/10/2026. **Revisto** em 21/10/2026 (MVP-8, ponto U11 de `docs/af-side/ua-star-norma.md`): seção 6
 **Data:** 02 de setembro de 2026
 
 ---
@@ -74,3 +74,28 @@ A decisão da seção 2 não muda.
 - TS 33.222 V19.0.0, §5.4.0.2, NOTA 0
 - TS 33.535 V19.0.0, Anexos A.4, B.1.2.2 e B.1.3
 - TS 24.109 V19.0.0, §5.2 e Anexo K
+- TS 33.222 V19.0.0, §5.3 e §5.4
+
+---
+
+## 6. Revisão de 21/10/2026: os perfis da norma (MVP-8)
+
+`[3GPP]` Com o MVP-8, o AF e o UE passam a ter os perfis de TS 24.109 Anexo K (`docs/af-side/ua-star-norma.md`). Cada um tem o seu identificador em TS 33.220 H.3:
+
+| Perfil | Identificador Ua\* | AF_ID no laboratório |
+|---|---|---|
+| K.2, Digest dentro de TLS, AF autenticado por certificado (TS 33.222 §5.3) | `(0x01,0x00,0x01,yy,zz)`, com `yy zz` o *cipher suite* negociado | `af1.akma.example.0100011301` (TLS 1.3, `TLS_AES_128_GCM_SHA256`) e os demais *cipher suites* aceitos |
+| K.3, TLS 1.3 com chave compartilhada (TS 33.222 §5.4.0.2) | `(0x01,0x00,0x00,0x00,0x07)`, fixo | `af1.akma.example.0100000007` |
+| K.3, TLS 1.2 com chave compartilhada (TS 33.222 §5.4.0.1) | `(0x01,0x00,0x01,yy,zz)` | `af1.akma.example.010001D001` (`TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256`) |
+| Ua\* simplificado, teste, desligado por padrão | `(0xFF,0x00,0x00,0x00,0x01)` | `af1.akma.example.FF00000001` |
+
+**Decisão revista.** A faixa privada da seção 2 fica só para o Ua\* simplificado, agora o perfil de teste `digest-http`. Os perfis da norma usam os identificadores de H.3. As políticas do AAnF, do NEF e do UE têm um AF_ID por perfil e por *cipher suite* aceito.
+
+**O que muda na seção 4.**
+
+- *"A migração para TLS 1.2 exigiria tratar a dependência da ciphersuite na derivação, e não é recomendada."* Não vale mais. `[3GPP]` TS 33.222 §5.4.0.2 NOTA 0 diz por que o TLS 1.2 e o K.2 podem depender do *cipher suite*: o UE só precisa da chave depois do `ServerHello`. No PSK TLS 1.2, o UE deriva a K_AF no *callback* de PSK, com o *cipher suite* escolhido pelo AF (`ua-star-norma.md` §3.4). No K.2, deriva-a ao receber o desafio Digest, dentro do túnel já estabelecido (§3.2). Não há dependência circular: a chave só entra depois da escolha do *cipher suite*.
+- A migração para o TLS 1.3 com PSK foi feita como a seção 4 previa: identificador `…07` e identidade `3GPP-AKMA;<A-KID>`.
+- O Ua\* simplificado continua com o DV-5 e o DV-6. O K.2 também os tem, porque usa o mesmo Digest.
+
+A fundamentação da seção 3 continua válida para o Ua\* simplificado.
+

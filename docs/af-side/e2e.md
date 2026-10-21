@@ -1,6 +1,6 @@
-# Ponta a ponta e testes negativos (MVP-5 e MVP-6)
+# Ponta a ponta e testes negativos (MVP-5 a MVP-8)
 
-**Data:** 18 de outubro de 2026; MVP-6 em 19 de outubro de 2026 · **Resultado do MVP-6:** 83 verificações, nenhuma falha (execução `20261019-213720`, seção 5.2) · **MVP-5:** 63 verificações, nenhuma falha (execução `20261018-171510`) · **Instalação limpa:** 63 verificações, nenhuma falha, em 19 de outubro de 2026 (execução `20261019-160723`, seção 5.1)
+**Data:** 18 de outubro de 2026; MVP-6 em 19 de outubro de 2026; MVP-8 em 20 e 21 de outubro de 2026 · **Resultado do MVP-8, fase (b):** 115 verificações, nenhuma falha (execução `20261021-164401`, seção 5.4) · **Resultado do MVP-6:** 83 verificações, nenhuma falha (execução `20261019-213720`, seção 5.2) · **MVP-5:** 63 verificações, nenhuma falha (execução `20261018-171510`) · **Instalação limpa:** 63 verificações, nenhuma falha, em 19 de outubro de 2026 (execução `20261019-160723`, seção 5.1)
 
 ## 1. O que o roteiro faz
 
@@ -22,9 +22,11 @@ As duas máquinas se sincronizam por arquivos-marcadores em três pontos (A, B, 
 | R1 | free5GC | NAT do N6, *namespace* do UE, `linkIp` do gNB, assinatura AKMA; free5GC com `-aanf`, gNB e UE no ar |
 | R2 | free5GC | registro; A-KID do UE = do AUSF = do AAnF; Ua\* do UE pelo plano de usuário, 3 requisições |
 | N (ponto A) | AF | testes negativos da API do AAnF, do `register-anchorkey`, do RID e do AF (seção 4); acesso anônimo direto ao AAnF (N01c, MVP-6) |
-| E (ponto A) | AF | MVP-6: túnel até o NRF; três AF extras (externo na 8083, externo anônimo na 8084, interno anônimo na 8085); API do NEF (seção 4.1) |
+| E (ponto A) | AF | MVP-6: túnel até o NRF; três AF extras (externo na 8083, externo anônimo na 8084, interno anônimo na 8085) e, no MVP-8, um externo com PSK TLS 1.3 na 8456; API do NEF (seção 4.1) |
 | R2k | free5GC | MVP-8, fase (a): serviço de chaves do ME (TS 33.535 §4.4.3). O `uaclient` recebeu a K_AF do seu AF_ID; outro AF_ID, outro usuário e o `akma-kaf` do `nr-cli` são recusados; a configuração com um AF_ID em duas aplicações não sobe |
-| R2n | free5GC | MVP-6: Ua\* do UE com os três AF extras; o AAnF entrega via NEF; o NEF repassa a K_AF e não registra o SUPI |
+| R2t | free5GC | MVP-8, fase (b): Ua\* do UE pelos perfis TLS, com a K_AF do ME para o AF_ID de cada perfil e *cipher suite*. K.2 em TLS 1.3 (duas conexões, a segunda retomada) e em TLS 1.2; PSK TLS 1.3 e PSK TLS 1.2, duas conexões cada; `ClientHello` só com `psk_ke` recusado |
+| T (ponto A) | AF | MVP-8, fase (b): o que o AF viu do R2t (AF_ID de cada *cipher suite*; retomadas); PSK TLS 1.3 com o `openssl s_client` no papel do UE; recusas (K_AF de outro AF_ID, A-KID desconhecido, `psk_ke`, certificado de outro FQDN, AF_ID fora da política do AAnF); expiração da K_AF numa sessão TLS, com as políticas `refetch` e `reject` |
+| R2n | free5GC | MVP-6: Ua\* do UE com os três AF extras; o AAnF entrega via NEF; o NEF repassa a K_AF e não registra o SUPI. MVP-8: Ua\* por PSK TLS 1.3 com um quarto AF extra, externo, na porta 8456 |
 | R3 | free5GC | nova autenticação: A-KID novo, contexto substituído, Ua\* com o novo; Ua\* com o A-KID e a K_AF anteriores, ainda aceitos pelo AF até `expiry` |
 | B (ponto B) | AF | os AF extras se descadastram do NRF (E12); o AAnF recusa o A-KID anterior e aceita o novo |
 | R4 | free5GC | AAnF parado durante uma autenticação (D9) |
@@ -42,7 +44,9 @@ Na máquina do free5GC, as partes 3 a 7 do tutorial, isto é:
 - o AAnF implantado (`bin/aanf`, `config/aanfcfg.yaml`) e o `seed` em `~/akma-tools/`;
 - o UERANSIM com os *patches*, o `linkIp: 10.100.0.1` do gNB e o `uaclient` em `~/akma-free5gc/af/build/bin/`.
 
-Na máquina do AF: `af/scripts/build-af.sh` e `free5gc/scripts/build-aanf.sh`; acesso SSH por chave à máquina do free5GC; e o `af/config/afcfg.yaml` com o `aanfUri` do AAnF da máquina do free5GC.
+Na máquina do AF: `af/scripts/build-wolfssl.sh`, `af/scripts/make-test-ca.sh`, `af/scripts/build-af.sh` e `free5gc/scripts/build-aanf.sh`; o `openssl` (o grupo T o usa como UE independente); acesso SSH por chave à máquina do free5GC; e o `af/config/afcfg.yaml` com o `aanfUri` do AAnF da máquina do free5GC.
+
+O roteiro sobe o AF com os perfis de `afcfg.yaml` e acrescenta o perfil de teste `digest-http` na porta 8080, que os grupos R2, N, R3 a R5 usam. Ele copia a CA de teste para a máquina do free5GC a cada execução. As políticas do AAnF, do NEF e do UE precisam dos AF_IDs dos perfis (`docs/af-side/af.md` §3).
 
 O roteiro confere esses itens no início (*preflight*) e mostra o estado dos *patches*. O NAT do N6 e o *namespace* do UE ele mesmo aplica.
 
@@ -191,6 +195,18 @@ O teste com o UERANSIM em outra máquina (critério 6) está em `docs/af-side/te
   - o `uaclient` passou pela política e recebeu `NO_KEY_MATERIAL`, porque não havia registro;
   - o `python3` do mesmo usuário recebeu `ERR NOT_AUTHORIZED`;
   - ao encerrar, o `nr-ue` apagou o *socket*.
+
+### 5.4 MVP-8, fase (b), em 21/10/2026
+
+`115 passed, 0 failed` na execução `20261021-164401`: 51 verificações na máquina do free5GC e 64 na do AF, em cerca de três minutos. O AF e o `uaclient` foram compilados com o wolfSSL 5.9.4. A máquina do free5GC tem a política nova do AAnF, os *patches* de configuração com a política nova do NEF e o *patch* 0005 com a política nova do UE.
+
+- **Verificações novas.** As oito do R2t, as dezessete do grupo T (seção 1) e duas no R2n: um AF fora da rede do operador com o perfil PSK TLS 1.3 (porta 8456), cuja K_AF vem pelo NEF. Os casos e o resultado de cada um estão em `ua-star-norma.md` §3.9.
+- **Execuções anteriores.** As falhas foram do roteiro, não do sistema:
+  - **`20261021-115934` (106/7).** O `uaclient` da máquina do free5GC era de antes da opção `-tls12` (R2t.k2-tls12, R2t.me, T02). O R2k.af-id pedia ao cliente um AF_ID de outro FQDN; o cliente agora só pergunta ao ME depois do desafio, e o AF recusa o FQDN antes (421). O R2k.af-id passou a perguntar ao serviço de chaves direto, como o usuário do `uaclient`. T12, T12b e T13b: o AAnF devolvia a K_AF que ainda valia para ele, e o AF, com o relógio adiantado, a achava vencida (`ua-star-norma.md` §3.9).
+  - **`20261021-120446`.** O registro de novo pelo `seed`, sem remover o contexto, não renova a K_AF no AAnF: o AAnF guarda as K_AF de um contexto enquanto o A-KID não muda. O roteiro passou a remover o contexto antes de registrar de novo. Além disso, o `e2e.sh` foi editado enquanto rodava e voltou a executar a parte remota; ela foi interrompida com Ctrl-C.
+  - **`20261021-132202` (113/0).** Execução válida, antes das duas verificações do AF externo com PSK no R2n.
+  - **`20261021-120909` (66/36).** Não vale. A parte remota interrompida na execução anterior não parou: o `e2e-remote.sh` ligava o controle de *jobs* (`set -m`), e o Ctrl-C e o fim da sessão SSH só alcançavam o comando em curso. Ela seguiu sozinha até o fim e parou o free5GC desta execução no meio do R2. Agora o controle de *jobs* só vale para iniciar o `run.sh`, e o Ctrl-C para o roteiro remoto.
+- **AUSF.** Antes da execução, o AUSF da máquina do free5GC foi revertido com o texto anterior do *patch* e reaplicado com o atual (`124b2d5`, que só mudou comentários). Assim o *preflight* volta a mostrar `ausf: patches applied`.
 
 ## 6. Limitações
 

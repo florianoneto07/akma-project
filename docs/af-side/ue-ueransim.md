@@ -80,11 +80,19 @@ akmaKeyService:
   applications:
     - name: uaclient
       uid: 1000            # o usuário que roda a aplicação (id -u)
-      afIds:
-        - af1.akma.example.FF00000001
+      afIds:               # um por perfil Ua* e cipher suite (TS 33.220 H.3)
+        - af1.akma.example.0100011301   # Digest em TLS 1.3 (K.2)
+        - af1.akma.example.0100011302
+        - af1.akma.example.0100011303
+        - af1.akma.example.010001C02B   # Digest em TLS 1.2
+        - af1.akma.example.010001C02C
+        - af1.akma.example.0100000007   # TLS 1.3 com a K_AF como PSK (K.3.3)
+        - af1.akma.example.010001D001   # TLS 1.2 com a K_AF como PSK (K.3.2)
+        - af1.akma.example.FF00000001   # Ua* simplificado, teste
 akmaCliKaf: false
 ```
 
+- `afIds`: desde a fase (b) do MVP-8, os AF_IDs dos perfis TLS do AF (`ua-star-norma.md` §3), além do de teste. O cliente pede ao serviço a K_AF do AF_ID do perfil e do *cipher suite* da conexão.
 - `executable`, opcional: o caminho absoluto do executável da aplicação.
 - `socket`, opcional: outro caminho para o *socket*.
 - Um AF_ID em duas aplicações faz o `nr-ue` recusar a configuração (TS 33.535 §4.4.3, item 3).

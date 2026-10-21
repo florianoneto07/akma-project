@@ -1,6 +1,6 @@
 # Plano de desenvolvimento por MVPs
 
-**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) implementado e verificado, com 83 verificações e nenhuma falha (19/10/2026). MVP-7 (repositório público) concluído: publicado no GitHub e instalado numa VM limpa só pelo guia, com 83 verificações e nenhuma falha (20/10/2026). MVP-8 (Ua\* da norma e autorização por aplicação no UE): organização e especificação das fases (a) e (b) aprovadas; fase (a), o serviço de chaves do ME, implementada e verificada, com 88 verificações e nenhuma falha (20/10/2026); o CAPIF passou a MVP-9.
+**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) implementado e verificado, com 83 verificações e nenhuma falha (19/10/2026). MVP-7 (repositório público) concluído: publicado no GitHub e instalado numa VM limpa só pelo guia, com 83 verificações e nenhuma falha (20/10/2026). MVP-8 (Ua\* da norma e autorização por aplicação no UE): organização e especificação das fases (a) e (b) aprovadas; fase (a), o serviço de chaves do ME, implementada e verificada, com 88 verificações e nenhuma falha (20/10/2026); fase (b), os perfis TLS (K.2, PSK TLS 1.3 e PSK TLS 1.2), implementada e verificada, com 115 verificações e nenhuma falha (21/10/2026); o CAPIF passou a MVP-9.
 **Data:** 15 de outubro de 2026; revisão 3 em 16 de outubro de 2026; aprovação em 16 de outubro de 2026
 **Base:** documentos `00` a `04`, Adendo E, ADR-0001-R2, ADR-0002, ADR-0003, `docs/baseline/ambiente-verificado.md`, `docs/baseline/conferencia-normativa.md`, `docs/literatura/analise-dos-artigos.md`, `docs/conformidade/desvios.md`
 **Revisão 2 (15/10/2026):** conferido contra as normas do acervo (hoje em `specs/`).
@@ -820,6 +820,22 @@ Diferenças em relação à especificação, registradas nela:
 
 - o *socket* padrão leva o SUPI, `/run/ueransim/akma-<SUPI>.sock`, porque o `nr-ue -n` roda vários UEs num processo;
 - entra a causa `UNAVAILABLE`, para quando o ME não consegue pausar as tarefas a tempo.
+
+**Estado (21/10/2026):** **fase (b) implementada e verificada.** `e2e.sh` com 115 verificações e nenhuma falha (execução `20261021-164401`; `docs/af-side/e2e.md` §5.4). A implementação e as diferenças estão em `ua-star-norma.md` §3.8; o ADR-0003 foi revisto (U11).
+
+| Caso da especificação (§3.7) | Resultado |
+|---|---|
+| K.2 em TLS 1.3 e 1.2, com o AF_ID do *cipher suite* | atendido [R2t.k2-tls13, R2t.k2-tls12, T01, T02] |
+| K.2 com certificado ou `realm` de outro FQDN | atendido: certificado [T09]; `realm` no teste de unidade `TestK2RealmOfAnotherAF` |
+| PSK TLS 1.3, `psk_dhe_ke`, AF_ID `…0100000007` | atendido [R2t.psk13, T03] |
+| PSK TLS 1.2, suíte `D0 01`, *hint* `3GPP-AKMA`, AF_ID `…010001D001` | atendido [R2t.psk12, T04] |
+| retomada de sessão | atendido nos três perfis [R2t.k2-resumed, R2t.psk12-resumed, T03, T04] |
+| `psk_ke`, K_AF errada, A-KID desconhecido, AF_ID fora da política | recusados [R2t.psk-ke, T06, T07, T08, T10] |
+| conferência independente com o OpenSSL | atendido [T05] |
+| K_AF vencida, `refetch` e `reject` | atendido [T11, T12, T13] |
+| nenhuma chave em log | atendido [L1, R7] |
+
+Diferenças em relação à especificação, registradas nela (§3.8): wolfSSL 5.9.4 em vez de 5.8.4; sem a suíte `D0 02`, que o wolfSSL não tem; sem OCSP *stapling*; o UE dos perfis PSK só aceita PSK (U6); o UE pede a K_AF ao ME só depois do desafio. A `D0 02` e o OCSP *stapling* são recomendados (*should*) por TS 33.210 §6.2, e a decisão de registrar ou não as duas ausências como desvio está com o responsável.
 
 **Pedido** (responsável, 20/10/2026):
 

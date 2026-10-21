@@ -354,7 +354,7 @@ cd ~/free5gc && ./run.sh -aanf
 O AAnF aparece na mesma tela, com uma linha de partida que mostra o que ele atende:
 
 ```
-[INFO][AANF][AKMA] Routing Indicators [0000]; K_AF lifetime 1h0m0s; AF_IDs authorized by local policy: [af1.akma.example.FF00000001]
+[INFO][AANF][AKMA] Routing Indicators [0000]; K_AF lifetime 1h0m0s; AF_IDs authorized by local policy: [af1.akma.example.0100000007 af1.akma.example.0100011301 …]
 ```
 
 ### 5.2 UERANSIM
@@ -369,7 +369,7 @@ Os *patches* mudam três coisas no `config/free5gc-ue.yaml`:
 
 - ligam a opção `akma: true`;
 - fazem o UE procurar o gNB em 10.100.0.1;
-- desde o MVP-8, põem a política do serviço de chaves do ME: cada aplicação só recebe a K_AF dos seus AF_IDs (TS 33.535 §4.4.3; `docs/af-side/ue-ueransim.md` §3). O exemplo autoriza o `uaclient` do usuário de *uid* 1000 para `af1.akma.example.FF00000001`.
+- desde o MVP-8, põem a política do serviço de chaves do ME: cada aplicação só recebe a K_AF dos seus AF_IDs (TS 33.535 §4.4.3; `docs/af-side/ue-ueransim.md` §3). O exemplo autoriza o `uaclient` do usuário de *uid* 1000 para os AF_IDs dos perfis do AF da parte 6: um por perfil e por *cipher suite*, e o de teste, `af1.akma.example.FF00000001`.
 
 Se o usuário que roda o cliente Ua\* não tem *uid* 1000 (`id -u`), troque o `uid`. Se você usa outro arquivo de configuração, faça o mesmo nele.
 
@@ -428,51 +428,86 @@ Um AF que usa AKMA faz três coisas (TS 33.535 §6.2.1):
 - pede ao AAnF a K_AF daquele A-KID para o próprio AF_ID;
 - usa a K_AF para autenticar o UE.
 
-O AF de teste do repositório faz isso com um Ua\* simplificado: o HTTP Digest de TS 24.109 K.2, sem TLS, com o identificador Ua\* `FF00000001` da faixa privada. O protocolo está em `docs/af-side/ua-star.md` e o AF em `docs/af-side/af.md`.
+O AF de teste do repositório serve os perfis de TS 24.109 Anexo K, cada um na sua porta (`docs/af-side/ua-star-norma.md`):
+
+| Perfil | Porta no laboratório | Como o UE se autentica | AF_ID |
+|---|---|---|---|
+| `digest-tls` (K.2) | 8443 | HTTP Digest com a K_AF dentro de TLS; o AF se autentica pelo certificado | `<FQDN>.010001<cipher suite>` |
+| `psk-tls13` (K.3.3) | 8444 | TLS 1.3 com a K_AF como chave pré-compartilhada | `<FQDN>.0100000007` |
+| `psk-tls12` (K.3.2) | 8445 | TLS 1.2 `ECDHE-PSK` com a K_AF | `<FQDN>.010001D001` |
+| `digest-http` (teste, desligado por padrão) | 8080 | o Ua\* simplificado: o Digest, sem TLS (`docs/af-side/ua-star.md`) | `<FQDN>.FF00000001` |
+
+O AF está em `docs/af-side/af.md`.
 
 ### 6.1 Autorizar o AF no AAnF
 
-O AAnF só entrega K_AF a um AF_ID autorizado, a partir do endereço do AF. No `aanfcfg.yaml` da parte 3 já está:
+O AAnF só entrega K_AF a um AF_ID autorizado, a partir do endereço do AF. Cada perfil, e no K.2 cada *cipher suite*, tem o seu AF_ID (TS 33.220 H.3). No `aanfcfg.yaml` da parte 3 já estão os oito AF_IDs de `af1.akma.example`:
 
 ```yaml
 configuration:
   akma:
     authorizedAfs:
-      - afId: af1.akma.example.FF00000001
+      - afId: af1.akma.example.0100011301   # K.2 em TLS 1.3, TLS_AES_128_GCM_SHA256
         sourceAddresses:
           - 192.168.16.129
+      # ... 0100011302, 0100011303, 010001C02B, 010001C02C (K.2),
+      #     0100000007 (PSK TLS 1.3), 010001D001 (PSK TLS 1.2), FF00000001 (teste)
 ```
 
-O AF_ID é o FQDN do AF seguido do identificador Ua\* (TS 33.535 A.4). Se mudar o FQDN ou a máquina do AF, mude aqui também.
+O AF_ID é o FQDN do AF seguido do identificador Ua\* (TS 33.535 A.4). Se mudar o FQDN ou a máquina do AF, mude em todas as entradas.
 
 ### 6.2 Compilar e configurar o AF
 
-Na máquina do AF (no laboratório, a VM do AF), com Go 1.26.2:
+Na máquina do AF (no laboratório, a VM do AF), com Go 1.26.2, `gcc`, `make` e `unzip`. Primeiro o wolfSSL, que faz os perfis PSK: o `crypto/tls` do Go não tem as suítes PSK de TS 33.210. O *script* baixa o wolfSSL 5.9.4, confere o SHA-256 e o compila em `af/build/wolfssl`:
+
+```bash
+af/scripts/build-wolfssl.sh
+```
+
+Depois a CA de teste e o certificado do AF para o K.2, em `af/build/cert`:
+
+```bash
+af/scripts/make-test-ca.sh
+```
+
+E o AF e o cliente:
 
 ```bash
 af/scripts/build-af.sh
 ```
 
+Com o wolfSSL, os binários ficam sob GPLv3, como o próprio wolfSSL. Sem ele (`AF_WOLFSSL=no`), o AF não tem os perfis PSK e recusa partir com eles na configuração.
+
 A configuração fica em `af/config/afcfg.yaml`. Os campos que importam:
 
-- `fqdn`: o nome pelo qual o UE chama o AF. Ele entra na K_AF, e o AF só aceita esse nome no cabeçalho `Host`;
-- `listen`: o endereço em que o AF escuta. Os pedidos ao AAnF não saem dele: saem do endereço que o sistema escolhe pela rota até o AAnF, e é esse que tem de estar em `sourceAddresses` (seção 6.1). Numa máquina com uma interface só, como no laboratório, os dois coincidem;
+- `fqdn`: o nome pelo qual o UE chama o AF. Ele entra na K_AF, e o AF só aceita esse nome no cabeçalho `Host` e no `server_name` do TLS;
+- `profiles`: um servidor por perfil, com `type` e `listen`; o `digest-tls` tem ainda `certificate` e `key`, relativos ao arquivo. Os pedidos ao AAnF não saem dos `listen`: saem do endereço que o sistema escolhe pela rota até o AAnF, e é esse que tem de estar em `sourceAddresses` (seção 6.1). Numa máquina com uma interface só, como no laboratório, os dois coincidem;
 - `aanfUri`: o endereço do AAnF, o `sbi.registerIPv4` da seção 3.2 com a porta 8010. No repositório está o do laboratório;
-- `kafExpiry`: o que fazer quando a K_AF vence, `refetch` ou `reject`.
+- `kafExpiry`: o que fazer quando a K_AF vence, `refetch` ou `reject`. Nos perfis PSK, o AF também encerra a sessão TLS quando a K_AF vence.
 
 ```bash
 af/build/bin/af -c af/config/afcfg.yaml
 ```
 
-Na tela, a partida mostra o AF_ID e o `realm`:
+Na tela, a partida mostra cada perfil:
 
 ```
-[INFO][AF][Main] AF_ID af1.akma.example.FF00000001; realm "3GPP-bootstrapping-akma@af1.akma.example"; ...
+[INFO][AF][Main] Built with wolfSSL: PSK profiles available
+[INFO][AF][Main] Ua* server digest-tls listening on 192.168.16.129:8443 for https://af1.akma.example/ua/v1/session, AF_ID af1.akma.example.010001<cipher suite> (TS 24.109 K.2)
+[INFO][AF][Main] Ua* server psk-tls13 listening on 192.168.16.129:8444 for https://af1.akma.example/ua/v1/session, AF_ID af1.akma.example.0100000007 (TS 24.109 K.3.3)
+[INFO][AF][Main] Ua* server psk-tls12 listening on 192.168.16.129:8445 for https://af1.akma.example/ua/v1/session, AF_ID af1.akma.example.010001<cipher suite> (TS 24.109 K.3.2)
 ```
 
 ### 6.3 Testar sem UE
 
-O UE do UERANSIM só entrega a K_AF na parte 7. Antes disso, faça o papel do UE com um vetor do projeto, em dois passos:
+O UE do UERANSIM só entrega a K_AF na parte 7, e ele a deriva para qualquer perfil. Antes disso, faça o papel do UE com um vetor do projeto. O vetor traz a K_AF de um AF_ID só, `af1.akma.example.FF00000001`, a do perfil de teste. Ligue-o, tirando o comentário destas linhas de `af/config/afcfg.yaml`, e reinicie o AF:
+
+```yaml
+    - type: digest-http
+      listen: 192.168.16.129:8080
+```
+
+Então:
 
 1. semeie no AAnF o contexto do vetor `testbed-ue`, como na seção 3.6 (`~/akma-tools/seed register`, com o `--aanf`);
 2. rode o cliente Ua\* com o mesmo vetor:
@@ -484,10 +519,10 @@ O UE do UERANSIM só entrega a K_AF na parte 7. Antes disso, faça o papel do UE
 O cliente pede a sessão, recebe o desafio, responde com o A-KID e a K_AF e confere o `rspauth` do AF:
 
 ```
-session established (nc 00000001): AF authenticated by rspauth; K_AF valid until ...
+session established (nc 00000001): AF authenticated by rspauth; A-KID …; AF_ID af1.akma.example.FF00000001; K_AF valid until ...
 ```
 
-Na tela do AF aparecem `K_AF for A-KID … obtained from the AAnF` e `UE with A-KID … authenticated`. Na do AAnF, `K_AF of imsi-… provided to AF_ID af1.akma.example.FF00000001`.
+Na tela do AF aparecem `K_AF for A-KID … and AF_ID af1.akma.example.FF00000001 obtained from the AAnF` e `UE with A-KID … authenticated`. Na do AAnF, `K_AF of imsi-… provided to AF_ID af1.akma.example.FF00000001`.
 
 O que testar a seguir, e o que esperar:
 
@@ -496,15 +531,19 @@ O que testar a seguir, e o que esperar:
 | K_AF errada: `-akid` com o A-KID do vetor e `-kaf` com outro valor (com `-vector`, o `-kaf` não vale) | `401` |
 | A-KID que o AAnF não conhece (`-vector rid-012`) | `403 AKMA_KEY_NOT_AVAILABLE` |
 | outro nome no `Host` (`-vector testbed-ue -fqdn af2.akma.example`) | `421 MISDIRECTED_REQUEST` |
-| AF_ID fora da política do AAnF: um segundo AF, com outra configuração, `fqdn: af2.akma.example` e outra porta em `listen`; o cliente com `-vector testbed-ue -fqdn af2.akma.example -connect <listen desse AF>` | `503 AANF_UNAVAILABLE` |
+| AF_ID fora da política do AAnF: um segundo AF, com outra configuração, `fqdn: af2.akma.example` e outras portas; o cliente com `-vector testbed-ue -fqdn af2.akma.example -connect <listen desse AF>` | `503 AANF_UNAVAILABLE` |
+| certificado de outro nome no K.2: `-profile digest-tls -ca af/build/cert/ca.pem -vector testbed-ue -fqdn af2.akma.example` | o cliente encerra o TLS antes de mandar o A-KID |
+| PSK com a K_AF de outro AF_ID: `-profile psk-tls13 -vector testbed-ue` | o *handshake* falha |
 
-Os resultados do laboratório estão em `docs/af-side/teste-af.md`.
+Os resultados do laboratório estão em `docs/af-side/teste-af.md` e, para os perfis TLS, no grupo T de `docs/af-side/e2e.md`. Desligue de novo o `digest-http` depois do teste.
 
-**Antes da parte 7.** O vetor `testbed-ue` tem o SUPI do UE do UERANSIM (`imsi-208930000000001`). Se o UE já se registrou, o `seed register` deste teste substituiu o contexto dele no AAnF. Faça então uma nova autenticação do UE (seção 7.4) antes da seção 7.3. Sem ela, o AF responde `403 AKMA_KEY_NOT_AVAILABLE` ao UE, porque o AAnF não tem mais o A-KID que o UE apresenta.
+**Antes da parte 7.** O vetor `testbed-ue` tem o SUPI do UE do UERANSIM (`imsi-208930000000001`). Se o UE já se registrou, o `seed register` deste teste substituiu o contexto dele no AAnF. Faça então uma nova autenticação do UE (seção 7.4) antes da seção 7.3. Sem ela, o AF recusa o UE, porque o AAnF não tem mais o A-KID que o UE apresenta.
 
 ### 6.4 Limitações
 
-Sem TLS, o A-KID e o conteúdo trafegam em claro, e o AF só é autenticado pelo `rspauth` (`docs/af-side/ua-star.md` §10). É um protocolo de laboratório; o perfil normativo, com TLS, fica para depois do MVP.
+- **`digest-http`.** Sem TLS, o A-KID e o conteúdo trafegam em claro, e o AF só é autenticado pelo `rspauth` (`docs/af-side/ua-star.md` §10). É só para teste.
+- **Certificado.** O do K.2 vem de uma CA de teste, sem revogação nem OCSP.
+- **SBI.** O pedido do AF ao AAnF continua sem TLS (DV-1).
 
 ---
 
@@ -538,25 +577,37 @@ O resultado esperado é `5 passed, 3 refused (FQDN not ASCII), 0 failed`. Os tr�
 
 ### 7.3 Autenticar no AF a partir do UE
 
-Na máquina do free5GC, compile o cliente Ua\* com `~/akma-free5gc/af/scripts/build-af.sh`, ou copie o `af/build/bin/uaclient` da máquina do AF para o mesmo lugar. O AAnF precisa ter o contexto da última autenticação do UE: se a seção 6.3 semeou o vetor `testbed-ue` depois que o UE se registrou, faça antes a nova autenticação da seção 7.4. Com o AF da parte 6 no ar:
+Na máquina do free5GC, ponha o cliente Ua\* e a CA de teste do AF onde o *script* os procura: copie da máquina do AF o `af/build/bin/uaclient` para `~/akma-free5gc/af/build/bin/` e o `af/build/cert/ca.pem` para `~/akma-free5gc/af/build/cert/`. O cliente compilado na máquina do AF é estático e roda na máquina do free5GC. O AAnF precisa ter o contexto da última autenticação do UE: se a seção 6.3 semeou o vetor `testbed-ue` depois que o UE se registrou, faça antes a nova autenticação da seção 7.4. Com o AF da parte 6 no ar:
 
 ```bash
-sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -n 3
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -profile psk-tls13 -n 2
 ```
 
 O cliente roda no *namespace* do UE, com o seu usuário:
 
-- pede o A-KID e a K_AF de `af1.akma.example` ao serviço de chaves do ME, em `/run/ueransim/akma-<SUPI>.sock`;
+- pede o A-KID e a K_AF ao serviço de chaves do ME, em `/run/ueransim/akma-<SUPI>.sock`, para o AF_ID do perfil;
 - vai ao AF a partir do endereço da sessão PDU;
-- confere o `rspauth`.
+- no TLS 1.3 com PSK, o *handshake* autentica os dois lados com a K_AF.
 
 ```
-ME: K_AF derived for AF_ID af1.akma.example.FF00000001
-AF af1.akma.example at 192.168.16.129:8080 from 10.60.0.1, A-KID rid0000.atid…
-session established (nc 00000001): AF authenticated by rspauth; K_AF valid until …
+AF af1.akma.example at 192.168.16.129:8444 from 10.60.0.1, profile psk-tls13
+ME: K_AF derived for AF_ID af1.akma.example.0100000007
+session established: AF authenticated by the TLS handshake with K_AF; A-KID rid0000.atid…; AF_ID af1.akma.example.0100000007; TLS 1.3, cipher suite 1301; K_AF valid until …
 ```
 
-O mesmo A-KID aparece nas telas do UE, do free5GC (AUSF e AAnF) e do AF. Na tela do UE aparece ainda `[app] [info] AKMA K_AF derived for AF_ID[af1.akma.example.FF00000001], …`.
+Os outros perfis:
+
+```bash
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -profile psk-tls12 -reconnect -n 2
+```
+
+```bash
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -profile digest-tls -ca ~/akma-free5gc/af/build/cert/ca.pem -n 3
+```
+
+No TLS 1.2, o ME deriva a K_AF depois que o AF escolheu a suíte (`AF_ID af1.akma.example.010001D001`), e com `-reconnect` a segunda conexão retoma a sessão (`resumed true`). No K.2, o cliente confere o certificado do AF contra `af1.akma.example` e a CA, e faz o Digest dentro do TLS; o AF_ID leva a suíte da conexão, como `af1.akma.example.0100011301`. As opções estão em `docs/af-side/ua-client.md`.
+
+O mesmo A-KID aparece nas telas do UE, do free5GC (AUSF e AAnF) e do AF. Na tela do UE aparece ainda `K_AF for AF_ID[af1.akma.example.0100000007] given to application [uaclient] (uid 1000), …`.
 
 ### 7.4 Nova autenticação
 
@@ -590,6 +641,14 @@ Com as partes 3 a 7 feitas, um único roteiro executa o AKMA inteiro e os testes
 Na máquina do AF:
 
 ```bash
+af/scripts/build-wolfssl.sh
+```
+
+```bash
+af/scripts/make-test-ca.sh
+```
+
+```bash
 af/scripts/build-af.sh
 ```
 
@@ -597,14 +656,14 @@ af/scripts/build-af.sh
 free5gc/scripts/build-aanf.sh
 ```
 
-A máquina do AF precisa de acesso SSH por chave à do free5GC (seção 1.1) e do `af/config/afcfg.yaml` da seção 6.2. Na do free5GC, o roteiro espera o que as partes anteriores deixaram:
+A máquina do AF precisa de acesso SSH por chave à do free5GC (seção 1.1), do `openssl` e do `af/config/afcfg.yaml` da seção 6.2. Na do free5GC, o roteiro espera o que as partes anteriores deixaram:
 
 - o repositório em `~/akma-free5gc`;
 - os *patches* aplicados, o AAnF implantado e o `seed` em `~/akma-tools/`;
 - o UERANSIM com os *patches* e o `linkIp: 10.100.0.1`;
-- o `uaclient` em `~/akma-free5gc/af/build/bin/`.
+- o `uaclient` compilado com o wolfSSL em `~/akma-free5gc/af/build/bin/` (seção 7.3).
 
-O free5GC deve estar parado: o roteiro o inicia. O AF da parte 6 também deve estar parado, porque o roteiro inicia o seu na mesma porta.
+O roteiro sobe o seu AF com os perfis de `afcfg.yaml` e mais o `digest-http` na porta 8080, e copia a CA de teste para a máquina do free5GC. O free5GC deve estar parado: o roteiro o inicia. O AF da parte 6 também deve estar parado, porque o do roteiro usa as mesmas portas.
 
 ### 8.2 Rodar
 
@@ -616,11 +675,12 @@ af/scripts/e2e.sh woca@192.168.16.130
 
 Sem o argumento, o roteiro usa a máquina do free5GC do laboratório, `woca@192.168.16.130`. O endereço do AAnF vem do `aanfUri` de `af/config/afcfg.yaml`. Antes de começar, o roteiro confere que é o `sbi.bindingIPv4` do `aanfcfg.yaml` instalado na máquina do free5GC.
 
-O roteiro pede a senha de `sudo` da máquina do free5GC uma vez e leva cerca de dois minutos. Ele:
+O roteiro pede a senha de `sudo` da máquina do free5GC uma vez e leva cerca de três minutos. Ele:
 
 - aplica o NAT do N6 e cria o *namespace* do UE;
 - sobe o free5GC com o AAnF, o gNB e o UE;
-- autentica no AF a partir do UE;
+- autentica no AF a partir do UE, por todos os perfis: o K.2 em TLS 1.3 e 1.2 e o PSK em TLS 1.3 e 1.2, com retomada de sessão;
+- confere o PSK TLS 1.3 com o `openssl s_client` no papel do UE, e a expiração da K_AF numa sessão TLS;
 - força novas autenticações primárias: com o AAnF parado, sem assinatura AKMA e com a assinatura restaurada;
 - roda os testes negativos;
 - encerra tudo.
@@ -629,7 +689,7 @@ Cada verificação aparece como `PASS` ou `FAIL`, e o fim mostra o total:
 
 ```
 report: …/af/build/e2e/<data-hora>/report.md
-88 passed, 0 failed
+115 passed, 0 failed
 ```
 
 ### 8.3 Ler o relatório
@@ -669,11 +729,11 @@ A configuração do NEF muda pelo *patch* de configuração da parte 4 (`free5gc
 
 - `sbi.registerIPv4` e `sbi.bindingIPv4`: o endereço da máquina do free5GC, que o AF externo alcança. A porta continua a 8000;
 - `3gpp-akma` em `serviceList`;
-- `akma.authorizedAfs`: cada AF_ID externo, com o endereço de origem do AF (§6.3 passo 2).
+- `akma.authorizedAfs`: cada AF_ID externo, com o endereço de origem do AF (§6.3 passo 2): os mesmos oito AF_IDs de `af1.akma.example` do AAnF.
 
 O AAnF precisa aceitar os pedidos que chegam pelo NEF. No `~/free5gc/config/aanfcfg.yaml`, a lista `akma.authorizedNefs` dá o endereço do NEF e os AF_ID externos aceitos dele (`docs/free5gc-side/aanf.md` §2). O AAnF escuta na porta 8010.
 
-Suba o free5GC com `./run.sh -aanf`. Na tela do NEF deve aparecer `Start SBI server (listen on 192.168.16.130:8000)`; na do AAnF, `AF_IDs accepted from a NEF: [af1.akma.example.FF00000001]`.
+Suba o free5GC com `./run.sh -aanf`. Na tela do NEF deve aparecer `Start SBI server (listen on 192.168.16.130:8000)`; na do AAnF, `AF_IDs accepted from a NEF: [af1.akma.example.0100000007 af1.akma.example.0100011301 …]`.
 
 ### 9.2 Rodar o AF fora da rede do operador
 
@@ -683,7 +743,7 @@ O AF externo se registra no NRF para obter o *token* da API do NEF. No laborató
 ssh -N -L 127.0.0.10:8000:127.0.0.10:8000 woca@192.168.16.130
 ```
 
-A configuração do AF externo está em `af/config/afcfg-external.yaml`. Ela tem `nefUri` no lugar de `aanfUri`, além de `nrfUri` e da porta 8083. Em outro terminal:
+A configuração do AF externo está em `af/config/afcfg-external.yaml`. Ela tem `nefUri` no lugar de `aanfUri`, além de `nrfUri`, e os mesmos perfis do AF interno, nas portas 8453 a 8455. Em outro terminal:
 
 ```bash
 af/build/bin/af -c af/config/afcfg-external.yaml
@@ -698,15 +758,15 @@ Na tela do AF:
 Com o UE no ar (parte 7), autentique o UE no AF externo:
 
 ```bash
-sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -connect 192.168.16.129:8083 -n 3
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -profile psk-tls13 -connect 192.168.16.129:8454 -n 1
 ```
 
 A saída do cliente é a mesma da seção 7.3. Na tela do free5GC aparecem as linhas do NEF e do AAnF:
 
 ```
-[INFO][NEF][AKMA] K_AF request from AF_ID af1.akma.example.FF00000001 for A-KID rid0000.atid…
-[INFO][AANF][AKMA] K_AF of imsi-208930000000001 provided to AF_ID af1.akma.example.FF00000001 for A-KID …, through the NEF at 192.168.16.130
-[INFO][NEF][AKMA] K_AF for A-KID rid0000.atid… relayed to AF_ID af1.akma.example.FF00000001, expires …
+[INFO][NEF][AKMA] K_AF request from AF_ID af1.akma.example.0100000007 for A-KID rid0000.atid…
+[INFO][AANF][AKMA] K_AF of imsi-208930000000001 provided to AF_ID af1.akma.example.0100000007 for A-KID …, through the NEF at 192.168.16.130
+[INFO][NEF][AKMA] K_AF for A-KID rid0000.atid… relayed to AF_ID af1.akma.example.0100000007, expires …
 ```
 
 As linhas do NEF não mostram o SUPI. A resposta do NEF ao AF também não o traz (§6.3 passo 5).
@@ -769,9 +829,9 @@ sudo ~/akma-free5gc/af/scripts/ue-netns.sh ue
 ```
 
 ```bash
-sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -n 3
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -profile psk-tls13 -n 2
 ```
 
-O gNB mostra `SCTP connection established (192.168.16.130:38412)` e `NG Setup procedure is successful`. O UE mostra o A-KID, que é o mesmo nas linhas do AUSF e do AAnF na tela do free5GC. Para o AF externo, use `ua -connect 192.168.16.129:8083`.
+O gNB mostra `SCTP connection established (192.168.16.130:38412)` e `NG Setup procedure is successful`. O UE mostra o A-KID, que é o mesmo nas linhas do AUSF e do AAnF na tela do free5GC. Para o AF externo, use `ua -profile psk-tls13 -connect 192.168.16.129:8454`.
 
 Resultado do laboratório em 19/10/2026: com o UE na máquina 192.168.16.131, o Ua\* passou com o AF interno, com o AF externo via NEF e com o AF externo anônimo (`docs/af-side/teste-nef.md`).

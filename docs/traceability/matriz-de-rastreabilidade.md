@@ -1,7 +1,7 @@
 # Matriz de rastreabilidade
 
-**Revisão:** 5 (MVP-6: K_AF via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina). Revisão 4 (MVP-5): etapas mínimas do fluxo ligadas a evidências do roteiro ponta a ponta
-**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 a 3.7 e 4 em 18 de outubro de 2026; revisão 5 em 19 de outubro de 2026
+**Revisão:** 6 (MVP-8, fases (a) e (b): serviço de chaves do ME e perfis TLS do Ua\*). Revisão 5 (MVP-6): K_AF via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina. Revisão 4 (MVP-5): etapas mínimas do fluxo ligadas a evidências do roteiro ponta a ponta
+**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 a 3.7 e 4 em 18 de outubro de 2026; revisão 5 em 19 de outubro de 2026; revisão 6 em 21 de outubro de 2026
 
 *Nota (16/10/2026):* os caminhos da coluna "Implementação" seguem a estrutura anterior ao plano. A estrutura aprovada (plano §3) é: `akma/` → `shared/akma/`; `NFs/aanf/` → `free5gc/aanf/`; `patches/` → `free5gc/patches/`; `af/` → `af/af/`; `ue/` → `af/ue/`. Os caminhos serão atualizados linha a linha à medida que cada MVP os criar. Os desvios citados como DV-n estão em `docs/conformidade/desvios.md`.
 
@@ -63,6 +63,28 @@ Evidências: verificações da execução `20261019-213720` de `af/scripts/e2e.s
 | Segurança NEF–AF: TLS mútuo e OAuth | 33.501 12.2 a 12.4 | `http`, *token* do NRF, política AF_ID ↔ endereço | [E04], [E06] | **Desvio DV-9**; CAPIF no MVP-9 |
 | UE em outra máquina: N2 e N3 entre máquinas | 23.501 (N2, N3); guia oficial do free5GC | configuração do AMF, do SMF, do UPF e dos gNB | 3H: NG Setup a partir de 192.168.16.131, mesmo A-KID no UE, no AUSF e no AAnF | **Verificado** |
 | Nenhuma chave em log, inclusive no NEF | plano, todos os MVPs | todos | [R7.no-key-*], [L1]; `TestAkmaNoKeyInLogs` do NEF; 3H | **Verificado** |
+
+## Procedimentos do MVP-8 e evidências (revisão 6)
+
+Evidências: verificações da execução `20261021-164401` de `af/scripts/e2e.sh`, com 115 verificações e nenhuma falha (`docs/af-side/e2e.md` §5.3 e §5.4). R2k, R2t e R2n são da máquina do free5GC; T e L1, da do AF. Especificação: `docs/af-side/ua-star-norma.md`.
+
+| Etapa | Cláusula | Implementação | Evidência | Estado |
+|---|---|---|---|---|
+| As aplicações do UE não acessam a K_AKMA | 33.535 4.4.3 item 1 | `af/ue/ueransim/patches/0005` (serviço de chaves do ME) | respostas só com A-KID, AF_ID e K_AF; [R7] | **Verificado** |
+| Cada aplicação só recebe a K_AF dos AF_IDs autorizados | 33.535 4.4.3 item 2 | `0005`: política `akmaKeyService`, *uid* pelo `SO_PEERCRED` | [R2k.given], [R2k.af-id], [R2k.uid], [R2t.me] | **Verificado** — `[INTERPRETAÇÃO]` *uid* como fronteira (U3) |
+| Uma aplicação não recebe a K_AF de outra | 33.535 4.4.3 item 3 | `0005`: AF_ID em duas aplicações recusado | [R2k.duplicate] | **Verificado** (U5) |
+| `nr-cli akma-kaf` só para teste | 33.535 4.4.3 | `0005` (`akmaCliKaf`) | [R2k.nr-cli] | **Verificado** |
+| K.2: TLS com certificado do AF conferido contra o FQDN; Digest dentro do TLS | 24.109 K.2 a) a d); 33.535 B.1.2.2; 33.222 5.3.0, 5.3.1.3 | `af/akmatls`, `af/af/internal/{profile,server}`, `af/ue/uaclient` | [R2t.k2-tls13], [R2t.k2-tls12], [T01], [T02], [T09]; `TestK2RealmOfAnotherAF` | **Verificado** — DV-5, DV-6 |
+| Identificador Ua\* `01 00 01 yy zz` do *cipher suite* (K.2 e TLS 1.2) e `01 00 00 00 07` (TLS 1.3) | 33.220 H.3; 33.222 5.4.0.2 NOTA 0 | `af/akmatls` (`UaStarTLS`); AF e UE | AF_IDs no AF, no AAnF e no ME [T01] a [T04], [R2t.me] | **Verificado** — ADR-0003 revisto |
+| PSK TLS 1.3: `psk_dhe_ke`, `server_name`, identidade `3GPP-AKMA;<A-KID>`, PSK da K_AF | 24.109 K.3.3; 33.222 5.4.0.2; 33.210 6.2.2 | `af/wolftls` (GPLv3), perfil `psk-tls13` | [R2t.psk13], [T03], [T05] (OpenSSL), [T08] (`psk_ke` recusado); testes do `ClientHello` | **Verificado** — D-E; U1 `[LACUNA]` |
+| PSK TLS 1.2: suíte `D0 01`, *hint* `3GPP-AKMA`, identidade com `;`, *premaster* da RFC 5489 com a K_AF | 24.109 K.3.2; 33.222 5.4.0.1; 33.210 6.2.3 | `af/wolftls`, perfil `psk-tls12` | [R2t.psk12], [T04], [T06]; testes do `ClientHello` e do `ServerHello` | **Verificado** — U1, U2 `[LACUNA]`; sem `D0 02` (recomendada) |
+| AF recusa a identidade sem K_AF; *handshake* falha | 33.222 5.4.0.1 passo 4; 33.535 6.2.1 passo 2 | `af/af/internal/server` (`PSKKey`) | [T07], [T07b], [T10], [T10b] | **Verificado** |
+| Perfil TLS de TS 33.210: TLS 1.2 e 1.3; AEAD com ECDHE; EMS, SNI, RFC 5746; grupos | 33.210 6.2; 33.310 Anexo E | `af/akmatls`; `af/scripts/build-wolfssl.sh` (macros); `af/wolftls` | testes de `af/wolftls` e `af/akmatls`; `build-wolfssl.sh` | **Verificado** — sem OCSP *stapling* (recomendado) |
+| Retomada de sessão: PSK até a expiração da K_AF e 24 h; K.2 até 24 h | 33.222 5.3.1.5, 5.4.1.4 | *tickets* do `af/wolftls`; `boundTickets` do `af/akmatls` | [R2t.k2-resumed], [R2t.psk12-resumed], [T03], [T04]; `TestResumption`, `TestExpiry`, `TestTicketLifetime` | **Verificado** (U8) |
+| K_AF vencida numa sessão TLS: sessão encerrada; `refetch` ou `reject` | 33.535 6.4.2, 4.4.0 | `af/wolftls` (`Expired`); `keys.go` | [T11], [T12], [T12b], [T13], [T13b]; `TestPSKExpiry` | **Verificado** (U9) |
+| AF externo com perfil PSK, K_AF pelo NEF | 33.535 6.3; 24.109 K.3.3 | AF com `nefUri` e perfil `psk-tls13` | [R2n.ua-nef-psk], [R2n.nef-psk-relayed] | **Verificado** |
+| Políticas do AAnF, do NEF e do UE com um AF_ID por perfil e *cipher suite* | 33.535 6.2.1 passo 2, 6.3 passo 2, 4.4.3 | `free5gc/config/aanfcfg.yaml`, `free5gc/patches/config/0002`, `0005` | [T10] (fora da política); demais [R2t] e [T] | **Verificado** (U7) |
+| Nenhuma chave em log | plano, todos os MVPs | todos; wolfSSL sem *debug* | [R7.no-key-*], [L1] | **Verificado** |
 
 ## Derivação criptográfica
 
@@ -156,9 +178,9 @@ Evidências: verificações da execução `20261019-213720` de `af/scripts/e2e.s
 | A-KID no ME: RID do SUCI, A-TID em base64, domínio com MNC de três dígitos | TS 33.535 V19.0.0; TS 29.522 V19.7.0; TS 23.003 V19.7.0 | 6.1; Tab. 5.14.5.4.2-1; 2.2B, 28.2 | idem (`keys::ConstructAKid`) | VM, RID `"0000"` | **Implementado** (MVP-3a) |
 | Opção `akma` na configuração do UE | — | — | idem; `0002-free5gc-ue-akma.patch` | VM: sem a opção, nenhuma derivação | **Implementado** (MVP-3a) — decisão do plano |
 | K_AF no ME, sob demanda, para um AF_ID | TS 33.535 V19.0.0; TS 33.220 V19.1.0 | 6.2.1 passo 1; A.4; Anexo H | `0003-akma-kaf-nr-cli-selftest.patch` (`keys::CalculateKAf`) | `nr-akma-selftest`; Ua\* com a K_AF do UE (`docs/af-side/teste-ue.md`) | **Implementado** (MVP-4) |
-| Aplicações do UE sem acesso à K_AKMA | TS 33.535 V19.0.0 | 4.4.3 | comando `akma-kaf` do `nr-cli`: só A-KID e K_AF | `teste-ue.md` §4 | **Implementado** (MVP-4) — `nr-cli` é interface de teste: entrega K_AF a qualquer processo local |
+| Aplicações do UE sem acesso à K_AKMA; cada uma só com a K_AF dos seus AF_IDs | TS 33.535 V19.0.0 | 4.4.3 | serviço de chaves do ME (`0005-akma-key-service.patch`); `akma-kaf` do `nr-cli` só com `akmaCliKaf` | [R2k], [R2t.me] (revisão 6) | **Verificado** (MVP-8) — antes, no MVP-4, o `nr-cli` entregava a K_AF a qualquer processo local |
 | FQDN do AF em UTF-8 com NFKC na K_AF | TS 33.220 V19.1.0 | B.2.1.2 | ME recusa FQDN não ASCII | `nr-akma-selftest` (vetores de NFKC) | **Implementado** (MVP-4) — DV-4 |
-| Cliente Ua\* do UE pelo plano de usuário | TS 33.535 V19.0.0 | 6.2.1 passo 1 | `af/ue/uaclient/` (`-nr-cli`, `-bind`), `af/scripts/ue-netns.sh` | `teste-ue.md` §2 e §3 | **Implementado** (MVP-4) — D5 |
+| Cliente Ua\* do UE pelo plano de usuário | TS 33.535 V19.0.0 | 6.2.1 passo 1 | `af/ue/uaclient/` (`-me-socket`, `-profile`, `-bind`), `af/scripts/ue-netns.sh` | `teste-ue.md` §2 e §3; [R2t] | **Verificado** (MVP-4; perfis TLS no MVP-8) — D5 |
 
 ## Logs
 
@@ -172,7 +194,8 @@ Evidências: verificações da execução `20261019-213720` de `af/scripts/e2e.s
 
 | Requisito | Norma | Cláusula | Implementação | Teste | Estado |
 |---|---|---|---|---|---|
-| Ua* simplificado com id de faixa privada | TS 33.220 H.2 NOTA 2 | — | `af/uastar/`, `af/af/`, `af/ue/uaclient/`; `docs/af-side/ua-star.md` | `docs/af-side/teste-af.md` | **Implementado** (MVP-3) — ADR-0003 |
+| Ua* simplificado com id de faixa privada | TS 33.220 H.2 NOTA 2 | — | `af/uastar/`, `af/af/`, `af/ue/uaclient/`; `docs/af-side/ua-star.md` | `docs/af-side/teste-af.md` | **Implementado** (MVP-3); perfil de teste `digest-http`, desligado por padrão, desde o MVP-8 — ADR-0003 revisto |
+| Perfil K.2: Digest dentro de TLS, AF autenticado por certificado | TS 24.109 V19.0.0; TS 33.535 V19.0.0 | K.2; B.1.2.2 | `af/akmatls`, perfil `digest-tls` | revisão 6 | **Verificado** (MVP-8) |
 | Perfil HTTP Digest — username, senha, realm | TS 24.109 V19.0.0; TS 33.535 V19.0.0; RFC 7616 | K.2; B.1.2.2; 3.3–3.5 | `af/uastar/` | `TestDigestVectors` (RFC 7616 §3.9.1 e Python independente); integração | **Implementado** (MVP-3) — DV-5 (RFC 7616, SHA-256), DV-6 (`realm = "3GPP-bootstrapping-akma@<FQDN>"`) |
 | Confirmação de chave nos dois sentidos (`rspauth`) | TS 33.535 V19.0.0; RFC 7616 | 4.4.1; 3.5 | `af/af/internal/server/`, `af/ue/uaclient/` | `TestAFWithoutKaf`, `TestWrongKafRejected`; integração | **Implementado** (MVP-3) |
 | *Product token* `3gpp-akma`; o UE verifica o FQDN no `realm` | TS 24.109 V19.0.0; TS 33.535 V19.0.0 | K.2 b) 1), d); B.1.2.2 passos 2 e 4 | `af/ue/uaclient/` | `TestChallengeChecks`, `TestHostAndProductToken` | **Implementado** (MVP-3) |
@@ -181,8 +204,8 @@ Evidências: verificações da execução `20261019-213720` de `af/scripts/e2e.s
 | Erro sem o `realm` do desafio quando o AF não obtém K_AF | TS 33.535 V19.0.0 | B.1.2.2 passo 6 | `af/af/internal/server/` | `TestKeyNotAvailable`, `TestAanfUnavailable` | **Implementado** (MVP-3) |
 | Iniciação do AKMA pelo AF | TS 33.535 V19.0.0 | 6.5 | `af/af/internal/server/` (o `401` com desafio) | `TestInitiation`; integração | **Implementado** (MVP-3) |
 | Expiração da K_AF no AF: nunca usada após `expiry`; renovar no AAnF ou recusar | TS 33.535 V19.0.0 | 4.4.0, 4.4.1, 6.4.2 | `af/af/internal/server/keys.go` (`kafExpiry`) | `TestKafExpiryRefetch`, `TestKafExpiryReject`, `TestExpiredOnArrival` | **Implementado** (MVP-3) |
-| Perfil TLS 1.2 PSK | TS 24.109 V19.0.0 | K.3.2 | `af/` | ponta a ponta | Pendente |
-| Perfil TLS 1.3 PSK — `"3GPP-AKMA" ";" A-KID` | TS 24.109 V19.0.0 | K.3.3 | `af/` | ponta a ponta | Pendente — defeito D-E |
+| Perfil TLS 1.2 PSK | TS 24.109 V19.0.0 | K.3.2 | `af/wolftls`, perfil `psk-tls12` | revisão 6 | **Verificado** (MVP-8) |
+| Perfil TLS 1.3 PSK — `"3GPP-AKMA" ";" A-KID` | TS 24.109 V19.0.0 | K.3.3 | `af/wolftls`, perfil `psk-tls13` | revisão 6 | **Verificado** (MVP-8) — defeito D-E |
 | Ausência de renovação de K_AF | TS 33.535 §6.4.3; TS 24.109 K.2, K.3 | — | — | — | Especificado |
 
 ## Requisitos de ambiente

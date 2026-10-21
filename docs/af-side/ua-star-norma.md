@@ -1,6 +1,6 @@
 # Ua\* da norma e autorização por aplicação no UE: especificação
 
-**MVP:** MVP-8 · **Data:** 20 de outubro de 2026 · **Estado:** fases (a) e (b) aprovadas pelo responsável em 20/10/2026, com os pontos U1 a U12 como propostos. A fase (a) está em implementação. As fases (c), DTLS, e (d), OSCORE, entram neste documento depois, com os pontos 3 a 7 do plano.
+**MVP:** MVP-8 · **Data:** 20 de outubro de 2026 · **Estado:** fases (a) e (b) aprovadas pelo responsável em 20/10/2026, com os pontos U1 a U12 como propostos. A fase (a) está implementada e verificada (20/10/2026). A fase (b) está implementada e verificada (21/10/2026): a implementação e as diferenças em relação a este texto estão na seção 3.8, e a verificação, com 115 verificações e nenhuma falha, na seção 3.9. As fases (c), DTLS, e (d), OSCORE, entram neste documento depois, com os pontos 3 a 7 do plano.
 
 Decisões já tomadas pelo responsável em 20/10/2026 (plano, MVP-8):
 
@@ -61,7 +61,7 @@ Verificado em 20/10/2026:
 
 - o OpenSSL 3.0.13 da VM do AF não tem `ECDHE-PSK-AES128-GCM-SHA256`;
 - o OpenSSL só traz DTLS 1.3 a partir da 4.1;
-- o wolfSSL tem TLS 1.2 e 1.3 com PSK e DTLS 1.3, sob GPLv3 ou licença comercial. A suíte `ECDHE-PSK-AES128-GCM-SHA256` aparece nos testes do próprio wolfSSL, mas ainda não foi conferida compilando: é o primeiro passo da fase (b);
+- o wolfSSL tem TLS 1.2 e 1.3 com PSK e DTLS 1.3, sob GPLv3 ou licença comercial. Conferido compilando em 21/10/2026 (seção 3.8): a suíte `ECDHE-PSK-AES128-GCM-SHA256` (`D0 01`) está lá; a `ECDHE-PSK-AES256-GCM-SHA384` (`D0 02`) não existe no wolfSSL;
 - o wolfSSL 5.8.4-stable (20/11/2025) corrige o rebaixamento de PSK com PFS para PSK sem PFS no TLS 1.3 (CVE-2025-11935) e a verificação do *binder* fora de tempo constante (CVE-2025-11932);
 - não há ligação Go do wolfSSL que o projeto possa adotar com segurança.
 
@@ -263,6 +263,74 @@ Sem `profiles`, vale o `listen` de hoje, com o Ua\* simplificado, para que as co
 | logs do AF, do UE e do wolfSSL | nenhuma chave |
 
 O `e2e.sh` ganha um grupo T, com o UE no seu *namespace* passando pelos três perfis TLS, e os negativos acima.
+
+### 3.8 Implementação (21/10/2026)
+
+**Componentes.**
+
+| Componente | Conteúdo |
+|---|---|
+| `af/scripts/build-wolfssl.sh` (GPLv3) | wolfSSL 5.9.4-stable (25/09/2026), `wolfssl-5.9.4.zip` de wolfssl.com com SHA-256 fixado; os fontes comuns ao *tag* `v5.9.4-stable` do GitHub foram comparados e são iguais. Biblioteca estática em `af/build/wolfssl`. Confere em `options.h`: TLS 1.3, DTLS 1.2 e 1.3, AES-GCM e AES-CCM, ECC e x25519, SNI, EMS, `renegotiation_info`, *supported groups*, *tickets*, `NO_DH` e `NO_OLD_TLS`; e que não há `NO_PSK`, *early data*, TLS 1.0, SSLv3 nem *truncated HMAC* |
+| `af/wolftls` (GPLv3) | ligação cgo: TLS 1.2 ou 1.3 com PSK sobre um `net.Conn`. O wolfSSL não bloqueia: lê de um *buffer* que uma *goroutine* enche, e por isso `Read` e `Write` podem correr juntos, como faz o `net/http` |
+| `af/akmatls` | identificadores Ua\* de H.3, identidade `3GPP-AKMA;<A-KID>`, configuração `crypto/tls` do K.2 |
+| `af/af/internal/profile` | um servidor por perfil; os perfis PSK só com a *tag* `wolfssl` |
+| `af/scripts/make-test-ca.sh` | CA de teste e certificado ECDSA P-256 do AF, com o FQDN em `subjectAltName` |
+| `af/scripts/build-af.sh` | compila com o wolfSSL quando a biblioteca existe: binários estáticos, GPLv3 |
+
+**O que a ligação impõe**, qualquer que seja a configuração:
+
+- uma versão por contexto: TLS 1.2 ou TLS 1.3;
+- TLS 1.3: `only_dhe_psk` no AF e no UE, e nenhum *early data* (U12);
+- TLS 1.2: só `ECDHE-PSK-AES128-GCM-SHA256` no AF, com EMS e `renegotiation_info`;
+- grupos P-256, x25519 e P-384;
+- o AF exige o `server_name` igual ao FQDN e recusa um `ClientHello` sem ele;
+- retomada só por *tickets*. O cache de sessões por *session ID* fica desligado no AF. Os *tickets* são cifrados por um *callback* próprio, com AES-256-GCM, e o nome de cada *ticket* aponta para a identidade, o A-KID e a expiração da K_AF do *handshake* completo. Um *ticket* só vale até o menor entre a expiração da K_AF e 24 horas (U8). Depois disso, o *handshake* é completo, e a política de expiração se aplica.
+
+**Conferido nos testes de `af/wolftls`**, com o `ClientHello` e o `ServerHello` lidos da rede:
+
+- TLS 1.2: o `ClientHello` oferece `D0 01` primeiro e depois `C0 2B`, `C0 2F`, `C0 2C` e `C0 30` (TS 33.222 §5.4.0.1 passo 1); tem SNI, EMS, `renegotiation_info`, *ticket* e os grupos `00 17`, `00 1D`, `00 18`. O `ServerHello` escolhe `D0 01` e tem EMS e `renegotiation_info`. O *hint* `3GPP-AKMA` chega ao UE;
+- TLS 1.3: `psk_key_exchange_modes` só com `psk_dhe_ke`; a identidade em `pre_shared_key`; sem `early_data`;
+- recusas: K_AF errada; identidade desconhecida (o erro do AF guarda a causa, como `K_AKMA_NOT_PRESENT`); `ClientHello` só com `psk_ke`; outro `server_name`;
+- retomada nas duas versões, com a identidade e o A-KID do *handshake* completo; *ticket* recusado depois da expiração da K_AF;
+- o `net/http` sobre a ligação, com cinco requisições numa conexão;
+- interoperabilidade: o `openssl s_client` 3.0.13 completa o TLS 1.3 com PSK contra o AF do wolfSSL.
+
+**Diferenças em relação ao texto aprovado.**
+
+1. `[MVP]` **wolfSSL 5.9.4**, e não a 5.8.4. A U10 pedia 5.8.4 ou mais nova; a 5.9.4 é a mais nova estável em 21/10/2026 e corrige CVEs de 2026.
+2. `[MVP]` **Sem `D0 02`.** A §3.4 dizia que o `ClientHello` oferece `ECDHE-PSK-AES128-GCM-SHA256` e `ECDHE-PSK-AES256-GCM-SHA384`. O wolfSSL não tem a segunda. TS 33.210 §6.2.3 só a recomenda (*"Support of the following cipher suite is recommended"*); a obrigatória, `D0 01`, está. Ver a pergunta da seção 5.
+3. `[MVP]` **Sem os *handlers* de `fork` do RNG do wolfSSL** (`--disable-rng-autofork`). Eles usam `dlopen`, que um binário estático não tem, e os processos Go não usam o wolfSSL depois de um `fork()`.
+4. `[INTERPRETAÇÃO]` **Identidade PSK só como texto.** Depois de recusar um *ticket*, o wolfSSL oferece os octetos dele ao *callback* de PSK externa como se fossem uma identidade. A ligação recusa, sem consultar o AF, toda identidade que não seja UTF-8 sem caracteres de controle (RFC 4279 §5.1: a identidade é UTF-8).
+5. `[INTERPRETAÇÃO]` **O UE dos perfis PSK só aceita PSK.** TS 24.109 K.3.3 1)c) e TS 33.222 §5.4.0.1 passo 1 mandam o UE indicar outros métodos de autenticação no `ClientHello`. O `ClientHello` do TLS 1.2 oferece suítes sem PSK, e o do TLS 1.3 leva os algoritmos de assinatura. Mas o cliente não confia em certificado nenhum nesses perfis: se o AF escolher certificado, o *handshake* falha. É a U6: o K.2 está noutra porta.
+6. `[MVP]` **Retomada vista pelo UE no TLS 1.3.** O wolfSSL informa ao cliente que ele ofereceu o *ticket*, e não se o AF o aceitou. O `uaclient` escreve *"session ticket offered"*; quem diz se houve retomada é o log do AF.
+7. `[MVP]` **OCSP *stapling*.** TS 33.210 §6.2.2 e §6.2.3 recomendam (*should*) a extensão *certificate status request*. A CA de teste não tem OCSP, e o K.2 não a usa. Ver a pergunta da seção 5.
+8. `[MVP]` **HTTP/1.1** nos perfis TLS. TS 33.210 §6.2.1 só impõe regras se houver HTTP/2.
+9. **Renegociação.** O AF e o UE mandam `renegotiation_info` (RFC 5746), e nenhum dos dois renegocia: o wolfSSL foi compilado sem renegociação, e o Go não a aceita no servidor. TS 33.210 §6.2.3: *"The server shall accept client-initiated renegotiation only if secured"*; aqui não aceita nunca.
+10. **No K.2, *tickets* de 24 horas.** O `crypto/tls` aceita *tickets* por sete dias. O AF marca cada *ticket* com a hora de emissão e recusa os de mais de 24 horas (TS 33.222 §5.3.1.5). Quando o Go reempacota um *ticket* do TLS 1.2 retomado, perde a marca. O AF então recusa esse *ticket*, e a sessão não passa das 24 horas.
+11. **O UE pede a K_AF ao ME só depois do desafio**, também no `digest-http`. Antes, o `uaclient` pedia a K_AF antes de conectar. Agora pede quando o identificador Ua\* é conhecido: depois do desafio no Digest, quando o *cipher suite* já foi escolhido, e no *callback* de PSK. Um desafio de outro AF já não leva a pedido nenhum ao ME.
+12. **Documentos.** Os perfis entraram no tutorial nas partes 5 a 9, onde o AF, o UE e o roteiro já estavam, e não numa parte 10 (seção 6).
+
+### 3.9 Verificação (21/10/2026)
+
+`e2e.sh` com **115 verificações e nenhuma falha** (execução `20261021-164401`; `e2e.md` §5.4). Os casos da seção 3.7:
+
+| Caso | Resultado |
+|---|---|
+| UE → AF por K.2, TLS 1.3 e TLS 1.2 | atendido: `nc 00000002` em TLS 1.3 com AF_ID `…0100011301` [R2t.k2-tls13, T01]; TLS 1.2 com `…010001C02B` [R2t.k2-tls12, T02]; retomada na segunda conexão [R2t.k2-resumed] |
+| K.2 com certificado de outro FQDN | atendido: o UE encerra o TLS antes de mandar o A-KID [T09]; teste de unidade `TestDigestTLSWrongCertificate` |
+| K.2 com `realm` de outro FQDN | atendido no teste de unidade `TestK2RealmOfAnotherAF`: o UE não pede a K_AF ao ME nem manda o A-KID. O AF do laboratório tem um FQDN só, e o roteiro não monta esse caso |
+| UE → AF por PSK TLS 1.3 | atendido: `psk_dhe_ke` (teste de `af/wolftls`), 200, AF_ID `…0100000007`, segunda conexão retomada [R2t.psk13, T03] |
+| UE → AF por PSK TLS 1.2 | atendido: suíte `D001`, *hint* `3GPP-AKMA`, 200, AF_ID `…010001D001`, retomada [R2t.psk12, R2t.psk12-resumed, T04] |
+| cliente que só oferece `psk_ke` | atendido: recusado [R2t.psk-ke, T08] |
+| PSK com K_AF errada | atendido: o *handshake* falha [T06] |
+| A-KID desconhecido do AAnF | atendido: *handshake* recusado; `No K_AKMA at the AAnF … handshake refused` no log do AF [T07, T07b] |
+| AF_ID de um perfil fora da política do AAnF | atendido: *handshake* recusado; o AAnF responde 403 [T10, T10b] |
+| conferência independente | atendido: `openssl s_client` 3.0.13 com `-psk_identity "3GPP-AKMA;<A-KID>"` e a K_AF calculada pelo oráculo Python recebe 200 com o A-KID [T05] |
+| K_AF vencida, `refetch` e `reject` | atendido: sessão encerrada no vencimento [T11]; `refetch` pede a K_AF de novo, e o *handshake* seguinte passa [T12, T12b]; `reject` recusa [T13, T13b] |
+| logs do AF, do UE e do wolfSSL | atendido: nenhuma cadeia de 64 hexadecimais [L1, R7]; o wolfSSL foi compilado sem *debug* e não escreve log |
+| o ME entrega a K_AF de cada AF_ID dos perfis | atendido [R2t.me] |
+
+**Como a expiração foi testada.** O AAnF dá a K_AF com validade de 1 hora e devolve a mesma enquanto ela vale. O roteiro sobe AF extras com o relógio adiantado em 3590 s: o AF vê a K_AF vencer em 10 s. Para o `refetch` ter uma K_AF nova, o roteiro remove o contexto no AAnF e o registra de novo com o `seed`, como faria uma nova autenticação primária. Sem isso, o AAnF devolve a mesma K_AF, que o AF, com o relógio adiantado, já acha vencida. É o mesmo efeito que o N22 mostra de propósito.
 
 ## 4. Fases (c) e (d)
 
