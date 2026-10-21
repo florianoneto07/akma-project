@@ -12,7 +12,7 @@
   - retomada por *tickets* presos à expiração da K_AF; sessão TLS encerrada quando a K_AF vence.
 - **Scripts:** `af/scripts/build-wolfssl.sh` (SHA-256 fixado, conferência das macros), `af/scripts/make-test-ca.sh`; `build-af.sh` compila com o wolfSSL quando a biblioteca existe.
 - **Roteiro:** passo R2t e grupo T; um AF externo com PSK TLS 1.3 no R2n; `e2e-remote.sh` sem controle de *jobs*, para o Ctrl-C parar a parte remota. Execução de 21/10/2026: 115 verificações, nenhuma falha.
-- **Documentos:** `docs/af-side/ua-star-norma.md` (especificação, implementação e verificação); ADR-0003 revisto; matriz revisão 6; tutorial, partes 5 a 9; `af.md`, `ua-client.md`, `ue-ueransim.md`, `e2e.md`.
+- **Documentos:** `docs/af-side/ua-star-norma.md` (especificação, implementação e verificação); ADR-0003 revisto; DV-10 (sem `D0 02` e sem OCSP *stapling*, recomendados por TS 33.210); matriz revisão 6; tutorial, partes 5 a 9; `af.md`, `ua-client.md`, `ue-ueransim.md`, `e2e.md`.
 
 ### MVP-6 — AF externo via NEF, acesso anônimo e UERANSIM em outra máquina (19/10/2026)
 - **NEF:** `free5gc/patches/nef/0001-akma-api.patch` acrescenta ao NEF do free5GC a API `3gpp-akma` (TS 29.522 §5.14; TS 33.535 §6.3). O NEF:

@@ -16,6 +16,7 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-7 | Nunca emitir 204 em `retrieve-applicationkey` | **implementado** (MVP-1, 17/10/2026) | MVP-1 |
 | DV-8 | `aud` vazio tolerado no token OAuth2 | **encerrado** em 17/10/2026 (MVP-1b: NRF corrigido, AAnF estrito) | MVP-1 |
 | DV-9 | NEF–AF externo sem TLS nem certificado de cliente | **implementado** (MVP-6, 19/10/2026) | MVP-6 |
+| DV-10 | Perfis TLS do Ua\* sem `TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384` e sem OCSP *stapling*, recomendados por TS 33.210 | **implementado** (MVP-8, 21/10/2026) | MVP-8 |
 
 **Consolidação (MVP-5, 18/10/2026).** Nenhum desvio novo surgiu no MVP-5. Estado e evidência de cada um no roteiro ponta a ponta (`docs/af-side/e2e.md`, execução `20261018-171510`):
 
@@ -187,3 +188,32 @@ O certificado de cliente exige mudar o servidor SBI comum do NEF do free5GC. O T
 - **Origem do *token*.** `[MVP]` O AF externo obtém o *token* no NRF do operador, o que um AF fora da rede não faria. Fora do laboratório, quem emite o *token* é o CAPIF ou o servidor de autorização do NEF (§12.4, §12.5). Sem CAPIF, TS 29.522 §6 deixa o servidor de autorização para a configuração local. O CAPIF está planejado para o MVP-9 (plano, seção 5) e fecha esta parte do desvio.
 
 **Implementação (19/10/2026).** `free5gc/patches/nef/0001-akma-api.patch` e `free5gc/patches/config/0002-nef-akma.patch` (`docs/free5gc-side/nef.md` §10). O NEF serve `3gpp-akma` em `http` em 192.168.16.130:8000. O AF de fora da rede obtém o *token* no NRF pelo túnel SSH. Verificação: o NEF responde 401 sem *token* (E04, `docs/af-side/teste-nef.md`) e 403 a um AF_ID fora da política (E06).
+
+---
+
+## DV-10 — Perfis TLS do Ua\* sem `D0 02` e sem OCSP *stapling*
+
+**Norma.** `[3GPP]` TS 33.210 V19.3.0 §6.2, o perfil TLS para o qual TS 33.222 §5.3.1 e §5.4.1 e TS 24.109 K.2 e K.3.1 remetem, por TS 33.310 Anexo E. Duas recomendações (*should*), não obrigações (*shall*):
+
+- §6.2.3, PSK no TLS 1.2: *"the following cipher suites are mandatory to support and recommended to use: TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256"* e *"Support of the following cipher suite is recommended: TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384"* (RFC 8442, `D0 02`);
+- §6.2.2, TLS 1.3: *"The TLS Certificate Status Request extension (i.e., "OCSP stapling") as defined in RFC 6066 and RFC 8446 should be supported"*; §6.2.3, TLS 1.2: *"The OCSP Status (a.k.a. certificate status request) extension, defined in RFC 6066 should be supported"*.
+
+**O que o projeto faz.** `[MVP]`
+
+- **`D0 02`.** O perfil `psk-tls12` só tem `TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256` (`D0 01`), a suíte obrigatória: o AF só a aceita, e o `ClientHello` do UE só oferece essa com PSK. O identificador Ua\* fica `01 00 01 D0 01`.
+- **OCSP *stapling*.** O AF do K.2 (`digest-tls`) não grampeia resposta OCSP ao certificado. O cliente Go manda a extensão `status_request`, e o AF a ignora. Os perfis PSK não têm certificado, e para eles a extensão não se aplica.
+
+**Por quê.** Decidido pelo responsável em 21/10/2026, ao fechar a fase (b) do MVP-8:
+
+- o wolfSSL 5.9.4 não tem a suíte `D0 02`: o código só define `ECDHE-PSK-AES128-GCM-SHA256` entre as suítes `ECDHE_PSK` com AES-GCM (`wolfssl/internal.h`; lista de suítes da biblioteca compilada, conferida em 21/10/2026). O `crypto/tls` do Go não tem PSK. Fazer a suíte exigiria mexer no wolfSSL;
+- a CA de teste do laboratório não tem respondedor OCSP. Sem ele, não há o que grampear. TS 33.222 §5.3.1.0 também deixa a revogação de certificados opcional: *"Support of certificate revocation and of the related fields in certificates is optional"*.
+
+**Impacto.**
+
+- **`D0 02`.** O PSK TLS 1.2 fica só com AES-128-GCM e SHA-256, que é o nível da suíte obrigatória. Um UE ou AF de outra implementação que oferecesse só `D0 02` não conectaria; como `D0 01` é obrigatória, toda implementação conforme a tem. Nenhum impacto no TLS 1.3, cujas suítes vêm do RFC 8446.
+- **OCSP.** O UE não recebe, no *handshake*, prova de que o certificado do AF não foi revogado. Com a CA de teste, não há revogação nenhuma. Num ambiente com PKI de verdade, o `crypto/tls` grampeia a resposta que a aplicação lhe der (`tls.Certificate.OCSPStaple`); o AF precisaria buscá-la no respondedor da CA.
+
+**Implementação (21/10/2026).** `af/wolftls/wolftls.go` (listas de suítes do servidor e do cliente); `af/akmatls/akmatls.go` (`ServerConfig`, sem `OCSPStaple`). Evidência: `TestTLS12Hello` (`ClientHello` com `D0 01` como única suíte PSK; `ServerHello` com `D0 01`); [R2t.psk12] e [T04] na execução `20261021-164401` (`docs/af-side/e2e.md` §5.4). Especificação: `docs/af-side/ua-star-norma.md` §3.8, itens 2 e 7.
+
+**Como fechar.** `D0 02`: quando o wolfSSL a tiver, ou com outra pilha de PSK TLS; basta acrescentá-la às listas e o AF_ID `<FQDN>.010001D002` às políticas. OCSP: com uma CA que tenha respondedor, o AF busca a resposta e a põe em `OCSPStaple`.
+

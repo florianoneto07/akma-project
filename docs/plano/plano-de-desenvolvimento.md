@@ -835,7 +835,7 @@ Diferenças em relação à especificação, registradas nela:
 | K_AF vencida, `refetch` e `reject` | atendido [T11, T12, T13] |
 | nenhuma chave em log | atendido [L1, R7] |
 
-Diferenças em relação à especificação, registradas nela (§3.8): wolfSSL 5.9.4 em vez de 5.8.4; sem a suíte `D0 02`, que o wolfSSL não tem; sem OCSP *stapling*; o UE dos perfis PSK só aceita PSK (U6); o UE pede a K_AF ao ME só depois do desafio. A `D0 02` e o OCSP *stapling* são recomendados (*should*) por TS 33.210 §6.2, e a decisão de registrar ou não as duas ausências como desvio está com o responsável.
+Diferenças em relação à especificação, registradas nela (§3.8): wolfSSL 5.9.4 em vez de 5.8.4; sem a suíte `D0 02`, que o wolfSSL não tem; sem OCSP *stapling*; o UE dos perfis PSK só aceita PSK (U6); o UE pede a K_AF ao ME só depois do desafio. A `D0 02` e o OCSP *stapling* são recomendados (*should*) por TS 33.210 §6.2; as duas ausências foram registradas como DV-10, por decisão do responsável em 21/10/2026.
 
 **Pedido** (responsável, 20/10/2026):
 
