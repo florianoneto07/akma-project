@@ -32,7 +32,7 @@ paths=(
     shared
     reference/kdf
     free5gc/aanf free5gc/config free5gc/patches free5gc/scripts
-    af/go.mod af/go.sum af/af af/config af/scripts af/uastar af/ue
+    af/go.mod af/go.sum af/af af/akmatls af/config af/scripts af/uastar af/ue af/wolftls
 )
 
 if [ -e "$dest" ] && [ -n "$(ls -A "$dest")" ]; then

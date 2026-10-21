@@ -48,6 +48,12 @@ cd free5gc/aanf && go test ./...
 cd af && go test ./...
 ```
 
+With the wolfSSL library of `af/scripts/build-wolfssl.sh`, the PSK binding and profiles too:
+
+```bash
+cd af && go test -tags wolfssl ./...
+```
+
 `free5gc/aanf` and `af` need the patched `openapi` copy: run `free5gc/scripts/prepare-openapi.sh` once, or the build scripts, which run it. All of them also pass with `-race`.
 
 | Module | What the tests cover |
@@ -55,7 +61,7 @@ cd af && go test ./...
 | `shared/akma` | KDF, SUPI as parameter, A-KID, AF_ID, encodings, against the vectors |
 | `shared/crosscheck` | the KDF against `ueauth.GetKDFValue` of `free5gc/util` |
 | `free5gc/aanf` | configuration; storage; OAuth2 checks; the three operations and every error code over h2c, with hand-built HTTP/2 frames for 411; the NEF policy; no key in the log at `trace` level |
-| `af` | the Digest computations against the vectors; the checks of the AF in order; the client refusing a bad `rspauth`; K_AF expiry; the AAnF and NEF clients; the NRF registration; no key in the log |
+| `af` | the Digest computations against the vectors; the checks of the AF in order; the client refusing a bad `rspauth`; K_AF expiry; the AAnF and NEF clients; the NRF registration; no key in the log. K.2: the AF_ID of the cipher suite at the UE and at the AAnF, a certificate or a `realm` of another FQDN, tickets refused after 24 hours. With `-tags wolfssl`: TLS 1.2 and 1.3 with PSK, the extensions and cipher suites on the wire (`psk_dhe_ke` only, no early data, EMS, `renegotiation_info`, SNI), wrong key, unknown identity, `psk_ke` only and another server name refused, resumption bound to the expiry of the key, `net/http` on top, OpenSSL as an independent client, and the AF profiles end to end with the client |
 
 With the patches applied on the free5GC host:
 
@@ -99,7 +105,7 @@ Expected: `5 passed, 3 refused (FQDN not ASCII), 0 failed`. The UE does not appl
 - K_AKMA and the A-KID in the AUSF and in the UE;
 - the registration at the AAnF;
 - K_AF to the AF, directly and through the NEF;
-- Ua\* from the UE over the user plane.
+- Ua\* from the UE over the user plane, over every profile of TS 24.109 Annex K.
 
 It runs on the AF host and drives the free5GC host by SSH. There, it asks for the `sudo` password **once**: the remote part (`af/scripts/e2e-remote.sh`) runs in a single `ssh -t` session, because free5GC (the UPF), the namespace and the UE need root.
 
@@ -132,7 +138,7 @@ With `--keep`, free5GC, the gNB and the UE stay up at the end. The files go to `
 | `remote/` | `free5gc.log`, `ue.log`, `gnb.log`, outputs of the Ua\* client and of `seed`, `state` (the A-KIDs) |
 | `af.log`, `af-*.log` | the AF, and the extra AFs |
 
-The exit code is 0 only when every check passes. It takes about two minutes and runs 88 checks: 41 on the free5GC host and 47 on the AF host.
+The exit code is 0 only when every check passes. It takes about three minutes and runs 115 checks: 51 on the free5GC host and 64 on the AF host.
 
 ### 5.2 Groups
 
@@ -142,9 +148,11 @@ The exit code is 0 only when every check passes. It takes about two minutes and 
 | R1 | free5GC host | N6 NAT, namespace of the UE, `linkIp` of the gNB, AKMA subscription; free5GC with `-aanf`, the gNB and the UE up |
 | R2 | free5GC host | registration; A-KID of the UE = of the AUSF = of the AAnF; Ua\* from the UE over the user plane, 3 requests |
 | R2k | free5GC host | the key service of the ME (TS 33.535 cl. 4.4.3): `uaclient` got the K_AF of its AF_ID; another AF_ID, another user and `nr-cli akma-kaf` are refused; a configuration that gives one AF_ID to two applications does not start |
+| R2t | free5GC host | Ua\* from the UE over the TLS profiles, with the K_AF of the ME for the AF_ID of each profile and cipher suite: K.2 in TLS 1.3 (two connections, the second resumed) and in TLS 1.2; PSK TLS 1.3 and PSK TLS 1.2, two connections each; a ClientHello with `psk_ke` only refused |
 | N (point A) | AF host | negative tests of the AAnF API, of `register-anchorkey`, of the RID and of the AF; anonymous access directly at the AAnF |
-| E (point A) | AF host | tunnel to the NRF; three extra AFs (external on 8083, external anonymous on 8084, internal anonymous on 8085); the NEF API |
-| R2n | free5GC host | Ua\* from the UE with the three extra AFs; the AAnF hands K_AF through the NEF; the NEF relays it and does not log the SUPI |
+| T (point A) | AF host | what the AF saw of R2t (the AF_ID of each cipher suite, the resumptions); PSK TLS 1.3 with `openssl s_client` as the UE; refusals (K_AF of another AF_ID, unknown A-KID, `psk_ke`, certificate of another FQDN, AF_ID outside the policy of the AAnF); K_AF expiry in a TLS session, with the `refetch` and `reject` policies |
+| E (point A) | AF host | tunnel to the NRF; four extra AFs (external on 8083, external anonymous on 8084, internal anonymous on 8085, external with PSK TLS 1.3 on 8456); the NEF API |
+| R2n | free5GC host | Ua\* from the UE with the four extra AFs, the last one over PSK TLS 1.3; the AAnF hands K_AF through the NEF; the NEF relays it and does not log the SUPI |
 | R3 | free5GC host | new authentication: new A-KID, context replaced, Ua\* with the new one; Ua\* with the previous A-KID and K_AF, still accepted by the AF until `expiry` |
 | B (point B) | AF host | the extra AFs deregister from the NRF; the AAnF refuses the previous A-KID and accepts the new one |
 | R4 | free5GC host | AAnF down during a primary authentication: the authentication succeeds, the registration fails |
