@@ -8,6 +8,7 @@
 # Steps:
 #   R1  free5GC (run.sh -aanf), gNB, UE in its namespace, subscriber provisioned
 #   R2  registration; A-KID of the UE = AUSF = AAnF; Ua* from the UE
+#   R2k AKMA key service of the ME: K_AF only to the application of the AF_ID
 #       -> sync A (checks from the AF machine)
 #   R3  new authentication: new A-KID; Ua* with it; Ua* with the previous
 #       A-KID and K_AF, still valid at the AF until expiry
@@ -164,6 +165,30 @@ check R2.akid-aanf "A-KID of the UE = A-KID registered at the AAnF" \
 ua -n 3 >"$run/ua-1.out" 2>&1
 check R2.ua "Ua* from the UE, through the user plane, with the K_AF of the ME (3 requests)" \
     grep -q "session established (nc 00000003)" "$run/ua-1.out"
+
+# ---------------------------------------------------------------- R2k
+# The AKMA key service of the ME (TS 33.535 cl. 4.4.3): uaclient got its K_AF
+# from it in R2.ua; another AF_ID, another user and nr-cli are refused, and a
+# configuration that gives one AF_ID to two applications does not start.
+step "R2k AKMA key service of the ME"
+check R2k.given "the ME gave uaclient the K_AF of its AF_ID" \
+    grep -aqF "K_AF for AF_ID[af1.akma.example.FF00000001] given to application [uaclient]" "$run/ue.log"
+ua -fqdn af2.akma.example -n 1 >"$run/ua-k-afid.out" 2>&1
+check R2k.af-id "an AF_ID outside the list of uaclient is refused (cl. 4.4.3)" \
+    grep -q "not authorized for this AF_ID" "$run/ua-k-afid.out"
+sudo -u nobody python3 -c 'import socket, sys
+s = socket.socket(socket.AF_UNIX)
+s.connect(sys.argv[1])
+s.sendall(b"KAF af1.akma.example FF00000001\n")
+print(s.makefile().readline().strip())' "/run/ueransim/akma-$supi.sock" >"$run/ua-k-uid.out" 2>&1
+check R2k.uid "another user gets no K_AF (cl. 4.4.3)" grep -qx "ERR NOT_AUTHORIZED" "$run/ua-k-uid.out"
+sudo "$netns" cli "$supi" -e "akma-kaf af1.akma.example" >"$run/ua-k-cli.out" 2>&1
+check R2k.nr-cli "akma-kaf of nr-cli is disabled" grep -q "akma-kaf is disabled" "$run/ua-k-cli.out"
+awk '{print} /^akmaKeyService:/ {svc=1} svc && /^  applications:/ {print "    - name: other\n      uid: 0\n      afIds:\n        - af1.akma.example.FF00000001"; svc=0}' \
+    "$uer/config/free5gc-ue.yaml" >"$run/ue-duplicate.yaml"
+timeout 5 "$uer/build/nr-ue" -c "$run/ue-duplicate.yaml" >"$run/ua-k-dup.out" 2>&1
+check R2k.duplicate "a configuration that gives one AF_ID to two applications is refused" \
+    grep -q "is given to more than one application" "$run/ua-k-dup.out"
 sync_point A
 
 # ---------------------------------------------------------------- R2n
@@ -190,7 +215,16 @@ check R2n.nef-no-supi "no SUPI in the AKMA lines of the NEF (cl. 6.3 step 5)" \
 # ---------------------------------------------------------------- R3
 step "R3 new primary authentication"
 kaffile="$(umask 077 && mktemp "$run/.kaf.XXXXXX")"
-sudo "$netns" cli "$supi" -e "akma-kaf $fqdn" | sed -n 's/^k-af: //p' >"$kaffile"
+# The application keeps the K_AF it got before the new authentication: the
+# test asks the AKMA key service of the ME for it, as the user of uaclient,
+# and keeps it in a file only that user reads.
+python3 -c 'import socket, sys
+s = socket.socket(socket.AF_UNIX)
+s.connect(sys.argv[1])
+s.sendall(("KAF " + sys.argv[2] + " FF00000001\n").encode())
+answer = s.makefile().readline().split()
+print(dict(f.split("=", 1) for f in answer[1:]).get("k-af", "") if answer[:1] == ["OK"] else "")' \
+    "/run/ueransim/akma-$supi.sock" "$fqdn" >"$kaffile"
 check R3.reauth "deregistration and new registration with a new authentication" reauthenticate
 akid2="$(ue_akid)"
 setstate A_KID_2 "$akid2"
