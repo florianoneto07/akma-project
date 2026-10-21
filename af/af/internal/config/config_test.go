@@ -21,6 +21,7 @@ func TestDefaults(t *testing.T) {
 		t.Fatal(err)
 	}
 	if s.AfID.Transport() != "af1.akma.example.FF00000001" || s.Realm != "3GPP-bootstrapping-akma@af1.akma.example" ||
+		len(s.Profiles) != 1 || s.Profiles[0] != (Profile{Type: "digest-http", Listen: "192.168.16.129:8080"}) ||
 		s.Path != DefaultPath || len(s.Qop) != 1 || s.Qop[0] != "auth" || s.NonceLifetime != DefaultNonceLifetime ||
 		s.KafExpiry != KafExpiryRefetch || s.AanfURI != "http://192.168.16.130:8010" {
 		t.Fatalf("settings %+v", s)
@@ -50,6 +51,24 @@ func TestInvalid(t *testing.T) {
 			c.AanfURI, c.NefURI, c.NrfURI = "", "192.168.16.130:8000", "http://127.0.0.10:8000"
 		},
 		"nfInstanceId": func(c *Configuration) { c.NfInstanceID = "af1" },
+		"listen and profiles": func(c *Configuration) {
+			c.Profiles = []Profile{{Type: "psk-tls13", Listen: "192.168.16.129:8444"}}
+		},
+		"profile type": func(c *Configuration) {
+			c.Listen, c.Profiles = "", []Profile{{Type: "psk-tls", Listen: "192.168.16.129:8444"}}
+		},
+		"profile listen": func(c *Configuration) {
+			c.Listen, c.Profiles = "", []Profile{{Type: "psk-tls13", Listen: "8444"}}
+		},
+		"profile port twice": func(c *Configuration) {
+			c.Listen, c.Profiles = "", []Profile{{Type: "psk-tls13", Listen: ":8444"}, {Type: "psk-tls12", Listen: ":8444"}}
+		},
+		"digest-tls without certificate": func(c *Configuration) {
+			c.Listen, c.Profiles = "", []Profile{{Type: "digest-tls", Listen: ":8443"}}
+		},
+		"psk with certificate": func(c *Configuration) {
+			c.Listen, c.Profiles = "", []Profile{{Type: "psk-tls12", Listen: ":8445", Certificate: "a.pem", Key: "a.key"}}
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			c := base()
@@ -91,13 +110,45 @@ func TestClockOffset(t *testing.T) {
 	}
 }
 
+// The sample configuration: the three profiles of TS 24.109 Annex K, and no
+// digest-http, a test profile off by default.
 func TestSampleConfig(t *testing.T) {
 	s, err := Load("../../../config/afcfg.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.AfID.Transport() != "af1.akma.example.FF00000001" || s.Listen != "192.168.16.129:8080" ||
+	if s.AfID.Transport() != "af1.akma.example.FF00000001" || len(s.Profiles) != 3 ||
 		s.NonceLifetime != 300*time.Second || s.KafExpiry != KafExpiryRefetch || !s.Logger.Enable {
+		t.Fatalf("settings %+v", s)
+	}
+	cert, _ := filepath.Abs("../../../build/cert/af1.akma.example.pem")
+	want := []Profile{
+		{Type: "digest-tls", Listen: "192.168.16.129:8443", Certificate: cert,
+			Key: strings.TrimSuffix(cert, ".pem") + ".key"},
+		{Type: "psk-tls13", Listen: "192.168.16.129:8444"},
+		{Type: "psk-tls12", Listen: "192.168.16.129:8445"},
+	}
+	for i, p := range s.Profiles {
+		if p.Certificate != "" {
+			p.Certificate, _ = filepath.Abs(p.Certificate)
+			p.Key, _ = filepath.Abs(p.Key)
+		}
+		if p != want[i] {
+			t.Errorf("profile %d: %+v, want %+v", i, p, want[i])
+		}
+	}
+}
+
+// Without profiles, listen is a digest-http profile with uaStarId, the
+// configuration of earlier versions; uaStarId defaults to FF00000001.
+func TestListenOnly(t *testing.T) {
+	c := base()
+	c.Configuration.UaStarID = ""
+	s, err := c.Settings()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.AfID.Transport() != "af1.akma.example.FF00000001" || len(s.Profiles) != 1 || s.Profiles[0].Type != "digest-http" {
 		t.Fatalf("settings %+v", s)
 	}
 }
@@ -108,7 +159,8 @@ func TestSampleExternalConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.AfID.Transport() != "af1.akma.example.FF00000001" || s.Listen != "192.168.16.129:8083" ||
+	if s.AfID.Transport() != "af1.akma.example.FF00000001" || len(s.Profiles) != 3 ||
+		s.Profiles[1].Listen != "192.168.16.129:8454" ||
 		s.NefURI != "http://192.168.16.130:8000" || s.NrfURI != "http://127.0.0.10:8000" || s.AanfURI != "" {
 		t.Fatalf("settings %+v", s)
 	}
