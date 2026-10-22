@@ -61,24 +61,7 @@ func NewPSKSession(cfg PSKConfig) (*PSKSession, error) {
 	}
 	s.client, err = wolftls.NewClient(wolftls.ClientConfig{
 		Version: version, ServerName: cfg.FQDN, OfferPSKKEOnly: cfg.OfferPSKKEOnly,
-		Key: func(hint string, suite uint16) (string, []byte, error) {
-			id := afid.UaStarTLS13
-			if version == wolftls.VersionTLS12 {
-				// TS 24.109 K.3.2 d): the hint names the AKMA name space.
-				if hint != akmatls.IdentityHint {
-					return "", nil, fmt.Errorf("%w: psk_identity_hint %q", ErrNotPSK, hint)
-				}
-				id = akmatls.UaStarTLS(suite)
-			}
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			aKid, kaf, err := cfg.Keys(ctx, id)
-			if err != nil {
-				return "", nil, err
-			}
-			s.afID = cfg.FQDN + "." + id.String()
-			return akmatls.Identity(aKid), kaf[:], nil
-		},
+		Key: pskKey(cfg, afid.UaStarTLS13, func(id string) { s.afID = id }),
 	})
 	if err != nil {
 		return nil, err
@@ -114,6 +97,36 @@ func NewPSKSession(cfg PSKConfig) (*PSKSession, error) {
 	}}
 	return s, nil
 }
+
+// pskKey returns the Key function of a PSK client: in (D)TLS 1.3 the K_AF
+// of the fixed identifier base, before the ClientHello; in (D)TLS 1.2 the
+// K_AF of the identifier of the cipher suite chosen by the AF, after the
+// ServerHello (TS 33.222 cl. 5.4.0.2 NOTE 0; TS 33.220 H.3). used gets the
+// AF_ID of the K_AF.
+func pskKey(cfg PSKConfig, base afid.UaStarID, used func(string)) func(string, uint16) (string, []byte, error) {
+	return func(hint string, suite uint16) (string, []byte, error) {
+		id := base
+		if suite != akmaTLS13Suite {
+			// TS 24.109 K.3.2 d): the hint names the AKMA name space.
+			if hint != akmatls.IdentityHint {
+				return "", nil, fmt.Errorf("%w: psk_identity_hint %q", ErrNotPSK, hint)
+			}
+			id = akmatls.UaStarTLS(suite)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		aKid, kaf, err := cfg.Keys(ctx, id)
+		if err != nil {
+			return "", nil, err
+		}
+		used(cfg.FQDN + "." + id.String())
+		return akmatls.Identity(aKid), kaf[:], nil
+	}
+}
+
+// akmaTLS13Suite is the suite wolftls gives the Key function of a (D)TLS 1.3
+// client.
+const akmaTLS13Suite = wolftls.TLS_AES_128_GCM_SHA256
 
 // Establish sends one Application Session Establishment Request (TS 33.535
 // cl. 6.2.1 step 1) inside the TLS session. The handshake authenticated

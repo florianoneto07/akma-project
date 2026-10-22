@@ -5,10 +5,12 @@ import (
 	"fmt"
 )
 
-// PSKConfig describes TLS sessions with the AF authenticated with K_AF as
-// pre-shared key (TS 24.109 K.3; TS 33.222 cl. 5.4).
+// PSKConfig describes TLS or DTLS sessions with the AF authenticated with
+// K_AF as pre-shared key (TS 24.109 K.3; TS 33.222 cl. 5.4; TS 33.535
+// Annex C).
 type PSKConfig struct {
-	// Profile is akmatls.ProfilePSKTLS13 or akmatls.ProfilePSKTLS12.
+	// Profile is akmatls.ProfilePSKTLS13, ProfilePSKTLS12, ProfilePSKDTLS13
+	// or ProfilePSKDTLS12.
 	Profile   string
 	FQDN      string // sent in server_name and Host, and the FQDN of the AF_ID
 	Connect   string // host:port to connect to

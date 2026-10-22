@@ -1,8 +1,10 @@
 // Command uaclient establishes an application session with the AF over a
 // Ua* profile (-profile): HTTP Digest inside TLS (digest-tls, TS 24.109
-// K.2), TLS 1.3 or TLS 1.2 with K_AF as pre-shared key (psk-tls13 and
-// psk-tls12, K.3, in a client built with wolfSSL), or the simplified Ua*
-// protocol of package uastar (digest-http, test only). The A-KID and K_AF
+// K.2); TLS 1.3 or TLS 1.2 with K_AF as pre-shared key (psk-tls13 and
+// psk-tls12, K.3); DTLS 1.3 or DTLS 1.2 with K_AF as pre-shared key and
+// CoAP inside (psk-dtls13 and psk-dtls12, TS 33.535 Annex C); the PSK
+// profiles in a client built with wolfSSL; or the simplified Ua* protocol of
+// package uastar (digest-http, test only). The A-KID and K_AF
 // come from the AKMA key service of the ME of UERANSIM (-me-socket), from
 // nr-cli for tests (-nr-cli, -ue), from a shared/akma vector (-vector) or
 // from the command line. K_AF is never printed.
@@ -35,17 +37,21 @@ var defaultPorts = map[string]string{
 	akmatls.ProfileDigestTLS:  "8443",
 	akmatls.ProfilePSKTLS13:   "8444",
 	akmatls.ProfilePSKTLS12:   "8445",
+	akmatls.ProfilePSKDTLS13:  "5684",
+	akmatls.ProfilePSKDTLS12:  "5685",
 }
+
+const profiles = "digest-tls, psk-tls13, psk-tls12, psk-dtls13, psk-dtls12 or digest-http"
 
 func main() {
 	var (
 		fqdn      = flag.String("fqdn", "af1.akma.example", "FQDN of the AF (sent in Host, checked in the realm)")
-		profile   = flag.String("profile", akmatls.ProfileDigestHTTP, "Ua* profile: digest-tls, psk-tls13, psk-tls12 or digest-http")
+		profile   = flag.String("profile", akmatls.ProfileDigestHTTP, "Ua* profile: "+profiles)
 		connect   = flag.String("connect", "192.168.16.129", "address of the AF, with the port of the profile when absent")
 		caFile    = flag.String("ca", "", "certificate of the CA of the AF, PEM (digest-tls)")
-		reconnect = flag.Bool("reconnect", false, "a new TLS connection for each request, resuming the previous session")
+		reconnect = flag.Bool("reconnect", false, "a new TLS connection or DTLS association for each request, resuming the previous session")
 		tls12     = flag.Bool("tls12", false, "digest-tls: TLS 1.2 only")
-		pskKEOnly = flag.Bool("psk-ke-only", false, "psk-tls13: offer psk_ke and not psk_dhe_ke (test only; the AF refuses it)")
+		pskKEOnly = flag.Bool("psk-ke-only", false, "psk-tls13, psk-dtls13: offer psk_ke and not psk_dhe_ke (test only; the AF refuses it)")
 		path      = flag.String("path", "/ua/v1/session", "protected resource")
 		aKid      = flag.String("akid", "", "A-KID")
 		kafHex    = flag.String("kaf", "", "K_AF, 64 hexadecimal characters")
@@ -99,7 +105,7 @@ func run(o options) error {
 	if _, _, err := net.SplitHostPort(o.connect); err != nil {
 		port, ok := defaultPorts[o.profile]
 		if !ok {
-			return fmt.Errorf("-profile %q is not digest-tls, psk-tls13, psk-tls12 or digest-http", o.profile)
+			return fmt.Errorf("-profile %q is not %s", o.profile, profiles)
 		}
 		o.connect = net.JoinHostPort(o.connect, port)
 	}
@@ -131,8 +137,18 @@ func run(o options) error {
 		}
 		defer ps.Close()
 		s = ps
+	case akmatls.ProfilePSKDTLS13, akmatls.ProfilePSKDTLS12:
+		ds, err := uaclient.NewDTLSSession(uaclient.PSKConfig{
+			Profile: o.profile, FQDN: o.fqdn, Connect: o.connect, Path: o.path, LocalAddr: o.bind, Keys: keys,
+			Reconnect: o.reconnect, OfferPSKKEOnly: o.pskKEOnly,
+		})
+		if err != nil {
+			return err
+		}
+		defer ds.Close()
+		s = ds
 	default:
-		return fmt.Errorf("-profile %q is not digest-tls, psk-tls13, psk-tls12 or digest-http", o.profile)
+		return fmt.Errorf("-profile %q is not %s", o.profile, profiles)
 	}
 	from := ""
 	if o.bind != "" {
@@ -156,20 +172,23 @@ func run(o options) error {
 func describe(profile string, r uaclient.Result) string {
 	tlsState := ""
 	if r.TLSVersion != 0 {
-		tlsState = fmt.Sprintf("; %s, cipher suite %04X", tls.VersionName(r.TLSVersion), r.CipherSuite)
+		tlsState = fmt.Sprintf("; %s, cipher suite %04X", versionName(r.TLSVersion), r.CipherSuite)
 		switch {
 		case profile == akmatls.ProfileDigestTLS:
 			tlsState += fmt.Sprintf(", resumed %t", r.Resumed)
-		case r.TLSVersion == tls.VersionTLS12:
+		case r.TLSVersion == tls.VersionTLS12 || r.TLSVersion == dtls12:
 			tlsState += fmt.Sprintf(", resumed %t", r.Resumed)
 		case r.Resumed:
-			// wolfSSL reports an offered TLS 1.3 ticket as resumed: the
-			// AF log tells whether the AF accepted it.
+			// wolfSSL reports an offered (D)TLS 1.3 ticket as resumed:
+			// the AF log tells whether the AF accepted it.
 			tlsState += ", session ticket offered"
 		}
 	}
 	auth := "AF authenticated by rspauth"
-	if r.NC == "" {
+	switch {
+	case akmatls.IsDTLS(profile):
+		auth = "AF authenticated by the DTLS handshake with K_AF"
+	case r.NC == "":
 		auth = "AF authenticated by the TLS handshake with K_AF"
 	}
 	nc := ""
@@ -178,6 +197,22 @@ func describe(profile string, r uaclient.Result) string {
 	}
 	return fmt.Sprintf("session established%s: %s; A-KID %s; AF_ID %s%s; K_AF valid until %s", nc, auth,
 		r.AKid, r.AfID, tlsState, r.KafExpiry.Format(time.RFC3339))
+}
+
+// DTLS versions, as wolfSSL gives them.
+const (
+	dtls12 = 0xFEFD
+	dtls13 = 0xFEFC
+)
+
+func versionName(v uint16) string {
+	switch v {
+	case dtls12:
+		return "DTLS 1.2"
+	case dtls13:
+		return "DTLS 1.3"
+	}
+	return tls.VersionName(v)
 }
 
 // keySource returns where the A-KID and K_AF come from. An explicit key or

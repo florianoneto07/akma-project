@@ -42,15 +42,20 @@ var (
 
 // RejectedError reports that the AF refused the session.
 type RejectedError struct {
-	Status int
+	Status int    // HTTP status
+	CoAP   string // or CoAP response code, such as "4.03"
 	Cause  string
 }
 
 func (e *RejectedError) Error() string {
-	if e.Cause != "" {
-		return fmt.Sprintf("uaclient: AF answered %d %s", e.Status, e.Cause)
+	code := fmt.Sprint(e.Status)
+	if e.CoAP != "" {
+		code = e.CoAP
 	}
-	return fmt.Sprintf("uaclient: AF answered %d", e.Status)
+	if e.Cause != "" {
+		return fmt.Sprintf("uaclient: AF answered %s %s", code, e.Cause)
+	}
+	return fmt.Sprintf("uaclient: AF answered %s", code)
 }
 
 // KeySource returns the A-KID and the K_AF of the AF_ID with the Ua*

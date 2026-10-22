@@ -18,3 +18,15 @@ func (*PSKSession) Establish(context.Context) (Result, error) { return Result{},
 
 // Close does nothing.
 func (*PSKSession) Close() {}
+
+// DTLSSession is not available without wolfSSL.
+type DTLSSession struct{}
+
+// NewDTLSSession returns ErrNoWolfSSL.
+func NewDTLSSession(PSKConfig) (*DTLSSession, error) { return nil, ErrNoWolfSSL }
+
+// Establish returns ErrNoWolfSSL.
+func (*DTLSSession) Establish(context.Context) (Result, error) { return Result{}, ErrNoWolfSSL }
+
+// Close does nothing.
+func (*DTLSSession) Close() {}
