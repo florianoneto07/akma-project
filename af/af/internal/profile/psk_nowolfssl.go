@@ -19,3 +19,8 @@ func pskListener(p config.Profile, _ *config.Settings, _ *server.Server, _ net.L
 	return nil, nil, nil, fmt.Errorf("profile %s needs an AF built with wolfSSL (af/scripts/build-wolfssl.sh, "+
 		"then af/scripts/build-af.sh)", p.Type)
 }
+
+func startDTLS(p config.Profile, _ *config.Settings, _ *server.Server) (func(), error) {
+	return nil, fmt.Errorf("profile %s needs an AF built with wolfSSL (af/scripts/build-wolfssl.sh, "+
+		"then af/scripts/build-af.sh)", p.Type)
+}

@@ -24,13 +24,20 @@ import (
 // Running is a profile being served.
 type Running struct {
 	Profile config.Profile
-	srv     *http.Server
+	srv     *http.Server // nil for DTLS
 	l       net.Listener
 	release func()
 }
 
 // Start opens the listener of p and serves it with ua.
 func Start(p config.Profile, s *config.Settings, ua *server.Server) (*Running, error) {
+	if akmatls.IsDTLS(p.Type) {
+		stop, err := startDTLS(p, s, ua)
+		if err != nil {
+			return nil, err
+		}
+		return &Running{Profile: p, release: stop}, nil
+	}
 	l, err := net.Listen("tcp", p.Listen)
 	if err != nil {
 		return nil, err
@@ -75,7 +82,9 @@ func Start(p config.Profile, s *config.Settings, ua *server.Server) (*Running, e
 
 // Shutdown stops the server.
 func (r *Running) Shutdown(ctx context.Context) {
-	_ = r.srv.Shutdown(ctx)
+	if r.srv != nil {
+		_ = r.srv.Shutdown(ctx)
+	}
 	r.release()
 }
 

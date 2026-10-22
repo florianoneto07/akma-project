@@ -26,6 +26,12 @@ const (
 	ProfilePSKTLS13 = "psk-tls13"
 	// ProfilePSKTLS12 is K.3 with TLS 1.2 (TS 24.109 K.3.2).
 	ProfilePSKTLS12 = "psk-tls12"
+	// ProfilePSKDTLS13 is DTLS 1.3 with K_AF as PSK, CoAP inside (TS 33.535
+	// Annex C).
+	ProfilePSKDTLS13 = "psk-dtls13"
+	// ProfilePSKDTLS12 is DTLS 1.2 with K_AF as PSK, with the procedure of
+	// TLS 1.2, CoAP inside.
+	ProfilePSKDTLS12 = "psk-dtls12"
 	// ProfileDigestHTTP is the simplified Ua* protocol of package uastar,
 	// HTTP Digest without TLS. Test only.
 	ProfileDigestHTTP = "digest-http"
@@ -39,6 +45,14 @@ func UaStarTLS(cipherSuite uint16) afid.UaStarID {
 	binary.BigEndian.PutUint16(id[3:], cipherSuite)
 	return id
 }
+
+// UaStarDTLS13 is the Ua* security protocol identifier of DTLS 1.3,
+// 01 00 00 00 09: the one TS 33.220 H.3 gives to the DTLS of its Annex O,
+// which TS 33.535 Annex C takes over for AKMA.
+var UaStarDTLS13 = afid.UaStarID{0x01, 0x00, 0x00, 0x00, 0x09}
+
+// IsDTLS reports whether profile runs over DTLS.
+func IsDTLS(profile string) bool { return profile == ProfilePSKDTLS13 || profile == ProfilePSKDTLS12 }
 
 // IdentityHint is the psk_identity_hint of the AF in TLS 1.2 (TS 24.109
 // K.3.2 d)) and the prefix of the PSK identity.

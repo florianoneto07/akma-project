@@ -63,6 +63,9 @@ func TestInvalid(t *testing.T) {
 		"profile port twice": func(c *Configuration) {
 			c.Listen, c.Profiles = "", []Profile{{Type: "psk-tls13", Listen: ":8444"}, {Type: "psk-tls12", Listen: ":8444"}}
 		},
+		"DTLS port twice": func(c *Configuration) {
+			c.Listen, c.Profiles = "", []Profile{{Type: "psk-dtls13", Listen: ":5684"}, {Type: "psk-dtls12", Listen: ":5684"}}
+		},
 		"digest-tls without certificate": func(c *Configuration) {
 			c.Listen, c.Profiles = "", []Profile{{Type: "digest-tls", Listen: ":8443"}}
 		},
@@ -117,7 +120,7 @@ func TestSampleConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.AfID.Transport() != "af1.akma.example.FF00000001" || len(s.Profiles) != 3 ||
+	if s.AfID.Transport() != "af1.akma.example.FF00000001" || len(s.Profiles) != 5 ||
 		s.NonceLifetime != 300*time.Second || s.KafExpiry != KafExpiryRefetch || !s.Logger.Enable {
 		t.Fatalf("settings %+v", s)
 	}
@@ -127,6 +130,8 @@ func TestSampleConfig(t *testing.T) {
 			Key: strings.TrimSuffix(cert, ".pem") + ".key"},
 		{Type: "psk-tls13", Listen: "192.168.16.129:8444"},
 		{Type: "psk-tls12", Listen: "192.168.16.129:8445"},
+		{Type: "psk-dtls13", Listen: "192.168.16.129:5684"},
+		{Type: "psk-dtls12", Listen: "192.168.16.129:5685"},
 	}
 	for i, p := range s.Profiles {
 		if p.Certificate != "" {
@@ -159,8 +164,8 @@ func TestSampleExternalConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.AfID.Transport() != "af1.akma.example.FF00000001" || len(s.Profiles) != 3 ||
-		s.Profiles[1].Listen != "192.168.16.129:8454" ||
+	if s.AfID.Transport() != "af1.akma.example.FF00000001" || len(s.Profiles) != 5 ||
+		s.Profiles[1].Listen != "192.168.16.129:8454" || s.Profiles[3].Listen != "192.168.16.129:5694" ||
 		s.NefURI != "http://192.168.16.130:8000" || s.NrfURI != "http://127.0.0.10:8000" || s.AanfURI != "" {
 		t.Fatalf("settings %+v", s)
 	}
@@ -174,5 +179,15 @@ func TestUnknownField(t *testing.T) {
 	}
 	if _, err := Load(path); err == nil || !strings.Contains(err.Error(), "uaStarID") {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+// A TCP and a UDP server may share an address and port.
+func TestTCPAndUDPOnOnePort(t *testing.T) {
+	c := base()
+	c.Configuration.Listen = ""
+	c.Configuration.Profiles = []Profile{{Type: "psk-tls13", Listen: ":5684"}, {Type: "psk-dtls13", Listen: ":5684"}}
+	if _, err := c.Settings(); err != nil {
+		t.Fatal(err)
 	}
 }

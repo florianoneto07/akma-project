@@ -94,8 +94,10 @@ type Configuration struct {
 // Profile is one Ua* server of the AF.
 type Profile struct {
 	// Type is digest-tls (TS 24.109 K.2), psk-tls13 (K.3.3), psk-tls12
-	// (K.3.2) or digest-http (the simplified Ua*, test only).
-	Type   string `yaml:"type"`
+	// (K.3.2), psk-dtls13 or psk-dtls12 (TS 33.535 Annex C, CoAP inside)
+	// or digest-http (the simplified Ua*, test only).
+	Type string `yaml:"type"`
+	// Listen is a TCP address, or a UDP address for the DTLS profiles.
 	Listen string `yaml:"listen"`
 	// Certificate and Key are the PEM files of the certificate of the AF
 	// and its private key, for digest-tls. A relative path is relative to
@@ -276,22 +278,33 @@ func checkProfiles(cf Configuration) ([]Profile, error) {
 			if p.Certificate == "" || p.Key == "" {
 				errs = append(errs, fmt.Errorf("%s: %s needs certificate and key", where, p.Type))
 			}
-		case akmatls.ProfilePSKTLS13, akmatls.ProfilePSKTLS12, akmatls.ProfileDigestHTTP:
+		case akmatls.ProfilePSKTLS13, akmatls.ProfilePSKTLS12, akmatls.ProfilePSKDTLS13, akmatls.ProfilePSKDTLS12,
+			akmatls.ProfileDigestHTTP:
 			if p.Certificate != "" || p.Key != "" {
 				errs = append(errs, fmt.Errorf("%s: %s takes no certificate", where, p.Type))
 			}
 		default:
-			errs = append(errs, fmt.Errorf("%s: type %q is not digest-tls, psk-tls13, psk-tls12 or digest-http",
-				where, p.Type))
+			errs = append(errs, fmt.Errorf("%s: type %q is not digest-tls, psk-tls13, psk-tls12, psk-dtls13, "+
+				"psk-dtls12 or digest-http", where, p.Type))
 		}
 		if _, _, err := net.SplitHostPort(p.Listen); err != nil {
 			errs = append(errs, fmt.Errorf("%s: listen: %w", where, err))
-		} else if seen[p.Listen] {
+		} else if key := transport(p.Type) + p.Listen; seen[key] {
 			errs = append(errs, fmt.Errorf("%s: listen %s already used", where, p.Listen))
+		} else {
+			seen[key] = true
 		}
-		seen[p.Listen] = true
 	}
 	return cf.Profiles, errors.Join(errs...)
+}
+
+// transport names the transport of a profile: a TCP and a UDP server may
+// share an address and port.
+func transport(profile string) string {
+	if akmatls.IsDTLS(profile) {
+		return "udp/"
+	}
+	return "tcp/"
 }
 
 func isAPIRoot(s string) bool {

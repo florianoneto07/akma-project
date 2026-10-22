@@ -120,6 +120,10 @@ func describe(p config.Profile, s *config.Settings) string {
 		return url + ", AF_ID " + s.FQDN + ".010001<cipher suite> (TS 24.109 K.2)"
 	case akmatls.ProfilePSKTLS13:
 		return url + ", AF_ID " + s.FQDN + ".0100000007 (TS 24.109 K.3.3)"
+	case akmatls.ProfilePSKDTLS13:
+		return "coaps://" + s.FQDN + s.Path + ", AF_ID " + s.FQDN + ".0100000009 (TS 33.535 Annex C)"
+	case akmatls.ProfilePSKDTLS12:
+		return "coaps://" + s.FQDN + s.Path + ", AF_ID " + s.FQDN + ".010001<cipher suite> (DTLS 1.2)"
 	default:
 		return url + ", AF_ID " + s.FQDN + ".010001<cipher suite> (TS 24.109 K.3.2)"
 	}

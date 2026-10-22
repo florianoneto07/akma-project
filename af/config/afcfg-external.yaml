@@ -12,6 +12,10 @@ configuration:
       listen: 192.168.16.129:8454
     - type: psk-tls12
       listen: 192.168.16.129:8455
+    - type: psk-dtls13
+      listen: 192.168.16.129:5694
+    - type: psk-dtls12
+      listen: 192.168.16.129:5695
     # Test only: the simplified Ua*. Off by default.
     # - type: digest-http
     #   listen: 192.168.16.129:8083
