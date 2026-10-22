@@ -11,6 +11,8 @@ package wolftls
 import "C"
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -80,7 +82,7 @@ func wolftlsServerKey(h C.uintptr_t, identity *C.char, suite C.int, key *C.uchar
 		return 0
 	}
 	req := KeyRequest{Identity: id, RemoteAddr: c.raw.RemoteAddr()}
-	if c.server.cfg.Version == VersionTLS12 {
+	if !is13(c.server.cfg.Version) {
 		req.CipherSuite = uint16(suite)
 	}
 	k, err := c.server.cfg.Key(req)
@@ -144,6 +146,19 @@ func wolftlsClientKey(h C.uintptr_t, hint *C.char, suite C.int, identity *C.char
 	ids[copy(ids, k.identity)] = 0
 	c.identity = k.identity
 	return C.uint(copy(unsafe.Slice((*byte)(unsafe.Pointer(key)), int(keyMax)), k.psk))
+}
+
+//export wolftlsGenCookie
+func wolftlsGenCookie(h C.uintptr_t, buf *C.uchar, sz C.int) (ret C.int) {
+	defer func() {
+		if recover() != nil {
+			ret = -1
+		}
+	}()
+	c := connOf(h)
+	mac := hmac.New(sha256.New, c.server.cookieSecret)
+	mac.Write([]byte(c.raw.RemoteAddr().String()))
+	return C.int(copy(unsafe.Slice((*byte)(unsafe.Pointer(buf)), int(sz)), mac.Sum(nil)))
 }
 
 //export wolftlsTicket

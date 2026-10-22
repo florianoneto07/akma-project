@@ -43,19 +43,23 @@ unzip -q "$zip" -d "$build"
 # TS 33.210 cl. 6.2: TLS 1.2 and 1.3, nothing older (default); no finite
 # field DH; SNI, Extended Master Secret and RFC 5746 (defaults); x25519 and
 # P-256. PSK for the K.3 profiles of TS 24.109; session tickets for the
-# resumption of TS 33.222 cl. 5.3.1.5 and 5.4.1.4. DTLS 1.3 and AES-CCM for
-# the DTLS profile of TS 33.535 Annex C. No early data (0-RTT). No RNG
+# resumption of TS 33.222 cl. 5.3.1.5 and 5.4.1.4. DTLS 1.2 and 1.3, with a
+# settable MTU, and AES-CCM for the DTLS profiles of TS 33.535 Annex C. No
+# early data (0-RTT). No RNG
 # fork handlers: Go programs never use wolfSSL across fork(), and the
 # handlers need dlopen, which a static binary does not have.
+# With a DTLS MTU set, wolfSSL reads at most MTU + this many octets per
+# datagram (500 by default): a ClientHello with post-quantum key shares, as
+# OpenSSL 4.1 sends, is larger. The MTU still bounds what wolfSSL sends.
 cd "$src"
 ./configure --prefix="$prefix" \
     --enable-static --disable-shared --disable-rng-autofork \
     --enable-psk --enable-session-ticket \
-    --enable-dtls --enable-dtls13 --enable-aesccm \
+    --enable-dtls --enable-dtls13 --enable-dtls-mtu --enable-aesccm \
     --enable-curve25519 --disable-dh \
     --disable-earlydata --disable-oldtls \
     --disable-examples --disable-crypttests \
-    CFLAGS="-O2 -fPIC" >"$build/configure.log"
+    CFLAGS="-O2 -fPIC -DWOLFSSL_DTLS_MTU_ADDITIONAL_READ_BUFFER=16384" >"$build/configure.log"
 make -j"$(nproc)" >"$build/make.log" 2>&1
 make install >>"$build/make.log" 2>&1
 
@@ -63,7 +67,7 @@ make install >>"$build/make.log" 2>&1
 # that TS 33.210 cl. 6.2 forbids.
 opts="$prefix/include/wolfssl/options.h"
 fail=0
-for m in WOLFSSL_TLS13 WOLFSSL_DTLS WOLFSSL_DTLS13 HAVE_AESGCM HAVE_AESCCM HAVE_ECC HAVE_CURVE25519 \
+for m in WOLFSSL_TLS13 WOLFSSL_DTLS WOLFSSL_DTLS13 WOLFSSL_DTLS_MTU HAVE_AESGCM HAVE_AESCCM HAVE_ECC HAVE_CURVE25519 \
          HAVE_SNI HAVE_EXTENDED_MASTER HAVE_SERVER_RENEGOTIATION_INFO HAVE_SUPPORTED_CURVES \
          HAVE_SESSION_TICKET NO_DH NO_OLD_TLS; do
     grep -q "^#define $m\b" "$opts" || { echo "options.h: $m missing" >&2; fail=1; }

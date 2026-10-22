@@ -29,6 +29,11 @@ const (
 	maxBuffered = 256 << 10
 	// closeTimeout bounds the close_notify sent by Close.
 	closeTimeout = 2 * time.Second
+	// dtlsMTU is the path MTU given to wolfSSL for DTLS: below the MTU of
+	// the GTP tunnel of the user plane; a PSK handshake fits with room.
+	dtlsMTU = 1200
+	// maxQueued bounds the datagrams queued for wolfSSL in DTLS.
+	maxQueued = 64
 )
 
 // ConnState describes an established connection.
@@ -45,15 +50,18 @@ type ConnState struct {
 	Expiry time.Time
 }
 
-// Conn is a TLS connection over a net.Conn. wolfSSL never blocks: it reads
-// from a buffer that a goroutine (the pump) fills from the net.Conn, and a
-// call that finds the buffer empty waits outside the lock of the
-// connection. Read and Write may therefore run at the same time, as
-// net/http does.
+// Conn is a TLS or DTLS connection over a net.Conn. wolfSSL never blocks:
+// it reads from a buffer that a goroutine (the pump) fills from the
+// net.Conn, and a call that finds the buffer empty waits outside the lock of
+// the connection. Read and Write may therefore run at the same time, as
+// net/http does. In DTLS the buffer keeps datagrams apart, each Read
+// returns one record, and the wait follows the retransmission timer of
+// wolfSSL during the handshake.
 type Conn struct {
 	raw    net.Conn
 	server *Server
 	client *Client
+	dtls   bool
 	handle cgo.Handle
 
 	hsMu  sync.Mutex
@@ -86,9 +94,9 @@ type clientKey struct {
 	psk      []byte
 }
 
-func newConn(raw net.Conn, ctx *C.WOLFSSL_CTX, s *Server, c *Client) *Conn {
-	conn := &Conn{raw: raw, server: s, client: c}
-	conn.in.init()
+func newConn(raw net.Conn, ctx *C.WOLFSSL_CTX, s *Server, c *Client, dtls bool) *Conn {
+	conn := &Conn{raw: raw, server: s, client: c, dtls: dtls}
+	conn.in.init(dtls)
 	conn.readDL.init()
 	conn.handle = cgo.NewHandle(conn)
 	conn.ssl = C.wolfSSL_new(ctx)
@@ -96,6 +104,10 @@ func newConn(raw net.Conn, ctx *C.WOLFSSL_CTX, s *Server, c *Client) *Conn {
 		conn.setupErr = errors.New("wolftls: wolfSSL_new failed")
 	} else {
 		C.wolftls_attach(conn.ssl, C.uintptr_t(conn.handle))
+		if dtls {
+			C.wolfSSL_dtls_set_using_nonblock(conn.ssl, 1)
+			C.wolfSSL_dtls_set_mtu(conn.ssl, dtlsMTU)
+		}
 		conn.rbuf = C.malloc(bufSize)
 		conn.wbuf = C.malloc(bufSize)
 	}
@@ -150,14 +162,46 @@ func (c *Conn) handshake() error {
 		if code != C.WOLFSSL_ERROR_WANT_READ {
 			hsErr = c.errorLocked("handshake", code)
 		}
+		timer := c.retransmitTimer(true)
 		c.mu.Unlock()
 		if hsErr != nil {
 			return hsErr
 		}
-		if err := c.waitRead(wake); err != nil {
+		if err := c.waitRead(wake, timer); err != nil {
 			return err
 		}
 	}
+}
+
+// retransmitTimer returns the time to wait before wolfSSL retransmits its
+// last DTLS flight, zero when nothing waits for it: TLS, or DTLS after the
+// handshake with nothing unacknowledged. mu is held.
+func (c *Conn) retransmitTimer(handshake bool) time.Duration {
+	if !c.dtls || c.ssl == nil {
+		return 0
+	}
+	if !handshake && C.wolfSSL_dtls13_has_pending_msg(c.ssl) != 1 {
+		return 0
+	}
+	secs := C.wolfSSL_dtls_get_current_timeout(c.ssl)
+	if secs <= 0 {
+		secs = 1
+	}
+	return time.Duration(secs) * time.Second
+}
+
+// retransmit tells wolfSSL that its DTLS timer expired: it sends its last
+// flight again, or gives up after its last retry.
+func (c *Conn) retransmit() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.ssl == nil {
+		return net.ErrClosed
+	}
+	if C.wolfSSL_dtls_got_timeout(c.ssl) != C.WOLFSSL_SUCCESS {
+		return &Error{Op: "handshake", Text: "no answer from the peer after the last retransmission", Cause: c.keyErr}
+	}
+	return nil
 }
 
 // established records the end of a successful handshake. mu is held.
@@ -220,11 +264,12 @@ func (c *Conn) Read(p []byte) (int, error) {
 		default:
 			err = c.errorLocked("read", code)
 		}
+		timer := c.retransmitTimer(false)
 		c.mu.Unlock()
 		if err != nil {
 			return 0, err
 		}
-		if err := c.waitRead(wake); err != nil {
+		if err := c.waitRead(wake, timer); err != nil {
 			return 0, err
 		}
 	}
@@ -325,12 +370,22 @@ func (c *Conn) SetWriteDeadline(t time.Time) error {
 	return c.raw.SetWriteDeadline(t)
 }
 
-func (c *Conn) waitRead(wake <-chan struct{}) error {
+// waitRead waits for data, the read deadline or, when timer is not zero,
+// the DTLS retransmission timer.
+func (c *Conn) waitRead(wake <-chan struct{}, timer time.Duration) error {
+	var expired <-chan time.Time
+	if timer > 0 {
+		t := time.NewTimer(timer)
+		defer t.Stop()
+		expired = t.C
+	}
 	select {
 	case <-wake:
 		return nil
 	case <-c.readDL.wait():
 		return os.ErrDeadlineExceeded
+	case <-expired:
+		return c.retransmit()
 	}
 }
 
@@ -342,26 +397,30 @@ func (c *Conn) errorLocked(op string, code C.int) error {
 }
 
 // inbox holds what the pump read from the underlying connection and
-// wolfSSL has not consumed yet.
+// wolfSSL has not consumed yet: a stream of octets in TLS, a queue of
+// datagrams in DTLS.
 type inbox struct {
-	mu     sync.Mutex
-	room   *sync.Cond
-	buf    []byte
-	err    error         // end or failure of the underlying connection
-	notify chan struct{} // closed and replaced when buf or err change
-	halt   bool
+	mu        sync.Mutex
+	room      *sync.Cond
+	datagrams bool
+	buf       []byte
+	queue     [][]byte
+	err       error         // end or failure of the underlying connection
+	notify    chan struct{} // closed and replaced when buf, queue or err change
+	halt      bool
 }
 
-func (b *inbox) init() {
+func (b *inbox) init(datagrams bool) {
 	b.room = sync.NewCond(&b.mu)
 	b.notify = make(chan struct{})
+	b.datagrams = datagrams
 }
 
 func (b *inbox) pump(r io.Reader) {
 	tmp := make([]byte, bufSize)
 	for {
 		b.mu.Lock()
-		for len(b.buf) >= maxBuffered && !b.halt {
+		for (len(b.buf) >= maxBuffered || len(b.queue) >= maxQueued) && !b.halt {
 			b.room.Wait()
 		}
 		halt := b.halt
@@ -371,7 +430,13 @@ func (b *inbox) pump(r io.Reader) {
 		}
 		n, err := r.Read(tmp)
 		b.mu.Lock()
-		b.buf = append(b.buf, tmp[:n]...)
+		if b.datagrams {
+			if n > 0 {
+				b.queue = append(b.queue, append([]byte(nil), tmp[:n]...))
+			}
+		} else {
+			b.buf = append(b.buf, tmp[:n]...)
+		}
 		if err != nil && b.err == nil {
 			b.err = err
 		}
@@ -383,11 +448,22 @@ func (b *inbox) pump(r io.Reader) {
 	}
 }
 
-// take moves buffered octets into p. Nothing buffered: 0 and the failure of
-// the underlying connection, nil while it is open.
+// take moves buffered octets into p: in DTLS, one datagram, cut to p if
+// longer. Nothing buffered: 0 and the failure of the underlying connection,
+// nil while it is open.
 func (b *inbox) take(p []byte) (int, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	if b.datagrams {
+		if len(b.queue) == 0 {
+			return 0, b.err
+		}
+		n := copy(p, b.queue[0])
+		b.queue[0] = nil
+		b.queue = b.queue[1:]
+		b.room.Signal()
+		return n, nil
+	}
 	if len(b.buf) == 0 {
 		return 0, b.err
 	}

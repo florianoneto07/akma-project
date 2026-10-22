@@ -13,6 +13,7 @@ package wolftls
 import "C"
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"net"
@@ -21,11 +22,19 @@ import (
 	"unsafe"
 )
 
-// TLS versions.
+// TLS and DTLS versions, as wolfSSL_version gives them.
 const (
-	VersionTLS12 uint16 = 0x0303
-	VersionTLS13 uint16 = 0x0304
+	VersionTLS12  uint16 = 0x0303
+	VersionTLS13  uint16 = 0x0304
+	VersionDTLS12 uint16 = 0xFEFD
+	VersionDTLS13 uint16 = 0xFEFC
 )
+
+// isDTLS reports whether v is a DTLS version.
+func isDTLS(v uint16) bool { return v == VersionDTLS12 || v == VersionDTLS13 }
+
+// is13 reports whether v is TLS 1.3 or DTLS 1.3.
+func is13(v uint16) bool { return v == VersionTLS13 || v == VersionDTLS13 }
 
 // Cipher suites negotiated with a PSK.
 const (
@@ -80,7 +89,8 @@ type Key struct {
 
 // ServerConfig configures a Server.
 type ServerConfig struct {
-	// Version is VersionTLS12 or VersionTLS13.
+	// Version is VersionTLS12, VersionTLS13, VersionDTLS12 or
+	// VersionDTLS13.
 	Version uint16
 	// ServerName is the name the client must send in server_name.
 	ServerName string
@@ -102,13 +112,14 @@ type ServerConfig struct {
 
 // ClientConfig configures a Client.
 type ClientConfig struct {
-	// Version is VersionTLS12 or VersionTLS13.
+	// Version is VersionTLS12, VersionTLS13, VersionDTLS12 or
+	// VersionDTLS13.
 	Version uint16
 	// ServerName is sent in server_name.
 	ServerName string
-	// Key returns the PSK identity and the PSK. In TLS 1.2 it is called
+	// Key returns the PSK identity and the PSK. In (D)TLS 1.2 it is called
 	// after the ServerHello, with the hint of the server and the
-	// negotiated cipher suite; in TLS 1.3 before the ClientHello, with
+	// negotiated cipher suite; in (D)TLS 1.3 before the ClientHello, with
 	// TLS_AES_128_GCM_SHA256.
 	Key func(hint string, cipherSuite uint16) (identity string, psk []byte, err error)
 	// OfferPSKKEOnly makes a TLS 1.3 ClientHello offer psk_ke and not
@@ -145,6 +156,9 @@ type Server struct {
 	cfg     ServerConfig
 	ctx     *C.WOLFSSL_CTX
 	tickets *ticketStore
+	// cookieSecret keys the DTLS 1.2 cookies, which bind the
+	// HelloVerifyRequest to the address of the client.
+	cookieSecret []byte
 }
 
 // NewServer checks cfg and builds its wolfSSL context.
@@ -163,14 +177,25 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 		method = C.wolfTLSv1_2_server_method()
 	case VersionTLS13:
 		method, list = C.wolfTLSv1_3_server_method(), serverList13
+	case VersionDTLS12:
+		method = C.wolfDTLSv1_2_server_method()
+	case VersionDTLS13:
+		method, list = C.wolfDTLSv1_3_server_method(), serverList13
 	default:
-		return nil, fmt.Errorf("wolftls: version %#04x is neither TLS 1.2 nor TLS 1.3", cfg.Version)
+		return nil, fmt.Errorf("wolftls: version %#04x is not TLS or DTLS 1.2 or 1.3", cfg.Version)
 	}
 	ctx := C.wolfSSL_CTX_new(method)
 	if ctx == nil {
 		return nil, errors.New("wolftls: wolfSSL_CTX_new failed")
 	}
 	s := &Server{cfg: cfg, ctx: ctx}
+	if isDTLS(cfg.Version) {
+		s.cookieSecret = make([]byte, 32)
+		if _, err := rand.Read(s.cookieSecret); err != nil {
+			C.wolfSSL_CTX_free(ctx)
+			return nil, err
+		}
+	}
 	if err := s.setup(list); err != nil {
 		C.wolfSSL_CTX_free(ctx)
 		return nil, err
@@ -179,7 +204,7 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 }
 
 func (s *Server) setup(list string) error {
-	tls13 := s.cfg.Version == VersionTLS13
+	tls13 := is13(s.cfg.Version)
 	if err := setCommon(s.ctx, list); err != nil {
 		return err
 	}
@@ -210,18 +235,26 @@ func (s *Server) setup(list string) error {
 		C.wolfSSL_CTX_set_TicketHint(s.ctx, secs)
 		C.wolfSSL_CTX_set_timeout(s.ctx, C.uint(secs))
 	}
-	boolTLS13 := C.int(0)
-	if tls13 {
-		boolTLS13 = 1
-	}
-	C.wolftls_setup_server(s.ctx, boolTLS13, C.int(tickets))
+	C.wolftls_setup_server(s.ctx, cBool(tls13), C.int(tickets), cBool(isDTLS(s.cfg.Version)))
 	return nil
 }
 
-// Server returns a server connection over raw. The handshake runs on the
-// first Read or Write, or on Handshake.
+func cBool(b bool) C.int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+// Server returns a TLS server connection over raw. The handshake runs on
+// the first Read or Write, or on Handshake. A DTLS server takes its
+// connections from ListenDTLS.
 func (s *Server) Server(raw net.Conn) *Conn {
-	return newConn(raw, s.ctx, s, nil)
+	conn := newConn(raw, s.ctx, s, nil, false)
+	if isDTLS(s.cfg.Version) {
+		conn.setupErr = errors.New("wolftls: a DTLS server takes its connections from ListenDTLS")
+	}
+	return conn
 }
 
 // Listener returns a listener whose connections are server connections
@@ -271,8 +304,12 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 		method = C.wolfTLSv1_2_client_method()
 	case VersionTLS13:
 		method, list = C.wolfTLSv1_3_client_method(), clientList13
+	case VersionDTLS12:
+		method = C.wolfDTLSv1_2_client_method()
+	case VersionDTLS13:
+		method, list = C.wolfDTLSv1_3_client_method(), clientList13
 	default:
-		return nil, fmt.Errorf("wolftls: version %#04x is neither TLS 1.2 nor TLS 1.3", cfg.Version)
+		return nil, fmt.Errorf("wolftls: version %#04x is not TLS or DTLS 1.2 or 1.3", cfg.Version)
 	}
 	ctx := C.wolfSSL_CTX_new(method)
 	if ctx == nil {
@@ -285,7 +322,7 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 	// No certificate is trusted: the server is authenticated by the PSK.
 	C.wolfSSL_CTX_set_verify(ctx, C.WOLFSSL_VERIFY_PEER, nil)
 	tls13 := C.int(0)
-	if cfg.Version == VersionTLS13 {
+	if is13(cfg.Version) {
 		tls13 = 1
 		if cfg.OfferPSKKEOnly {
 			C.wolfSSL_CTX_no_dhe_psk(ctx)
@@ -300,10 +337,11 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 	return &Client{cfg: cfg, ctx: ctx}, nil
 }
 
-// Client returns a client connection over raw. With resume, the handshake
-// first offers that session (Conn.Session of an earlier connection).
+// Client returns a client connection over raw: a stream for TLS, a
+// connected UDP socket for DTLS. With resume, the handshake first offers
+// that session (Conn.Session of an earlier connection).
 func (c *Client) Client(raw net.Conn, resume *Session) *Conn {
-	conn := newConn(raw, c.ctx, nil, c)
+	conn := newConn(raw, c.ctx, nil, c, isDTLS(c.cfg.Version))
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
 	if conn.ssl == nil {

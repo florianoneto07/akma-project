@@ -7,9 +7,10 @@
 #   uses its Naanf_AKMA client.
 #
 #   With the wolfSSL library of af/scripts/build-wolfssl.sh, both binaries
-#   have the PSK profiles (psk-tls13, psk-tls12) and, linked with wolfSSL,
-#   are licensed under the GNU General Public License v3.0. Without it, or
-#   with AF_WOLFSSL=no, they have the other profiles only.
+#   have the PSK profiles (psk-tls13, psk-tls12, psk-dtls13, psk-dtls12) and,
+#   linked with wolfSSL, are licensed under the GNU General Public License
+#   v3.0. Without it, or with AF_WOLFSSL=no, they have the other profiles
+#   only.
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")/.." && pwd)"
@@ -25,9 +26,10 @@ fi
 mkdir -p "$here/build/bin"
 cd "$here"
 if [ -f "$lib" ] && [ "${AF_WOLFSSL:-yes}" != no ]; then
-    # The Go build cache does not see the library: its hash in the flags of
-    # the C compiler makes a new library rebuild the packages that use it.
-    export CGO_ENABLED=1 CGO_CFLAGS="-O2 -g -DWOLFTLS_LIB_$(sha256sum "$lib" | cut -c1-16)"
+    # The Go build cache does not see the library: its hash, compiled into
+    # af/wolftls, makes a new library rebuild that package and link the
+    # binaries again.
+    export CGO_ENABLED=1 CGO_CFLAGS="-O2 -g -DWOLFTLS_LIB=0x$(sha256sum "$lib" | cut -c1-16)ULL"
     flags=(-tags 'wolfssl netgo osusergo' -ldflags '-linkmode external -extldflags -static')
     with="with wolfSSL (PSK profiles; GPLv3 binaries)"
 else

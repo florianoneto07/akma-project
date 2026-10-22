@@ -7,6 +7,16 @@
 
 #include "shim.h"
 #include "_cgo_export.h"
+#include <string.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+/* The start of the SHA-256 of libwolfssl.a, from af/scripts/build-af.sh. Go
+ * does not see the library: with its hash in this object, a new library
+ * changes the package, and Go links the binaries again. */
+#ifdef WOLFTLS_LIB
+const unsigned long long wolftls_lib = WOLFTLS_LIB;
+#endif
 
 /* The hash of an external PSK defaults to SHA-256 (RFC 8446 cl. 4.2.11). */
 static const char tls13PSKSuite[] = "TLS13-AES128-GCM-SHA256";
@@ -51,6 +61,16 @@ static unsigned int server_psk13(WOLFSSL *ssl, const char *identity,
                                  const char **suite)
 {
     *suite = tls13PSKSuite;
+    /* DTLS 1.3: wolfSSL answers a ClientHello without a valid cookie with a
+     * stateless HelloRetryRequest, and asks this callback only for the
+     * cipher suite of the PSK; it checks no binder there. The key, and with
+     * it any request of the AF to the AAnF, waits for the ClientHello with
+     * the cookie (RFC 9147 cl. 5.1). */
+    if (wolfSSL_dtls(ssl) && !wolfSSL_is_stateful(ssl)) {
+        unsigned int n = max < 32 ? max : 32;
+        memset(key, 0, n);
+        return n;
+    }
     return server_key(ssl, identity, key, max);
 }
 
@@ -81,10 +101,21 @@ static int ticket_cb(WOLFSSL *ssl, unsigned char name[WOLFSSL_TICKET_NAME_SZ],
     return wolftlsTicket(handle(ssl), name, iv, mac, enc, ticket, inLen, outLen);
 }
 
-void wolftls_setup_server(WOLFSSL_CTX *ctx, int tls13, int tickets)
+static int gen_cookie_cb(WOLFSSL *ssl, unsigned char *buf, int sz, void *ctx)
+{
+    (void)ctx;
+    return wolftlsGenCookie(handle(ssl), buf, sz);
+}
+
+void wolftls_setup_server(WOLFSSL_CTX *ctx, int tls13, int tickets, int dtls)
 {
     wolfSSL_CTX_SetIORecv(ctx, recv_cb);
     wolfSSL_CTX_SetIOSend(ctx, send_cb);
+    /* The DTLS 1.2 cookie comes from the Go side: with these I/O
+     * callbacks there is no socket for the default one to read the peer
+     * address from. */
+    if (dtls)
+        wolfSSL_CTX_SetGenCookie(ctx, gen_cookie_cb);
     if (tls13)
         wolfSSL_CTX_set_psk_server_tls13_callback(ctx, server_psk13);
     else
@@ -116,6 +147,33 @@ void wolftls_attach(WOLFSSL *ssl, uintptr_t h)
     wolfSSL_SetIOReadCtx(ssl, (void *)h);
     wolfSSL_SetIOWriteCtx(ssl, (void *)h);
     wolfSSL_set_psk_callback_ctx(ssl, (void *)h);
+}
+
+int wolftls_dtls_peer(WOLFSSL *ssl, const unsigned char *ip, int ipLen, int port, int tls13)
+{
+    int ret;
+    if (ipLen == 4) {
+        struct sockaddr_in sa;
+        memset(&sa, 0, sizeof(sa));
+        sa.sin_family = AF_INET;
+        sa.sin_port = htons((unsigned short)port);
+        memcpy(&sa.sin_addr, ip, 4);
+        ret = wolfSSL_dtls_set_peer(ssl, &sa, sizeof(sa));
+    } else if (ipLen == 16) {
+        struct sockaddr_in6 sa;
+        memset(&sa, 0, sizeof(sa));
+        sa.sin6_family = AF_INET6;
+        sa.sin6_port = htons((unsigned short)port);
+        memcpy(&sa.sin6_addr, ip, 16);
+        ret = wolfSSL_dtls_set_peer(ssl, &sa, sizeof(sa));
+    } else {
+        return -1;
+    }
+    if (ret != WOLFSSL_SUCCESS)
+        return -1;
+    if (tls13 && wolfSSL_send_hrr_cookie(ssl, NULL, 0) != WOLFSSL_SUCCESS)
+        return -1;
+    return 0;
 }
 
 void wolftls_error_string(int err, char *buf, int len)

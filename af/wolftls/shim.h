@@ -13,12 +13,18 @@
 #include <wolfssl/options.h>
 #include <wolfssl/ssl.h>
 
-/* Configures a context made by the Go side: callbacks, PSK, tickets. */
-void wolftls_setup_server(WOLFSSL_CTX *ctx, int tls13, int tickets);
+/* Configures a context made by the Go side: callbacks, PSK, tickets, DTLS
+ * cookies. */
+void wolftls_setup_server(WOLFSSL_CTX *ctx, int tls13, int tickets, int dtls);
 void wolftls_setup_client(WOLFSSL_CTX *ctx, int tls13);
 
 /* Attaches the cgo.Handle h of a Conn to ssl. */
 void wolftls_attach(WOLFSSL *ssl, uintptr_t h);
+
+/* Gives a DTLS server connection the address of its client, which the
+ * cookies bind to, and turns on the HelloRetryRequest cookie of DTLS 1.3.
+ * ip is 4 or 16 octets. Returns 0 on success. */
+int wolftls_dtls_peer(WOLFSSL *ssl, const unsigned char *ip, int ipLen, int port, int tls13);
 
 /* Returns the reason text of a wolfSSL error code into buf. */
 void wolftls_error_string(int err, char *buf, int len);
