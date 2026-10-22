@@ -1,6 +1,6 @@
 # Ponta a ponta e testes negativos (MVP-5 a MVP-8)
 
-**Data:** 18 de outubro de 2026; MVP-6 em 19 de outubro de 2026; MVP-8 em 20 e 21 de outubro de 2026 · **Resultado do MVP-8, fase (b):** 115 verificações, nenhuma falha (execução `20261021-164401`, seção 5.4) · **Resultado do MVP-6:** 83 verificações, nenhuma falha (execução `20261019-213720`, seção 5.2) · **MVP-5:** 63 verificações, nenhuma falha (execução `20261018-171510`) · **Instalação limpa:** 63 verificações, nenhuma falha, em 19 de outubro de 2026 (execução `20261019-160723`, seção 5.1)
+**Data:** 18 de outubro de 2026; MVP-6 em 19 de outubro de 2026; MVP-8 de 20 a 22 de outubro de 2026 · **Resultado do MVP-8, fase (c):** 126 verificações, nenhuma falha (execução `20261022-124514`, seção 5.5) · **Fase (b):** 115 verificações, nenhuma falha (execução `20261021-164401`, seção 5.4) · **Resultado do MVP-6:** 83 verificações, nenhuma falha (execução `20261019-213720`, seção 5.2) · **MVP-5:** 63 verificações, nenhuma falha (execução `20261018-171510`) · **Instalação limpa:** 63 verificações, nenhuma falha, em 19 de outubro de 2026 (execução `20261019-160723`, seção 5.1)
 
 ## 1. O que o roteiro faz
 
@@ -25,6 +25,8 @@ As duas máquinas se sincronizam por arquivos-marcadores em três pontos (A, B, 
 | E (ponto A) | AF | MVP-6: túnel até o NRF; três AF extras (externo na 8083, externo anônimo na 8084, interno anônimo na 8085) e, no MVP-8, um externo com PSK TLS 1.3 na 8456; API do NEF (seção 4.1) |
 | R2k | free5GC | MVP-8, fase (a): serviço de chaves do ME (TS 33.535 §4.4.3). O `uaclient` recebeu a K_AF do seu AF_ID; outro AF_ID, outro usuário e o `akma-kaf` do `nr-cli` são recusados; a configuração com um AF_ID em duas aplicações não sobe |
 | R2t | free5GC | MVP-8, fase (b): Ua\* do UE pelos perfis TLS, com a K_AF do ME para o AF_ID de cada perfil e *cipher suite*. K.2 em TLS 1.3 (duas conexões, a segunda retomada) e em TLS 1.2; PSK TLS 1.3 e PSK TLS 1.2, duas conexões cada; `ClientHello` só com `psk_ke` recusado |
+| R2d | free5GC | MVP-8, fase (c): Ua\* do UE pelos perfis DTLS, com CoAP: DTLS 1.3 com o AF_ID `…0100000009` e DTLS 1.2 com `…010001D001`, duas associações cada, a segunda retomada; `ClientHello` só com `psk_ke` recusado |
+| D (ponto A) | AF | MVP-8, fase (c): o que o AF viu do R2d; DTLS 1.3 com o `openssl s_client` do OpenSSL 4.1 no papel do UE, mandando o GET em CoAP (com `OPENSSL_DTLS13`; sem ela, pulada); A-KID desconhecido e K_AF de outro AF_ID recusados |
 | T (ponto A) | AF | MVP-8, fase (b): o que o AF viu do R2t (AF_ID de cada *cipher suite*; retomadas); PSK TLS 1.3 com o `openssl s_client` no papel do UE; recusas (K_AF de outro AF_ID, A-KID desconhecido, `psk_ke`, certificado de outro FQDN, AF_ID fora da política do AAnF); expiração da K_AF numa sessão TLS, com as políticas `refetch` e `reject` |
 | R2n | free5GC | MVP-6: Ua\* do UE com os três AF extras; o AAnF entrega via NEF; o NEF repassa a K_AF e não registra o SUPI. MVP-8: Ua\* por PSK TLS 1.3 com um quarto AF extra, externo, na porta 8456 |
 | R3 | free5GC | nova autenticação: A-KID novo, contexto substituído, Ua\* com o novo; Ua\* com o A-KID e a K_AF anteriores, ainda aceitos pelo AF até `expiry` |
@@ -44,7 +46,7 @@ Na máquina do free5GC, as partes 3 a 7 do tutorial, isto é:
 - o AAnF implantado (`bin/aanf`, `config/aanfcfg.yaml`) e o `seed` em `~/akma-tools/`;
 - o UERANSIM com os *patches*, o `linkIp: 10.100.0.1` do gNB e o `uaclient` em `~/akma-free5gc/af/build/bin/`.
 
-Na máquina do AF: `af/scripts/build-wolfssl.sh`, `af/scripts/make-test-ca.sh`, `af/scripts/build-af.sh` e `free5gc/scripts/build-aanf.sh`; o `openssl` (o grupo T o usa como UE independente); acesso SSH por chave à máquina do free5GC; e o `af/config/afcfg.yaml` com o `aanfUri` do AAnF da máquina do free5GC.
+Na máquina do AF: `af/scripts/build-wolfssl.sh`, `af/scripts/make-test-ca.sh`, `af/scripts/build-af.sh` e `free5gc/scripts/build-aanf.sh`; o `openssl` (o grupo T o usa como UE independente); opcionalmente, um OpenSSL 4.1 compilado à parte para o D03 (seção 3); acesso SSH por chave à máquina do free5GC; e o `af/config/afcfg.yaml` com o `aanfUri` do AAnF da máquina do free5GC.
 
 O roteiro sobe o AF com os perfis de `afcfg.yaml` e acrescenta o perfil de teste `digest-http` na porta 8080, que os grupos R2, N, R3 a R5 usam. Ele copia a CA de teste para a máquina do free5GC a cada execução. As políticas do AAnF, do NEF e do UE precisam dos AF_IDs dos perfis (`docs/af-side/af.md` §3).
 
@@ -62,6 +64,26 @@ af/scripts/e2e.sh woca@192.168.16.130
 
 O argumento é a máquina do free5GC, `usuario@endereço`. Sem ele, vale a do laboratório, `woca@192.168.16.130`.
 
+A verificação D03 confere o DTLS 1.3 com o `openssl s_client` no papel do UE. O OpenSSL do Ubuntu 24.04, 3.0, não tem DTLS 1.3 no `s_client`; o 4.1 tem. Ele fica fora do repositório, compilado à parte; a verificação foi feita com o 4.1.0 *beta* 2:
+
+```bash
+mkdir -p ~/openssl41 && cd ~/openssl41 && wget https://github.com/openssl/openssl/releases/download/openssl-4.1.0-beta2/openssl-4.1.0-beta2.tar.gz
+```
+
+```bash
+echo "457df0ec01a148954f843cb3589ff7465bdacc50250c7aba37e20f6c30c4e8b5  openssl-4.1.0-beta2.tar.gz" | sha256sum -c -
+```
+
+```bash
+tar -xzf openssl-4.1.0-beta2.tar.gz && cd openssl-4.1.0-beta2 && ./Configure --prefix="$HOME/openssl41/install" --libdir=lib no-shared no-tests no-docs && make -j"$(nproc)" && make install_sw
+```
+
+O roteiro recebe o binário em `OPENSSL_DTLS13`. Sem ele, o D03 aparece como pulado (`SKIP`):
+
+```bash
+OPENSSL_DTLS13=$HOME/openssl41/install/bin/openssl af/scripts/e2e.sh woca@192.168.16.130
+```
+
 Os endereços vêm de duas configurações:
 
 - o do AAnF, do `aanfUri` de `af/config/afcfg.yaml`. No *preflight*, o roteiro confere que ele é o `sbi.bindingIPv4` do `~/free5gc/config/aanfcfg.yaml` instalado e para se não for. A parte remota toma o endereço desse mesmo `aanfcfg.yaml`. O `seed` recebe o endereço em `--aanf` nas duas máquinas;
@@ -72,11 +94,11 @@ Com `--keep`, o free5GC, o gNB e o UE continuam no ar no fim. Sem ele, o roteiro
 | Arquivo | Conteúdo |
 |---|---|
 | `report.md` | resumo, A-KID de cada autenticação, tabela de verificações e as linhas AKMA do free5GC, do UE e do AF |
-| `local-results.txt`, `remote/remote-results.txt` | uma linha `PASS` ou `FAIL` por verificação |
+| `local-results.txt`, `remote/remote-results.txt` | uma linha `PASS`, `FAIL` ou `SKIP` por verificação |
 | `remote/` | `free5gc.log`, `ue.log`, `gnb.log`, saídas do cliente Ua\* e do `seed`, `state` (os A-KID) |
 | `af.log`, `af-*.log` | o AF, e os AF de relógio deslocado |
 
-O código de saída é 0 só se todas as verificações passarem. Leva cerca de dois minutos.
+O código de saída é 0 só se nenhuma verificação falhar; uma verificação pulada não conta como falha. Leva cerca de três minutos.
 
 ## 4. Testes negativos
 
@@ -207,6 +229,15 @@ O teste com o UERANSIM em outra máquina (critério 6) está em `docs/af-side/te
   - **`20261021-132202` (113/0).** Execução válida, antes das duas verificações do AF externo com PSK no R2n.
   - **`20261021-120909` (66/36).** Não vale. A parte remota interrompida na execução anterior não parou: o `e2e-remote.sh` ligava o controle de *jobs* (`set -m`), e o Ctrl-C e o fim da sessão SSH só alcançavam o comando em curso. Ela seguiu sozinha até o fim e parou o free5GC desta execução no meio do R2. Agora o controle de *jobs* só vale para iniciar o `run.sh`, e o Ctrl-C para o roteiro remoto.
 - **AUSF.** Antes da execução, o AUSF da máquina do free5GC foi revertido com o texto anterior do *patch* e reaplicado com o atual (`124b2d5`, que só mudou comentários). Assim o *preflight* volta a mostrar `ausf: patches applied`.
+
+### 5.5 MVP-8, fase (c), em 22/10/2026
+
+`126 passed, 0 failed, 0 skipped` na execução `20261022-124514`: 56 verificações na máquina do free5GC e 70 na do AF, em cerca de dois minutos e meio. O AF e o `uaclient` foram compilados com o wolfSSL 5.9.4 com DTLS; o D03 usou o OpenSSL 4.1.0 *beta* 2, compilado à parte (`OPENSSL_DTLS13`). A máquina do free5GC tem a política do AAnF com os nove AF_IDs, os *patches* de configuração com a política nova do NEF e o *patch* 0005 com o AF_ID do DTLS 1.3 na política do UE.
+
+- **Verificações novas.** As cinco do R2d e as seis do grupo D (seção 1). Os casos e o resultado de cada um estão em `ua-star-norma.md` §4.8.
+- **Execuções anteriores.**
+  - **`20261021-183854` (124/2).** T11: o texto do log do AF no vencimento da K_AF passou a dizer o protocolo (`TLS 1.3 session`), e o roteiro ainda procurava o texto antigo. D03: o segundo `ClientHello` do OpenSSL 4.1, com 1702 octetos, passava do que o wolfSSL lê por padrão com o MTU de 1200 (`ua-star-norma.md` §4.7). O `build-wolfssl.sh` passou a compilar a biblioteca com uma leitura maior.
+  - **`20261022-120810` (125/1).** D03 de novo: o AF ainda tinha a biblioteca antiga, porque o Go reaproveitou o binário já ligado (`ua-star-norma.md` §4.7). O `build-af.sh` passou a compilar o *hash* da biblioteca dentro de `af/wolftls`, e o `uaclient` da máquina do free5GC foi trocado pelo compilado de novo.
 
 ## 6. Limitações
 

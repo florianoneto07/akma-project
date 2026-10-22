@@ -435,13 +435,15 @@ O AF de teste do repositório serve os perfis de TS 24.109 Anexo K, cada um na s
 | `digest-tls` (K.2) | 8443 | HTTP Digest com a K_AF dentro de TLS; o AF se autentica pelo certificado | `<FQDN>.010001<cipher suite>` |
 | `psk-tls13` (K.3.3) | 8444 | TLS 1.3 com a K_AF como chave pré-compartilhada | `<FQDN>.0100000007` |
 | `psk-tls12` (K.3.2) | 8445 | TLS 1.2 `ECDHE-PSK` com a K_AF | `<FQDN>.010001D001` |
+| `psk-dtls13` (TS 33.535 Anexo C) | UDP 5684 | DTLS 1.3 com a K_AF como chave pré-compartilhada; CoAP dentro | `<FQDN>.0100000009` |
+| `psk-dtls12` | UDP 5685 | DTLS 1.2 `ECDHE-PSK` com a K_AF; CoAP dentro | `<FQDN>.010001D001` |
 | `digest-http` (teste, desligado por padrão) | 8080 | o Ua\* simplificado: o Digest, sem TLS (`docs/af-side/ua-star.md`) | `<FQDN>.FF00000001` |
 
 O AF está em `docs/af-side/af.md`.
 
 ### 6.1 Autorizar o AF no AAnF
 
-O AAnF só entrega K_AF a um AF_ID autorizado, a partir do endereço do AF. Cada perfil, e no K.2 cada *cipher suite*, tem o seu AF_ID (TS 33.220 H.3). No `aanfcfg.yaml` da parte 3 já estão os oito AF_IDs de `af1.akma.example`:
+O AAnF só entrega K_AF a um AF_ID autorizado, a partir do endereço do AF. Cada perfil, e no K.2 cada *cipher suite*, tem o seu AF_ID (TS 33.220 H.3). No `aanfcfg.yaml` da parte 3 já estão os nove AF_IDs de `af1.akma.example`:
 
 ```yaml
 configuration:
@@ -451,14 +453,15 @@ configuration:
         sourceAddresses:
           - 192.168.16.129
       # ... 0100011302, 0100011303, 010001C02B, 010001C02C (K.2),
-      #     0100000007 (PSK TLS 1.3), 010001D001 (PSK TLS 1.2), FF00000001 (teste)
+      #     0100000007 (PSK TLS 1.3), 010001D001 (PSK TLS e DTLS 1.2),
+      #     0100000009 (PSK DTLS 1.3), FF00000001 (teste)
 ```
 
 O AF_ID é o FQDN do AF seguido do identificador Ua\* (TS 33.535 A.4). Se mudar o FQDN ou a máquina do AF, mude em todas as entradas.
 
 ### 6.2 Compilar e configurar o AF
 
-Na máquina do AF (no laboratório, a VM do AF), com Go 1.26.2, `gcc`, `make` e `unzip`. Primeiro o wolfSSL, que faz os perfis PSK: o `crypto/tls` do Go não tem as suítes PSK de TS 33.210. O *script* baixa o wolfSSL 5.9.4, confere o SHA-256 e o compila em `af/build/wolfssl`:
+Na máquina do AF (no laboratório, a VM do AF), com Go 1.26.2, `gcc`, `make` e `unzip`. Primeiro o wolfSSL, que faz os perfis PSK: o `crypto/tls` do Go não tem as suítes PSK de TS 33.210 nem DTLS. O *script* baixa o wolfSSL 5.9.4, confere o SHA-256 e o compila em `af/build/wolfssl`:
 
 ```bash
 af/scripts/build-wolfssl.sh
@@ -605,7 +608,17 @@ sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -profile psk-tls12 -reconnect -n 2
 sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -profile digest-tls -ca ~/akma-free5gc/af/build/cert/ca.pem -n 3
 ```
 
-No TLS 1.2, o ME deriva a K_AF depois que o AF escolheu a suíte (`AF_ID af1.akma.example.010001D001`), e com `-reconnect` a segunda conexão retoma a sessão (`resumed true`). No K.2, o cliente confere o certificado do AF contra `af1.akma.example` e a CA, e faz o Digest dentro do TLS; o AF_ID leva a suíte da conexão, como `af1.akma.example.0100011301`. As opções estão em `docs/af-side/ua-client.md`.
+E os perfis DTLS, com CoAP sobre UDP pela sessão PDU:
+
+```bash
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -profile psk-dtls13 -reconnect -n 2
+```
+
+```bash
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -profile psk-dtls12 -reconnect -n 2
+```
+
+No TLS 1.2, o ME deriva a K_AF depois que o AF escolheu a suíte (`AF_ID af1.akma.example.010001D001`), e com `-reconnect` a segunda conexão retoma a sessão (`resumed true`). No DTLS 1.3, o AF_ID é `af1.akma.example.0100000009`; o AF responde ao primeiro `ClientHello` com um *cookie* e só pede a K_AF ao AAnF depois que o UE o devolve. No K.2, o cliente confere o certificado do AF contra `af1.akma.example` e a CA, e faz o Digest dentro do TLS; o AF_ID leva a suíte da conexão, como `af1.akma.example.0100011301`. As opções estão em `docs/af-side/ua-client.md`.
 
 O mesmo A-KID aparece nas telas do UE, do free5GC (AUSF e AAnF) e do AF. Na tela do UE aparece ainda `K_AF for AF_ID[af1.akma.example.0100000007] given to application [uaclient] (uid 1000), …`.
 
@@ -679,8 +692,8 @@ O roteiro pede a senha de `sudo` da máquina do free5GC uma vez e leva cerca de 
 
 - aplica o NAT do N6 e cria o *namespace* do UE;
 - sobe o free5GC com o AAnF, o gNB e o UE;
-- autentica no AF a partir do UE, por todos os perfis: o K.2 em TLS 1.3 e 1.2 e o PSK em TLS 1.3 e 1.2, com retomada de sessão;
-- confere o PSK TLS 1.3 com o `openssl s_client` no papel do UE, e a expiração da K_AF numa sessão TLS;
+- autentica no AF a partir do UE, por todos os perfis: o K.2 em TLS 1.3 e 1.2, o PSK em TLS 1.3 e 1.2 e o PSK em DTLS 1.3 e 1.2, com CoAP, com retomada de sessão;
+- confere o PSK TLS 1.3 com o `openssl s_client` no papel do UE, e a expiração da K_AF numa sessão TLS; com um OpenSSL 4.1 em `OPENSSL_DTLS13`, confere também o PSK DTLS 1.3 (`docs/af-side/e2e.md` §3);
 - força novas autenticações primárias: com o AAnF parado, sem assinatura AKMA e com a assinatura restaurada;
 - roda os testes negativos;
 - encerra tudo.
@@ -689,8 +702,10 @@ Cada verificação aparece como `PASS` ou `FAIL`, e o fim mostra o total:
 
 ```
 report: …/af/build/e2e/<data-hora>/report.md
-115 passed, 0 failed
+126 passed, 0 failed, 0 skipped
 ```
+
+Sem o `OPENSSL_DTLS13`, a verificação D03 aparece como pulada: `125 passed, 0 failed, 1 skipped`.
 
 ### 8.3 Ler o relatório
 
@@ -729,7 +744,7 @@ A configuração do NEF muda pelo *patch* de configuração da parte 4 (`free5gc
 
 - `sbi.registerIPv4` e `sbi.bindingIPv4`: o endereço da máquina do free5GC, que o AF externo alcança. A porta continua a 8000;
 - `3gpp-akma` em `serviceList`;
-- `akma.authorizedAfs`: cada AF_ID externo, com o endereço de origem do AF (§6.3 passo 2): os mesmos oito AF_IDs de `af1.akma.example` do AAnF.
+- `akma.authorizedAfs`: cada AF_ID externo, com o endereço de origem do AF (§6.3 passo 2): os mesmos nove AF_IDs de `af1.akma.example` do AAnF.
 
 O AAnF precisa aceitar os pedidos que chegam pelo NEF. No `~/free5gc/config/aanfcfg.yaml`, a lista `akma.authorizedNefs` dá o endereço do NEF e os AF_ID externos aceitos dele (`docs/free5gc-side/aanf.md` §2). O AAnF escuta na porta 8010.
 

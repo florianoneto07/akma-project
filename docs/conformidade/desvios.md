@@ -17,6 +17,7 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-8 | `aud` vazio tolerado no token OAuth2 | **encerrado** em 17/10/2026 (MVP-1b: NRF corrigido, AAnF estrito) | MVP-1 |
 | DV-9 | NEF–AF externo sem TLS nem certificado de cliente | **implementado** (MVP-6, 19/10/2026) | MVP-6 |
 | DV-10 | Perfis TLS do Ua\* sem `TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384` e sem OCSP *stapling*, recomendados por TS 33.210 | **implementado** (MVP-8, 21/10/2026) | MVP-8 |
+| DV-11 | CoAP sobre DTLS sem a suíte obrigatória de RFC 7252, `TLS_PSK_WITH_AES_128_CCM_8`; vale TS 33.210 | **implementado** (MVP-8, 21/10/2026) | MVP-8 |
 
 **Consolidação (MVP-5, 18/10/2026).** Nenhum desvio novo surgiu no MVP-5. Estado e evidência de cada um no roteiro ponta a ponta (`docs/af-side/e2e.md`, execução `20261018-171510`):
 
@@ -216,4 +217,23 @@ O certificado de cliente exige mudar o servidor SBI comum do NEF do free5GC. O T
 **Implementação (21/10/2026).** `af/wolftls/wolftls.go` (listas de suítes do servidor e do cliente); `af/akmatls/akmatls.go` (`ServerConfig`, sem `OCSPStaple`). Evidência: `TestTLS12Hello` (`ClientHello` com `D0 01` como única suíte PSK; `ServerHello` com `D0 01`); [R2t.psk12] e [T04] na execução `20261021-164401` (`docs/af-side/e2e.md` §5.4). Especificação: `docs/af-side/ua-star-norma.md` §3.8, itens 2 e 7.
 
 **Como fechar.** `D0 02`: quando o wolfSSL a tiver, ou com outra pilha de PSK TLS; basta acrescentá-la às listas e o AF_ID `<FQDN>.010001D002` às políticas. OCSP: com uma CA que tenha respondedor, o AF busca a resposta e a põe em `OCSPStaple`.
+
+---
+
+## DV-11 — CoAP sobre DTLS sem `TLS_PSK_WITH_AES_128_CCM_8`
+
+**Norma.** Dois textos em conflito:
+
+- `[3GPP]` TS 33.535 C.2.1: *"The TLS profile specified in TS 33.210 clause 6.2 apply to DTLS 1.3"*. TS 33.210 V19.3.0 §6.2.3: *"Only cipher suites with AEAD (e.g. GCM) and PFS (i.e., ECDHE) shall be supported"*; com PSK, `TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256` é obrigatória. A NOTA 2 de §6.2.1 estende o perfil ao DTLS;
+- RFC 7252 §9.1.3.1, sobre o CoAP no modo PSK: *"Implementations in these modes MUST support the mandatory-to-implement cipher suite TLS_PSK_WITH_AES_128_CCM_8"*. É uma suíte de DTLS 1.2 sem ECDHE, sem sigilo futuro.
+
+`[DIVERGÊNCIA]` O Anexo C de TS 33.535 não diz o protocolo de aplicação. O projeto pôs CoAP dentro do DTLS (ponto U14 de `docs/af-side/ua-star-norma.md`), e com ele veio a regra da RFC 7252.
+
+**O que o projeto faz.** Segue TS 33.210 (ponto U15): os perfis `psk-dtls13` e `psk-dtls12` só têm suítes com ECDHE e AEAD. No DTLS 1.3, `TLS_AES_128_GCM_SHA256` com `psk_dhe_ke`; no DTLS 1.2, `TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256`. `TLS_PSK_WITH_AES_128_CCM_8` não é oferecida nem aceita.
+
+**Por quê.** Decidido pelo responsável em 21/10/2026, com os pontos U13 a U21. O Ua\* do AKMA é um ponto de referência 3GPP, e TS 33.535 C.2.1 aplica a ele o perfil de TS 33.210, que proíbe suítes sem ECDHE. A RFC 7252 pensa em dispositivos restritos, sem capacidade para ECDHE, o que não é o caso de um UE.
+
+**Impacto.** Um cliente CoAP que só tenha `TLS_PSK_WITH_AES_128_CCM_8` não conecta ao AF. É o que TS 33.210 quer: sem sigilo futuro, quem obtivesse a K_AF leria as sessões passadas.
+
+**Implementação (21/10/2026).** `af/wolftls/wolftls.go` (listas de suítes, as mesmas do TLS); `af/af/internal/profile/psk_wolfssl.go` (perfis DTLS); `af/coap` (CoAP). Verificação na execução do `e2e.sh` da fase (c) (`docs/af-side/e2e.md`).
 

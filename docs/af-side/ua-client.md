@@ -13,6 +13,8 @@ O cliente `uaclient` (`af/ue/uaclient/`) faz o papel da aplicação do UE nos pe
 | `digest-tls` (TS 24.109 K.2) | abre TLS 1.3 ou 1.2, confere o certificado do AF contra o FQDN e a CA de `-ca`, e faz o Digest dentro do túnel | `<FQDN>.010001<cipher suite>`, pedido ao ME depois do desafio |
 | `psk-tls13` (K.3.3) | TLS 1.3 com a K_AF como PSK externa, só `psk_dhe_ke`, identidade `3GPP-AKMA;<A-KID>` | `<FQDN>.0100000007`, pedido ao ME antes do `ClientHello` |
 | `psk-tls12` (K.3.2) | TLS 1.2 com `ECDHE-PSK`; confere o *hint* `3GPP-AKMA` | `<FQDN>.010001<cipher suite>`, pedido ao ME depois do `ServerHello` |
+| `psk-dtls13` (TS 33.535 Anexo C) | DTLS 1.3 com a K_AF como PSK; `GET` em CoAP confirmável, com retransmissão | `<FQDN>.0100000009`, pedido ao ME antes do `ClientHello` |
+| `psk-dtls12` | DTLS 1.2 com `ECDHE-PSK`; CoAP | `<FQDN>.010001<cipher suite>`, depois do `ServerHello` |
 | `digest-http` (padrão; teste) | o Ua\* simplificado de `ua-star.md`, sem TLS | `<FQDN>.<-ua-star-id>` |
 
 Nos perfis Digest:
@@ -77,13 +79,13 @@ O AF vê a requisição vindo de 192.168.16.130, o endereço da VM do free5GC, p
 
 | Opção | Padrão | |
 |---|---|---|
-| `-profile` | `digest-http` | `digest-tls`, `psk-tls13`, `psk-tls12` ou `digest-http` |
+| `-profile` | `digest-http` | `digest-tls`, `psk-tls13`, `psk-tls12`, `psk-dtls13`, `psk-dtls12` ou `digest-http` |
 | `-fqdn` | `af1.akma.example` | FQDN do AF: vai no `Host` e no `server_name`, é conferido no `realm` e no certificado, e entra na K_AF |
-| `-connect` | `192.168.16.129` | endereço do AF; sem porta, a do perfil em `afcfg.yaml`: 8443, 8444, 8445 ou 8080 |
+| `-connect` | `192.168.16.129` | endereço do AF; sem porta, a do perfil em `afcfg.yaml`: 8443, 8444, 8445, 5684 (UDP), 5685 (UDP) ou 8080 |
 | `-ca` | — | certificado da CA do AF, PEM; obrigatório com `digest-tls` |
 | `-tls12` | — | `digest-tls` só com TLS 1.2 |
-| `-reconnect` | — | uma conexão TLS nova por requisição, retomando a sessão anterior |
-| `-psk-ke-only` | — | `psk-tls13` oferecendo só `psk_ke`, que TS 33.210 §6.2.2 proíbe; teste negativo |
+| `-reconnect` | — | uma conexão TLS ou associação DTLS nova por requisição, retomando a sessão anterior |
+| `-psk-ke-only` | — | `psk-tls13` ou `psk-dtls13` oferecendo só `psk_ke`, que TS 33.210 §6.2.2 proíbe; teste negativo |
 | `-path` | `/ua/v1/session` | |
 | `-ua-star-id` | `FF00000001` | identificador Ua\* de `digest-http` (ADR-0003) |
 | `-qop` | `auth` | ou `auth-int` |
@@ -100,6 +102,7 @@ Uma K_AF dada explicitamente (`-kaf`, `-kaf-base64`, `-kaf-file`) ou um vetor t�
 |---|---|
 | `af/ue/uaclient/client.go` | sessão Digest, com ou sem TLS: desafio, K_AF do identificador Ua\* da conexão, credenciais, `rspauth`, `stale`; endereço de origem |
 | `af/ue/uaclient/psk.go`, `psk_wolfssl.go`, `psk_nowolfssl.go` | sessão PSK pelo `af/wolftls`; sem a *tag* `wolfssl`, um erro que manda compilar com o wolfSSL |
+| `af/ue/uaclient/dtls_wolfssl.go` | sessão DTLS: associação, CoAP pelo `af/coap`, nova associação quando o AF encerra a anterior |
 | `af/ue/uaclient/me.go` | `FromKeyService`: pede a K_AF ao serviço de chaves do ME; `FromME`: chama o `nr-cli` (teste) |
 | `af/akmatls/` | identificadores Ua\* de TS 33.220 H.3, identidade PSK e configuração TLS do K.2 |
 | `af/ue/uaclient/cmd/uaclient/` | o comando |

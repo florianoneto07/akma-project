@@ -2,7 +2,7 @@
 
 ## [Não lançado]
 
-### MVP-8 — Ua\* da norma e autorização por aplicação no UE, fases (a) e (b) (20 e 21/10/2026)
+### MVP-8 — Ua\* da norma e autorização por aplicação no UE, fases (a) a (c) (20 a 22/10/2026)
 - **Fase (a), serviço de chaves do ME:** `af/ue/ueransim/patches/0005-akma-key-service.patch`. O `nr-ue` atende num *socket* Unix e dá a cada aplicação, identificada pelo *uid* (`SO_PEERCRED`), só a K_AF dos seus AF_IDs (TS 33.535 §4.4.3). O `akma-kaf` do `nr-cli` só funciona com `akmaCliKaf`. O `uaclient` usa o serviço (`-me-socket`). Execução de 20/10/2026: 88 verificações, nenhuma falha.
 - **Fase (b), perfis TLS** (TS 24.109 Anexo K):
   - K.2, Digest dentro de TLS 1.3 e 1.2, com o `crypto/tls` (`af/akmatls`);
@@ -10,9 +10,18 @@
   - o AF serve um perfil por porta; o Ua\* simplificado vira o perfil de teste `digest-http`, desligado por padrão;
   - identificadores Ua\* de TS 33.220 H.3, um AF_ID por perfil e *cipher suite* nas políticas do AAnF, do NEF (`free5gc/patches/config/0002`) e do UE (`0005`);
   - retomada por *tickets* presos à expiração da K_AF; sessão TLS encerrada quando a K_AF vence.
-- **Scripts:** `af/scripts/build-wolfssl.sh` (SHA-256 fixado, conferência das macros), `af/scripts/make-test-ca.sh`; `build-af.sh` compila com o wolfSSL quando a biblioteca existe.
-- **Roteiro:** passo R2t e grupo T; um AF externo com PSK TLS 1.3 no R2n; `e2e-remote.sh` sem controle de *jobs*, para o Ctrl-C parar a parte remota. Execução de 21/10/2026: 115 verificações, nenhuma falha.
-- **Documentos:** `docs/af-side/ua-star-norma.md` (especificação, implementação e verificação); ADR-0003 revisto; DV-10 (sem `D0 02` e sem OCSP *stapling*, recomendados por TS 33.210); matriz revisão 6; tutorial, partes 5 a 9; `af.md`, `ua-client.md`, `ue-ueransim.md`, `e2e.md`.
+- **Fase (c), perfis DTLS** (TS 33.535 Anexo C):
+  - DTLS 1.3 com a K_AF como PSK externa, AF_ID `…0100000009`; DTLS 1.2 com o procedimento e o AF_ID do TLS 1.2 (`…010001D001`);
+  - CoAP dentro do DTLS (`af/coap`, RFC 7252): `GET coaps://<FQDN>/ua/v1/session`, resposta `2.05` em JSON; UDP 5684 e 5685;
+  - *cookies* nas duas versões, e nenhuma consulta ao AAnF antes do *cookie*; MTU 1200; sem *connection ID*;
+  - `af/wolftls` com DTLS: um *socket* UDP no AF, uma associação por endereço de origem, retransmissão pelos temporizadores do wolfSSL;
+  - AF_ID `…0100000009` nas políticas do AAnF, do NEF e do UE;
+  - sem `TLS_PSK_WITH_AES_128_CCM_8`, que RFC 7252 exige do CoAP e TS 33.210 não admite (DV-11).
+- **Scripts:**
+  - `af/scripts/build-wolfssl.sh` (SHA-256 fixado, conferência das macros), `af/scripts/make-test-ca.sh`; `build-af.sh` compila com o wolfSSL quando a biblioteca existe;
+  - fase (c): o wolfSSL com DTLS, MTU ajustável e leitura de datagramas maiores que o MTU; o `build-af.sh` compila o *hash* da biblioteca dentro de `af/wolftls`, para o Go ligar os binários de novo quando ela muda.
+- **Roteiro:** passo R2t e grupo T; um AF externo com PSK TLS 1.3 no R2n; `e2e-remote.sh` sem controle de *jobs*, para o Ctrl-C parar a parte remota. Execução de 21/10/2026: 115 verificações, nenhuma falha. Fase (c): passo R2d e grupo D, com o OpenSSL 4.1 no papel do UE (`OPENSSL_DTLS13`). Execução de 22/10/2026: 126 verificações, nenhuma falha.
+- **Documentos:** `docs/af-side/ua-star-norma.md` (especificação, implementação e verificação); ADR-0003 revisto; DV-10 (sem `D0 02` e sem OCSP *stapling*, recomendados por TS 33.210); DV-11; matriz revisões 6 e 7; tutorial, partes 5 a 9; `af.md`, `ua-client.md`, `ue-ueransim.md`, `e2e.md`.
 
 ### MVP-6 — AF externo via NEF, acesso anônimo e UERANSIM em outra máquina (19/10/2026)
 - **NEF:** `free5gc/patches/nef/0001-akma-api.patch` acrescenta ao NEF do free5GC a API `3gpp-akma` (TS 29.522 §5.14; TS 33.535 §6.3). O NEF:

@@ -13,7 +13,11 @@ O AF serve os perfis de TS 24.109 Anexo K, cada um na sua porta (`ua-star-norma.
 | `digest-tls` (K.2) | HTTP Digest com a K_AF dentro de TLS 1.3 ou 1.2; o AF se autentica pelo certificado | `<FQDN>.010001<cipher suite>` da conexão |
 | `psk-tls13` (K.3.3) | TLS 1.3 com a K_AF como PSK externa, `psk_dhe_ke` | `<FQDN>.0100000007` |
 | `psk-tls12` (K.3.2) | TLS 1.2 `ECDHE-PSK` com a K_AF, *hint* `3GPP-AKMA` | `<FQDN>.010001D001` |
+| `psk-dtls13` (TS 33.535 Anexo C) | DTLS 1.3 com a K_AF como PSK externa, `psk_dhe_ke`, *cookie* no `HelloRetryRequest`; CoAP `GET` dentro | `<FQDN>.0100000009` |
+| `psk-dtls12` | DTLS 1.2 `ECDHE-PSK` com a K_AF, `HelloVerifyRequest`; CoAP dentro | `<FQDN>.010001D001` |
 | `digest-http` (teste, desligado por padrão) | o Ua\* simplificado de `ua-star.md`, sem TLS | `<FQDN>.<uaStarId>` |
+
+Nos perfis DTLS, o AF responde em CoAP (RFC 7252): `GET coaps://<FQDN>/ua/v1/session` recebe `2.05 Content` com o mesmo JSON dos perfis TLS (`ua-star-norma.md` §4.2). O AF só pede a K_AF ao AAnF depois do *cookie* (U16).
 
 Os perfis PSK precisam do AF compilado com o wolfSSL (`af/scripts/build-wolfssl.sh` antes de `build-af.sh`); o binário fica sob GPLv3. Sem ele, o AF recusa partir com um perfil PSK na configuração.
 
@@ -46,7 +50,8 @@ Módulo Go `af/` (`github.com/florianoneto07/akma-free5gc/af`). Depende de `shar
 | `af/af/internal/server/` | servidor Ua\*: Digest nas verificações de `ua-star.md` §5.4, com o AF_ID do perfil e da conexão; K_AF da identidade PSK; recurso de sessão dos perfis PSK; K_AF por AF_ID e A-KID |
 | `af/af/internal/profile/` | um servidor por perfil: certificado do K.2 e `crypto/tls`; PSK pelo `af/wolftls` (só com a *tag* `wolfssl`) |
 | `af/akmatls/` | identificadores Ua\* de TS 33.220 H.3, identidade PSK, perfil TLS do K.2 com *tickets* de 24 horas |
-| `af/wolftls/` (GPLv3) | ligação cgo ao wolfSSL: TLS 1.2 e 1.3 com PSK sobre um `net.Conn`, *tickets* presos à expiração da chave |
+| `af/wolftls/` (GPLv3) | ligação cgo ao wolfSSL: TLS e DTLS 1.2 e 1.3 com PSK, *tickets* presos à expiração da chave; no DTLS, um *socket* UDP separado por endereço de origem e *cookies* presos ao endereço |
+| `af/coap/` | CoAP (RFC 7252): mensagem, opções, troca confirmável com resposta no ACK e retransmissão |
 | `af/af/internal/logger/` | log no formato do free5GC, NF `AF`, categorias `Main`, `CFG`, `UA` e `Consumer` |
 | `af/af/cmd/af/` | o programa `af` (`-c` configuração, `-l` arquivo de log) |
 | `af/ue/uaclient/` | cliente Ua\* (biblioteca e comando `uaclient`) |
@@ -62,14 +67,14 @@ Os campos e os padrões estão em `ua-star.md` §11; os perfis, em `ua-star-norm
 | Campo | Valor |
 |---|---|
 | `fqdn` | `af1.akma.example` |
-| `profiles` | `digest-tls` em `192.168.16.129:8443`, com `certificate` e `key` de `make-test-ca.sh`; `psk-tls13` em `:8444`; `psk-tls12` em `:8445`. O `digest-http` em `:8080` fica comentado: o `e2e.sh` o acrescenta |
+| `profiles` | `digest-tls` em `192.168.16.129:8443`, com `certificate` e `key` de `make-test-ca.sh`; `psk-tls13` em `:8444`; `psk-tls12` em `:8445`; `psk-dtls13` em UDP `:5684`; `psk-dtls12` em UDP `:5685`. O `digest-http` em `:8080` fica comentado: o `e2e.sh` o acrescenta |
 | `uaStarId` | `FF00000001`, só do `digest-http` |
 | `kafExpiry` | `refetch` |
 | `aanfUri` | `http://192.168.16.130:8010` |
 
 Sem `profiles`, o `listen` de antes vale como um perfil `digest-http`. Com `profiles`, `listen` não pode aparecer.
 
-Cada AF_ID dos perfis precisa estar em `akma.authorizedAfs` do `aanfcfg.yaml`, com o endereço do AF (`docs/free5gc-side/aanf.md` §2): `af1.akma.example.` mais `0100011301`, `0100011302`, `0100011303`, `010001C02B` e `010001C02C` (K.2 com certificado ECDSA), `0100000007`, `010001D001` e `FF00000001`. O mesmo vale para a política do NEF e para a do UE.
+Cada AF_ID dos perfis precisa estar em `akma.authorizedAfs` do `aanfcfg.yaml`, com o endereço do AF (`docs/free5gc-side/aanf.md` §2): `af1.akma.example.` mais `0100011301`, `0100011302`, `0100011303`, `010001C02B` e `010001C02C` (K.2 com certificado ECDSA), `0100000007`, `010001D001`, `0100000009` e `FF00000001`. O mesmo vale para a política do NEF e para a do UE.
 
 **AF fora da rede do operador (MVP-6).** Com `nefUri` no lugar de `aanfUri`, o AF pede a K_AF ao NEF (`POST {nefUri}/3gpp-akma/v1/retrieve`, TS 29.522 §4.4.23.2; TS 33.535 §6.3). Especificação: `docs/free5gc-side/nef.md`.
 
@@ -95,7 +100,7 @@ Mesmo formato das NFs do free5GC (MVP-3a), na categoria `UA` para o Ua\* e `Cons
 | `info` | `K_AF for A-KID <A-KID> and AF_ID <AF_ID> obtained from the AAnF, expires <instante>`; no modo externo, `obtained from the NEF` |
 | `info` | `UE with A-KID <A-KID> authenticated (AF_ID <AF_ID>, nc <nc>, qop <qop>)` |
 | `info` | `TLS 1.3 PSK handshake with <endereço>: A-KID <A-KID>, AF_ID <AF_ID>, cipher suite 1301, resumed true\|false`; `TLS 1.2 …` |
-| `info` | `UE with A-KID <A-KID> served over PSK TLS (AF_ID <AF_ID>)` |
+| `info` | `UE with A-KID <A-KID> served over PSK TLS (AF_ID <AF_ID>)`; nos perfis DTLS, `served over PSK DTLS`; `DTLS 1.3 PSK handshake with …` |
 | `info` | `K_AF of A-KID <A-KID>, AF_ID <AF_ID> expired: TLS session with <endereço> closed` |
 | `info` | `No K_AKMA at the AAnF for A-KID <A-KID>: access rejected`; nos perfis PSK, `… (AF_ID <AF_ID>): handshake refused` |
 | `warn` | `TLS 1.3 PSK handshake with <endereço> failed: <erro do wolfSSL>: <causa>`; `PSK identity from <endereço> is not 3GPP-AKMA;<A-KID>: handshake refused`; erros de *handshake* do K.2 |

@@ -1,6 +1,6 @@
 # Ua\* da norma e autorização por aplicação no UE: especificação
 
-**MVP:** MVP-8 · **Data:** 20 de outubro de 2026 · **Estado:** fases (a) e (b) aprovadas pelo responsável em 20/10/2026, com os pontos U1 a U12 como propostos. A fase (a) está implementada e verificada (20/10/2026). A fase (b) está implementada e verificada (21/10/2026): a implementação e as diferenças em relação a este texto estão na seção 3.8, e a verificação, com 115 verificações e nenhuma falha, na seção 3.9. A fase (c), DTLS, está especificada na seção 4, com os pontos U13 a U21 aprovados pelo responsável em 21/10/2026 como propostos. A fase (d), OSCORE, entra depois (seção 7).
+**MVP:** MVP-8 · **Data:** 20 de outubro de 2026 · **Estado:** fases (a) e (b) aprovadas pelo responsável em 20/10/2026, com os pontos U1 a U12 como propostos. A fase (a) está implementada e verificada (20/10/2026). A fase (b) está implementada e verificada (21/10/2026): a implementação e as diferenças em relação a este texto estão na seção 3.8, e a verificação, com 115 verificações e nenhuma falha, na seção 3.9. A fase (c), DTLS, foi aprovada pelo responsável em 21/10/2026, com os pontos U13 a U21 como propostos, e está implementada e verificada (22/10/2026): a implementação está na seção 4.7, e a verificação, com 126 verificações e nenhuma falha, na seção 4.8. A fase (d), OSCORE, entra depois (seção 7).
 
 Decisões já tomadas pelo responsável em 20/10/2026 (plano, MVP-8):
 
@@ -334,7 +334,7 @@ O `e2e.sh` ganha um grupo T, com o UE no seu *namespace* passando pelos três pe
 
 ## 4. Fase (c): DTLS
 
-**Estado (21/10/2026):** **aprovada** pelo responsável, com os pontos U13 a U21 como propostos (seção 5): DTLS 1.3 e DTLS 1.2, CoAP dentro do DTLS.
+**Estado (22/10/2026):** **aprovada** pelo responsável em 21/10/2026, com os pontos U13 a U21 como propostos (seção 5): DTLS 1.3 e DTLS 1.2, CoAP dentro do DTLS. **Implementada e verificada** (seções 4.7 e 4.8).
 
 ### 4.1 Situação normativa
 
@@ -412,6 +412,55 @@ Se o ponto U13 ficar na proposta (b): o procedimento do PSK TLS 1.2 da seção 3
 | logs | nenhuma chave |
 
 O `e2e.sh` ganha o passo R2d, com o UE no seu *namespace*, e um grupo D na máquina do AF.
+
+### 4.7 Implementação (21/10/2026)
+
+**Componentes.**
+
+| Componente | Mudança |
+|---|---|
+| `af/scripts/build-wolfssl.sh` | `--enable-dtls-mtu`, para fixar o MTU; `WOLFSSL_DTLS_MTU_ADDITIONAL_READ_BUFFER` de 16384 (abaixo); a conferência das macros passa a exigir `WOLFSSL_DTLS_MTU` |
+| `af/wolftls` | DTLS 1.2 e 1.3. A fila de entrada guarda datagramas inteiros, e cada `Read` devolve um registro. Durante o *handshake*, a espera segue o temporizador de retransmissão do wolfSSL (`wolfSSL_dtls_get_current_timeout`, `wolfSSL_dtls_got_timeout`); depois dele, só no DTLS 1.3 com mensagem não confirmada. No servidor, `ListenDTLS`: um *socket* UDP, uma associação por endereço de origem, até 1024 |
+| `af/scripts/build-af.sh` | o *hash* da biblioteca entra numa constante do *shim* de `af/wolftls` (abaixo) |
+| `af/coap` (novo) | mensagem e opções (RFC 7252 §3, §5.4, §5.10); cliente com CON, retransmissão (§4.2, §4.8) e resposta no ACK; respondedor que repete a resposta a um CON repetido (§4.5), responde `Reset` a um CON malformado e ao *ping* |
+| `af/af` | perfis `psk-dtls13` e `psk-dtls12`; recurso CoAP (`server.CoAP`); *handshake* de no máximo 15 s; associação sem pedido por 5 minutos encerrada |
+| `af/ue/uaclient` | `-profile psk-dtls13` e `psk-dtls12`; nova associação quando o AF encerra a anterior |
+| políticas | AF_ID `af1.akma.example.0100000009` no AAnF, no NEF e no UE; o `…010001D001` já estava |
+
+**Cookies (U16).**
+
+- **DTLS 1.2.** O `HelloVerifyRequest` usa um *callback* próprio: HMAC-SHA-256, com um segredo do servidor, sobre o endereço do cliente. O padrão do wolfSSL lê o endereço do *socket*, que a ligação não lhe dá.
+- **DTLS 1.3.** O *cookie* do `HelloRetryRequest` fica preso ao endereço do cliente com `wolfSSL_dtls_set_peer`.
+- **Achado.** No DTLS 1.3, ao responder sem estado ao primeiro `ClientHello`, o wolfSSL chama o *callback* de PSK para saber a suíte da PSK (*"Ask the user for the ciphersuite matching this identity"*, `src/dtls.c`); não confere *binder* nessa hora. Do jeito ingênuo, o AF pediria a K_AF ao AAnF antes do *cookie*, contra a U16. A ligação responde a essa fase sem perguntar nada (`wolfSSL_is_stateful`): devolve só a suíte. A K_AF é pedida no segundo `ClientHello`, depois do *cookie*, quando o wolfSSL confere o *binder*. Teste: `TestDTLSNoKeyBeforeCookie`.
+
+**Datagramas maiores que o MTU.** O wolfSSL lê no máximo o MTU mais `WOLFSSL_DTLS_MTU_ADDITIONAL_READ_BUFFER` (500 por padrão), 1700 octetos com o MTU de 1200, e o resto do datagrama se perde. O OpenSSL 4.1 oferece uma partilha de chave híbrida com ML-KEM: com uma identidade do tamanho de um A-KID, o seu segundo `ClientHello` tinha 1702 octetos, chegava cortado ao AF e o *handshake* não terminava. O MTU de 1200 vale para o que o AF manda; para receber, a biblioteca passa a ser compilada com 16384 octetos a mais. O teste `TestOpenSSLDTLS13Client` cobre as duas identidades, a curta e a do tamanho de um A-KID.
+
+**Compilação depois de trocar a biblioteca.** O Go não vê o `libwolfssl.a`. Desde a fase (b), o `build-af.sh` punha o *hash* da biblioteca numa macro do compilador C, para que uma biblioteca nova recompilasse `af/wolftls`. O pacote era recompilado, mas nenhum código usava a macro: o objeto saía igual, e o Go reaproveitava os binários já ligados. Com isso, o AF da execução `20261022-120810` ainda tinha o wolfSSL de antes do ajuste da leitura, e o D03 falhou do mesmo jeito. Agora o *hash* vai para uma constante do *shim* (`wolftls_lib`): uma biblioteca nova muda o objeto, e o Go liga os binários de novo.
+
+**Testes de `af/wolftls`** (DTLS): `psk_dhe_ke`, identidade e `server_name` no segundo `ClientHello`; `HelloRetryRequest` com *cookie* (1.3) e `HelloVerifyRequest` (1.2) como primeira resposta; nenhuma chave pedida antes do *cookie*; K_AF errada, identidade desconhecida, outro `server_name` e `psk_ke` recusados; retomada nas duas versões com uma consulta só; associação encerrada no vencimento da K_AF; um registro por `Read`; e, com `OPENSSL_DTLS13`, o `openssl s_client -dtls1_3` do OpenSSL 4.1.
+
+**Diferenças em relação ao texto aprovado.**
+
+1. `[MVP]` **Tempos.** *Handshake* de no máximo 15 s e associação encerrada depois de 5 minutos sem pedido. O UDP não tem fim de conexão, e as associações abandonadas ocupariam o AF.
+2. `[MVP]` **CoAP só com resposta no ACK.** O AF responde sempre no ACK, e o cliente não trata a resposta separada (RFC 7252 §5.2.2).
+3. **Recusas no DTLS 1.2.** Com uma K_AF errada, o registro que não decifra é descartado em silêncio (RFC 6347 §4.1.2.7). O cliente só desiste no fim do seu prazo.
+4. **OpenSSL 4.1 *beta* 2** (09/10/2026) na conferência independente: a versão final ainda não saiu. Ele fica fora do repositório e é dado ao roteiro por `OPENSSL_DTLS13`; sem ele, a verificação D03 aparece como pulada.
+
+### 4.8 Verificação (22/10/2026)
+
+`e2e.sh` com **126 verificações e nenhuma falha** (execução `20261022-124514`; `e2e.md` §5.5). Os casos da seção 4.6:
+
+| Caso | Resultado |
+|---|---|
+| UE → AF por DTLS 1.3, CoAP GET | atendido: `2.05` com o A-KID, AF_ID `…0100000009` e suíte `1301` no log do AF [R2d.dtls13, D01]; `HelloRetryRequest` com *cookie* como primeira resposta e `psk_dhe_ke` no segundo `ClientHello`, nos testes de `af/wolftls` (`TestDTLSCookieOnTheWire`) |
+| UE → AF por DTLS 1.2 | atendido: suíte `D001`, `2.05`, AF_ID `…010001D001` [R2d.dtls12, D02]; `HelloVerifyRequest` e *hint* `3GPP-AKMA` nos testes de `af/wolftls` |
+| segunda associação | atendido: retomada nas duas versões [D01, R2d.dtls12-resumed, D02] |
+| `ClientHello` que só oferece `psk_ke` | atendido: recusado [R2d.psk-ke] |
+| K_AF errada; A-KID desconhecido; AF_ID fora da política | atendido: K_AF de outro AF_ID [D05]; A-KID desconhecido, com `K_AKMA_NOT_PRESENT` do AAnF no log [D04, D04b]. O AF_ID fora da política é recusado pelo AAnF no mesmo caminho do PSK TLS [T10, T10b]; o roteiro não o repete no DTLS |
+| `ClientHello` sem o *cookie* | atendido nos testes de `af/wolftls` (`TestDTLSNoKeyBeforeCookie`): nenhuma chave pedida nas duas versões. O roteiro não monta esse caso |
+| K_AF vencida, `refetch` e `reject` | atendido nos testes: associação encerrada no vencimento (`TestDTLSExpiry`; teste do perfil `psk-dtls13` do AF). A política do *handshake* seguinte é a mesma do PSK TLS [T11 a T13b] |
+| conferência independente (U21) | atendido: `openssl s_client -dtls1_3` do OpenSSL 4.1.0 *beta* 2, com `-psk_identity "3GPP-AKMA;<A-KID>"` e a K_AF calculada em Python a partir do vetor, manda o GET em CoAP e recebe `2.05` com o A-KID [D03] |
+| logs | atendido: nenhuma cadeia de 64 hexadecimais [L1, R7] |
 
 ## 5. Pontos para aprovação
 

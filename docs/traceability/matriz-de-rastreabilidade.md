@@ -1,7 +1,7 @@
 # Matriz de rastreabilidade
 
-**Revisão:** 6 (MVP-8, fases (a) e (b): serviço de chaves do ME e perfis TLS do Ua\*). Revisão 5 (MVP-6): K_AF via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina. Revisão 4 (MVP-5): etapas mínimas do fluxo ligadas a evidências do roteiro ponta a ponta
-**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 a 3.7 e 4 em 18 de outubro de 2026; revisão 5 em 19 de outubro de 2026; revisão 6 em 21 de outubro de 2026
+**Revisão:** 7 (MVP-8, fase (c): perfis DTLS do Ua\*). Revisão 6 (MVP-8, fases (a) e (b)): serviço de chaves do ME e perfis TLS do Ua\*. Revisão 5 (MVP-6): K_AF via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina. Revisão 4 (MVP-5): etapas mínimas do fluxo ligadas a evidências do roteiro ponta a ponta
+**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 a 3.7 e 4 em 18 de outubro de 2026; revisão 5 em 19 de outubro de 2026; revisões 6 e 7 em 21 de outubro de 2026
 
 *Nota (16/10/2026):* os caminhos da coluna "Implementação" seguem a estrutura anterior ao plano. A estrutura aprovada (plano §3) é: `akma/` → `shared/akma/`; `NFs/aanf/` → `free5gc/aanf/`; `patches/` → `free5gc/patches/`; `af/` → `af/af/`; `ue/` → `af/ue/`. Os caminhos serão atualizados linha a linha à medida que cada MVP os criar. Os desvios citados como DV-n estão em `docs/conformidade/desvios.md`.
 
@@ -85,6 +85,22 @@ Evidências: verificações da execução `20261021-164401` de `af/scripts/e2e.s
 | AF externo com perfil PSK, K_AF pelo NEF | 33.535 6.3; 24.109 K.3.3 | AF com `nefUri` e perfil `psk-tls13` | [R2n.ua-nef-psk], [R2n.nef-psk-relayed] | **Verificado** |
 | Políticas do AAnF, do NEF e do UE com um AF_ID por perfil e *cipher suite* | 33.535 6.2.1 passo 2, 6.3 passo 2, 4.4.3 | `free5gc/config/aanfcfg.yaml`, `free5gc/patches/config/0002`, `0005` | [T10] (fora da política); demais [R2t] e [T] | **Verificado** (U7) |
 | Nenhuma chave em log | plano, todos os MVPs | todos; wolfSSL sem *debug* | [R7.no-key-*], [L1] | **Verificado** |
+
+## Perfis DTLS do MVP-8 e evidências (revisão 7)
+
+Evidências: verificações R2d (máquina do free5GC) e D (máquina do AF) da execução `20261022-124514` de `af/scripts/e2e.sh`, com 126 verificações e nenhuma falha (`docs/af-side/e2e.md` §5.5), e testes de `af/wolftls`, `af/coap` e `af/af/internal/profile`. Especificação: `docs/af-side/ua-star-norma.md` §4.
+
+| Etapa | Cláusula | Implementação | Evidência | Estado |
+|---|---|---|---|---|
+| UE como cliente DTLS; identidade PSK de B.1 levada em mensagem DTLS | 33.535 C.1.1, C.2.2 | `af/wolftls` (DTLS), `af/ue/uaclient` (`psk-dtls13`, `psk-dtls12`) | [R2d.dtls13], [R2d.dtls12]; `TestDTLSCookieOnTheWire` (identidade no `ClientHello`) | **Verificado** |
+| DTLS 1.3 com o procedimento do TLS 1.3 (B.1.3.2.2): `psk_dhe_ke`, PSK externa da K_AF | 33.535 C.2.2; 33.210 6.2.2 | `af/wolftls`; perfil `psk-dtls13` | [R2d.dtls13], [D01], [R2d.psk-ke]; `TestDTLSRefused` | **Verificado** — U1 |
+| Identificador Ua\* do DTLS 1.3 `01 00 00 00 09` | 33.220 H.3; 33.535 A.4 | `af/akmatls` (`UaStarDTLS13`); políticas | [D01], [R2d.me] | **Verificado** — `[INTERPRETAÇÃO]` U18 |
+| DTLS 1.2, que TS 33.210 exige de quem tem DTLS | 33.210 6.2.1; 33.535 C.1.1 | perfil `psk-dtls12`, procedimento e identificador do TLS 1.2 | [R2d.dtls12], [R2d.dtls12-resumed], [D02] | **Verificado** — `[LACUNA]` U13 (b) |
+| Perfil TLS de TS 33.210 aplicado ao DTLS | 33.535 C.2.1; 33.210 6.2 | as mesmas listas de suítes e grupos do TLS | testes de `af/wolftls` | **Verificado** — DV-11 (RFC 7252 §9.1.3.1) |
+| *Cookie* contra negação de serviço; nenhuma consulta ao AAnF antes dele | RFC 9147 5.1; RFC 6347 4.2.1 | `af/wolftls` (`wolftls_dtls_peer`, *callback* de *cookie*, fase sem estado) | `TestDTLSCookieOnTheWire`, `TestDTLSNoKeyBeforeCookie` | **Verificado** (U16) |
+| CoAP dentro do DTLS: `GET` da sessão, `2.05` em JSON | RFC 7252 3, 4.2, 5.2.1 | `af/coap`; `server.CoAP` | [R2d], [D03]; `TestCoAPHandler`, testes de `af/coap` | **Verificado** — `[LACUNA]` U14 |
+| Conferência independente do DTLS 1.3 | — | OpenSSL 4.1 *beta* 2, fora do repositório | [D03]; `TestOpenSSLDTLS13Client` | **Verificado** (U21) |
+| Retomada; K_AF vencida | 33.222 5.4.1.4; 33.535 6.4.2 | *tickets* do `af/wolftls`; `Expired` | [R2d.dtls12-resumed], [D01]; `TestDTLSResumption`, `TestDTLSExpiry`, `TestPSKExpiry` | **Verificado** (U19) |
 
 ## Derivação criptográfica
 
