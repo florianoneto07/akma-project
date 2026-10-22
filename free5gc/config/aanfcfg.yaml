@@ -45,7 +45,10 @@ configuration:
       - afId: af1.akma.example.0100000007 # TLS 1.3 with K_AF as pre-shared key (K.3.3)
         sourceAddresses:
           - 192.168.16.129
-      - afId: af1.akma.example.010001D001 # TLS 1.2, TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256 (K.3.2)
+      - afId: af1.akma.example.010001D001 # (D)TLS 1.2, TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256 (K.3.2)
+        sourceAddresses:
+          - 192.168.16.129
+      - afId: af1.akma.example.0100000009 # DTLS 1.3 with K_AF as pre-shared key (TS 33.535 Annex C)
         sourceAddresses:
           - 192.168.16.129
       - afId: af1.akma.example.FF00000001 # simplified Ua*, test only (TS 33.220 H.2 NOTE 2)
@@ -62,6 +65,7 @@ configuration:
           - af1.akma.example.010001C02C
           - af1.akma.example.0100000007
           - af1.akma.example.010001D001
+          - af1.akma.example.0100000009
           - af1.akma.example.FF00000001
 
 logger: # log output setting
