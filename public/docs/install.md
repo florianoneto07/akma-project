@@ -403,7 +403,8 @@ The patches change three things in `config/free5gc-ue.yaml`:
           - af1.akma.example.010001C02B   # Digest in TLS 1.2
           - af1.akma.example.010001C02C
           - af1.akma.example.0100000007   # TLS 1.3 with K_AF as pre-shared key (K.3.3)
-          - af1.akma.example.010001D001   # TLS 1.2 with K_AF as pre-shared key (K.3.2)
+          - af1.akma.example.010001D001   # (D)TLS 1.2 with K_AF as pre-shared key (K.3.2)
+          - af1.akma.example.0100000009   # DTLS 1.3 with K_AF as pre-shared key (TS 33.535 Annex C)
           - af1.akma.example.FF00000001   # simplified Ua*, test only
   akmaCliKaf: false
   ```
@@ -472,11 +473,13 @@ The test AF serves the Ua\* profiles of TS 24.109 Annex K, each on its own port:
 | `digest-tls` (K.2) | 8443 | HTTP Digest keyed with K_AF inside TLS; the AF authenticates with its certificate | `<FQDN>.010001<cipher suite>` |
 | `psk-tls13` (K.3.3) | 8444 | TLS 1.3 with K_AF as external pre-shared key | `<FQDN>.0100000007` |
 | `psk-tls12` (K.3.2) | 8445 | TLS 1.2 `ECDHE-PSK` with K_AF | `<FQDN>.010001D001` |
+| `psk-dtls13` (TS 33.535 Annex C) | UDP 5684 | DTLS 1.3 with K_AF as pre-shared key; CoAP inside | `<FQDN>.0100000009` |
+| `psk-dtls12` | UDP 5685 | DTLS 1.2 `ECDHE-PSK` with K_AF; CoAP inside | `<FQDN>.010001D001` |
 | `digest-http` (test, off by default) | 8080 | the simplified Ua\*: the Digest without TLS ([ua-star.md](ua-star.md)) | `<FQDN>.FF00000001` |
 
 ### 6.1 Authorize the AF at the AAnF
 
-The AAnF only hands K_AF to an authorized AF_ID, from the address of the AF. Each profile, and in K.2 each cipher suite, has its own AF_ID (TS 33.220 H.3). The `aanfcfg.yaml` of part 3 already has the eight AF_IDs of `af1.akma.example`:
+The AAnF only hands K_AF to an authorized AF_ID, from the address of the AF. Each profile, and in K.2 each cipher suite, has its own AF_ID (TS 33.220 H.3). The `aanfcfg.yaml` of part 3 already has the nine AF_IDs of `af1.akma.example`:
 
 ```yaml
 configuration:
@@ -486,14 +489,15 @@ configuration:
         sourceAddresses:
           - 192.168.16.129
       # ... 0100011302, 0100011303, 010001C02B, 010001C02C (K.2),
-      #     0100000007 (PSK TLS 1.3), 010001D001 (PSK TLS 1.2), FF00000001 (test)
+      #     0100000007 (PSK TLS 1.3), 010001D001 (PSK TLS and DTLS 1.2),
+      #     0100000009 (PSK DTLS 1.3), FF00000001 (test)
 ```
 
 The AF_ID is the FQDN of the AF followed by the Ua\* identifier (TS 33.535 A.4). If you change the FQDN or the AF host, change every entry.
 
 ### 6.2 Build and configure the AF
 
-On the AF host, with Go 1.26.2, `gcc`, `make` and `unzip`. First wolfSSL, for the PSK profiles: Go's `crypto/tls` has none of the PSK cipher suites of TS 33.210. The script downloads wolfSSL 5.9.4, checks its SHA-256 and builds it in `af/build/wolfssl`:
+On the AF host, with Go 1.26.2, `gcc`, `make` and `unzip`. First wolfSSL, for the PSK profiles: Go's `crypto/tls` has neither the PSK cipher suites of TS 33.210 nor DTLS. The script downloads wolfSSL 5.9.4, checks its SHA-256 and builds it in `af/build/wolfssl`:
 
 ```bash
 af/scripts/build-wolfssl.sh
@@ -640,7 +644,17 @@ sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -profile psk-tls12 -reconnect -n 2
 sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -profile digest-tls -ca ~/akma-free5gc/af/build/cert/ca.pem -n 3
 ```
 
-In TLS 1.2, the ME derives K_AF after the AF has picked the cipher suite (`AF_ID af1.akma.example.010001D001`), and with `-reconnect` the second connection resumes the session (`resumed true`). In K.2, the client checks the certificate of the AF against `af1.akma.example` and the CA, and runs the Digest inside TLS; the AF_ID carries the cipher suite of the connection, such as `af1.akma.example.0100011301`.
+And the DTLS profiles, with CoAP over UDP through the PDU session:
+
+```bash
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -profile psk-dtls13 -reconnect -n 2
+```
+
+```bash
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -profile psk-dtls12 -reconnect -n 2
+```
+
+In TLS 1.2, the ME derives K_AF after the AF has picked the cipher suite (`AF_ID af1.akma.example.010001D001`), and with `-reconnect` the second connection resumes the session (`resumed true`). In DTLS 1.3 the AF_ID is `af1.akma.example.0100000009`; the AF answers the first ClientHello with a cookie and asks the AAnF for K_AF only once the UE sends it back. In K.2, the client checks the certificate of the AF against `af1.akma.example` and the CA, and runs the Digest inside TLS; the AF_ID carries the cipher suite of the connection, such as `af1.akma.example.0100011301`.
 
 The same A-KID shows on the screens of the UE, of free5GC (AUSF and AAnF) and of the AF. The UE screen also shows `K_AF for AF_ID[af1.akma.example.0100000007] given to application [uaclient] (uid 1000), …`.
 
@@ -702,7 +716,7 @@ The script runs its own AF with the profiles of `afcfg.yaml` plus `digest-http` 
 
 The script also checks the NEF path of part 9, so do section 9.1 first: the patched NEF, the configuration patch and `akma.authorizedNefs` in the AAnF. Without them, the NEF checks fail.
 
-free5GC must be stopped: the script starts it. Stop your own AFs too, and close the tunnel of section 9.2: the script starts its own AFs on ports 8080 to 8085 and 8443 to 8448 and 8456 of the address of the first `listen`, and its own tunnel to the NRF.
+free5GC must be stopped: the script starts it. Stop your own AFs too, and close the tunnel of section 9.2: the script starts its own AFs on TCP ports 8080 to 8085, 8443 to 8448 and 8456 and UDP ports 5684 and 5685 of the address of the first `listen`, and its own tunnel to the NRF.
 
 ### 8.2 Run
 
@@ -718,8 +732,8 @@ The script asks once for the `sudo` password of the free5GC host and takes about
 
 - applies the N6 NAT and creates the namespace of the UE;
 - starts free5GC with the AAnF, the gNB and the UE;
-- authenticates the UE at the AF over every profile: K.2 in TLS 1.3 and 1.2 and PSK in TLS 1.3 and 1.2, with session resumption;
-- checks PSK TLS 1.3 with `openssl s_client` as the UE, and the expiry of K_AF in a TLS session;
+- authenticates the UE at the AF over every profile: K.2 in TLS 1.3 and 1.2, PSK in TLS 1.3 and 1.2 and PSK in DTLS 1.3 and 1.2 with CoAP, with session resumption;
+- checks PSK TLS 1.3 with `openssl s_client` as the UE, and the expiry of K_AF in a TLS session; with an OpenSSL 4.1 in `OPENSSL_DTLS13`, it also checks PSK DTLS 1.3 ([testing.md](testing.md) section 5.1);
 - forces new primary authentications: with the AAnF down, without the AKMA subscription and with it restored;
 - runs the negative tests;
 - stops everything.
@@ -728,8 +742,10 @@ Each check prints `PASS` or `FAIL`, and the end shows the total:
 
 ```
 report: …/af/build/e2e/<date-time>/report.md
-115 passed, 0 failed
+126 passed, 0 failed, 0 skipped
 ```
+
+Without `OPENSSL_DTLS13`, check D03 is reported as skipped: `125 passed, 0 failed, 1 skipped`.
 
 ### 8.3 Read the report
 
@@ -765,7 +781,7 @@ The configuration of the NEF comes from the configuration patch of part 4 (`free
 
 - `sbi.registerIPv4` and `sbi.bindingIPv4`: the address of the free5GC host, which the external AF can reach. The port stays 8000;
 - `3gpp-akma` in `serviceList`;
-- `akma.authorizedAfs`: each external AF_ID, with the source address of the AF (cl. 6.3 step 2): the same eight AF_IDs of `af1.akma.example` as the AAnF.
+- `akma.authorizedAfs`: each external AF_ID, with the source address of the AF (cl. 6.3 step 2): the same nine AF_IDs of `af1.akma.example` as the AAnF.
 
 The patch also authorizes `af3.akma.example.FF00000001`, which the AAnF does not accept. It is there for a negative test of part 8; remove it outside a test bed.
 

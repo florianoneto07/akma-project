@@ -61,7 +61,7 @@ cd af && go test -tags wolfssl ./...
 | `shared/akma` | KDF, SUPI as parameter, A-KID, AF_ID, encodings, against the vectors |
 | `shared/crosscheck` | the KDF against `ueauth.GetKDFValue` of `free5gc/util` |
 | `free5gc/aanf` | configuration; storage; OAuth2 checks; the three operations and every error code over h2c, with hand-built HTTP/2 frames for 411; the NEF policy; no key in the log at `trace` level |
-| `af` | the Digest computations against the vectors; the checks of the AF in order; the client refusing a bad `rspauth`; K_AF expiry; the AAnF and NEF clients; the NRF registration; no key in the log. K.2: the AF_ID of the cipher suite at the UE and at the AAnF, a certificate or a `realm` of another FQDN, tickets refused after 24 hours. With `-tags wolfssl`: TLS 1.2 and 1.3 with PSK, the extensions and cipher suites on the wire (`psk_dhe_ke` only, no early data, EMS, `renegotiation_info`, SNI), wrong key, unknown identity, `psk_ke` only and another server name refused, resumption bound to the expiry of the key, `net/http` on top, OpenSSL as an independent client, and the AF profiles end to end with the client |
+| `af` | the Digest computations against the vectors; the checks of the AF in order; the client refusing a bad `rspauth`; K_AF expiry; the AAnF and NEF clients; the NRF registration; no key in the log. K.2: the AF_ID of the cipher suite at the UE and at the AAnF, a certificate or a `realm` of another FQDN, tickets refused after 24 hours. With `-tags wolfssl`: TLS and DTLS 1.2 and 1.3 with PSK, the DTLS cookies (no key lookup before the client returns it), the extensions and cipher suites on the wire (`psk_dhe_ke` only, no early data, EMS, `renegotiation_info`, SNI), wrong key, unknown identity, `psk_ke` only and another server name refused, resumption bound to the expiry of the key, `net/http` on top, OpenSSL as an independent client, and the AF profiles end to end with the client |
 
 With the patches applied on the free5GC host:
 
@@ -129,16 +129,36 @@ af/scripts/e2e.sh user@192.168.16.130
 
 The argument is the free5GC host, `user@address`, or `FREE5GC_HOST` when absent. The address of the AAnF comes from `aanfUri` in `af/config/afcfg.yaml`. Before it starts, the script checks that this is the `sbi.bindingIPv4` of the `~/free5gc/config/aanfcfg.yaml` installed on the free5GC host, and stops if not. The address of the NEF comes from `nefUri` in `af/config/afcfg-external.yaml`. The extra AFs listen on the address of `listen` in `afcfg.yaml`.
 
+Check D03 runs `openssl s_client` as the UE over DTLS 1.3. The OpenSSL of Ubuntu 24.04, 3.0, has no DTLS 1.3 in `s_client`; 4.1 has it. Build it apart, outside the repository; the check was done with 4.1.0-beta2:
+
+```bash
+mkdir -p ~/openssl41 && cd ~/openssl41 && wget https://github.com/openssl/openssl/releases/download/openssl-4.1.0-beta2/openssl-4.1.0-beta2.tar.gz
+```
+
+```bash
+echo "457df0ec01a148954f843cb3589ff7465bdacc50250c7aba37e20f6c30c4e8b5  openssl-4.1.0-beta2.tar.gz" | sha256sum -c -
+```
+
+```bash
+tar -xzf openssl-4.1.0-beta2.tar.gz && cd openssl-4.1.0-beta2 && ./Configure --prefix="$HOME/openssl41/install" --libdir=lib no-shared no-tests no-docs && make -j"$(nproc)" && make install_sw
+```
+
+Give the binary in `OPENSSL_DTLS13`; without it, D03 is reported as skipped (`SKIP`):
+
+```bash
+OPENSSL_DTLS13=$HOME/openssl41/install/bin/openssl af/scripts/e2e.sh user@192.168.16.130
+```
+
 With `--keep`, free5GC, the gNB and the UE stay up at the end. The files go to `af/build/e2e/<date-time>/`:
 
 | File | Content |
 |---|---|
 | `report.md` | summary, the A-KID of each authentication, table of checks, and the AKMA lines of free5GC, of the UE and of the AF |
-| `local-results.txt`, `remote/remote-results.txt` | one `PASS` or `FAIL` line per check |
+| `local-results.txt`, `remote/remote-results.txt` | one `PASS`, `FAIL` or `SKIP` line per check |
 | `remote/` | `free5gc.log`, `ue.log`, `gnb.log`, outputs of the Ua\* client and of `seed`, `state` (the A-KIDs) |
 | `af.log`, `af-*.log` | the AF, and the extra AFs |
 
-The exit code is 0 only when every check passes. It takes about three minutes and runs 115 checks: 51 on the free5GC host and 64 on the AF host.
+The exit code is 0 only when no check fails; a skipped check is not a failure. It takes about three minutes and runs 126 checks: 56 on the free5GC host and 70 on the AF host.
 
 ### 5.2 Groups
 
@@ -149,7 +169,9 @@ The exit code is 0 only when every check passes. It takes about three minutes an
 | R2 | free5GC host | registration; A-KID of the UE = of the AUSF = of the AAnF; Ua\* from the UE over the user plane, 3 requests |
 | R2k | free5GC host | the key service of the ME (TS 33.535 cl. 4.4.3): `uaclient` got the K_AF of its AF_ID; another AF_ID, another user and `nr-cli akma-kaf` are refused; a configuration that gives one AF_ID to two applications does not start |
 | R2t | free5GC host | Ua\* from the UE over the TLS profiles, with the K_AF of the ME for the AF_ID of each profile and cipher suite: K.2 in TLS 1.3 (two connections, the second resumed) and in TLS 1.2; PSK TLS 1.3 and PSK TLS 1.2, two connections each; a ClientHello with `psk_ke` only refused |
+| R2d | free5GC host | Ua\* from the UE over the DTLS profiles, with CoAP: DTLS 1.3 with the AF_ID `…0100000009` and DTLS 1.2 with `…010001D001`, two associations each, the second resumed; a ClientHello with `psk_ke` only refused |
 | N (point A) | AF host | negative tests of the AAnF API, of `register-anchorkey`, of the RID and of the AF; anonymous access directly at the AAnF |
+| D (point A) | AF host | what the AF saw of R2d; DTLS 1.3 with `openssl s_client` of OpenSSL 4.1 as the UE, sending the CoAP GET (with `OPENSSL_DTLS13`; skipped without it); unknown A-KID and K_AF of another AF_ID refused |
 | T (point A) | AF host | what the AF saw of R2t (the AF_ID of each cipher suite, the resumptions); PSK TLS 1.3 with `openssl s_client` as the UE; refusals (K_AF of another AF_ID, unknown A-KID, `psk_ke`, certificate of another FQDN, AF_ID outside the policy of the AAnF); K_AF expiry in a TLS session, with the `refetch` and `reject` policies |
 | E (point A) | AF host | tunnel to the NRF; four extra AFs (external on 8083, external anonymous on 8084, internal anonymous on 8085, external with PSK TLS 1.3 on 8456); the NEF API |
 | R2n | free5GC host | Ua\* from the UE with the four extra AFs, the last one over PSK TLS 1.3; the AAnF hands K_AF through the NEF; the NEF relays it and does not log the SUPI |

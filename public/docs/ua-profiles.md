@@ -1,12 +1,14 @@
 # Ua\* profiles of the test AF
 
-The test AF and the Ua\* client implement the TLS profiles of TS 24.109 Annex K, which TS 33.535 Annex B adapts to AKMA from the GBA profiles of TS 33.222. Each profile runs on its own port of the AF.
+The test AF and the Ua\* client implement the TLS profiles of TS 24.109 Annex K, which TS 33.535 Annex B adapts to AKMA from the GBA profiles of TS 33.222, and the DTLS profile of TS 33.535 Annex C, with CoAP inside. Each profile runs on its own port of the AF.
 
 | Profile | Specification | How the UE authenticates | Ua\* identifier (TS 33.220 H.3) |
 |---|---|---|---|
 | `digest-tls` | TS 24.109 K.2; TS 33.222 cl. 5.3 | HTTP Digest keyed with K_AF inside TLS 1.3 or 1.2; the AF authenticates with its certificate | `01 00 01 yy zz`, `yy zz` the cipher suite of the connection |
 | `psk-tls13` | TS 24.109 K.3.3; TS 33.222 cl. 5.4.0.2 | TLS 1.3 with K_AF as external pre-shared key | `01 00 00 00 07` |
 | `psk-tls12` | TS 24.109 K.3.2; TS 33.222 cl. 5.4.0.1 | TLS 1.2 `ECDHE_PSK` with K_AF | `01 00 01 D0 01` |
+| `psk-dtls13` | TS 33.535 Annex C | DTLS 1.3 with K_AF as external pre-shared key; CoAP inside | `01 00 00 00 09` |
+| `psk-dtls12` | TS 33.535 C.1.1; TS 33.210 cl. 6.2.1 | DTLS 1.2 `ECDHE_PSK` with K_AF, the procedure of TLS 1.2; CoAP inside | `01 00 01 D0 01` |
 | `digest-http` | none: test only | the simplified Ua\* of [ua-star.md](ua-star.md), without TLS | `FF 00 00 00 01` (private range) |
 
 The AF_ID is the FQDN of the AF followed by the identifier, `<FQDN>.<10 hex digits>` in the APIs. Each profile, and in K.2 and TLS 1.2 each cipher suite, has its own AF_ID and so its own K_AF. The AAnF, the NEF and the key service of the UE must authorize every AF_ID that the AF can use.
@@ -29,12 +31,21 @@ K_AF, the full 32 octets, is the PSK: the specifications only say that the PSK i
 
 The AF requires the `server_name` of the client to be its FQDN. In both versions the client also offers other authentication methods, as TS 33.222 cl. 5.4.0 asks, but it trusts no certificate in these profiles: if the AF picked one, the handshake would fail. K.2 is the profile with a certificate.
 
-## 3. Session resumption and K_AF expiry
+## 3. DTLS profiles
+
+TS 33.535 Annex C applies the TLS 1.3 procedure of section 2 to DTLS 1.3, with the identifier `01 00 00 00 09` that TS 33.220 H.3 gives to DTLS. TS 33.210 cl. 6.2.1 also requires DTLS 1.2 from whoever supports DTLS. Annex C does not describe it and H.3 has no identifier for it, so this repository runs DTLS 1.2 with the procedure and identifier of TLS 1.2 (`01 00 01 D0 01`). DTLS 1.2 and DTLS 1.3 thus never share a K_AF (RFC 8446 Appendix E.7).
+
+- **Cookies.** The AF answers a first ClientHello with a HelloRetryRequest (DTLS 1.3, RFC 9147 cl. 5.1) or a HelloVerifyRequest (DTLS 1.2) carrying a cookie bound to the address of the client. It asks the AAnF for K_AF only once the client has sent the cookie back, so a forged source address never makes the AF query the AAnF.
+- **Application protocol.** Annex C leaves it open; the AF serves CoAP (RFC 7252), `coaps` on UDP 5684 (DTLS 1.3) and 5685 (DTLS 1.2). The UE sends a confirmable `GET coaps://<FQDN>/ua/v1/session` with `Uri-Host`; the AF answers `2.05 Content` in the acknowledgement, with the JSON of the PSK TLS profiles. Errors: `4.04` for another host or path, `4.05`, `4.02` for an unknown critical option, `4.03` with `KAF_EXPIRED`.
+- **Cipher suites.** Those of TS 33.210 cl. 6.2, as in TLS. RFC 7252 cl. 9.1.3.1 asks CoAP in PSK mode to support `TLS_PSK_WITH_AES_128_CCM_8`, a suite without ECDHE; TS 33.535 C.2.1 applies TS 33.210, which forbids it, and so does this repository.
+- **Datagrams.** One UDP socket at the AF, one association per client address; MTU 1200 for what the AF sends, while it reads datagrams of up to 17584 octets (a `ClientHello` with a post-quantum key share passes 1700); CoAP retransmission per RFC 7252 cl. 4.8. No connection ID: if the NAT mapping of the UE changes, a new handshake resumes the session.
+
+## 4. Session resumption and K_AF expiry
 
 - **PSK profiles.** Resumption by session tickets only, in TLS 1.2 (RFC 5077) and in TLS 1.3. A ticket is valid until the earlier of the expiry of the K_AF of its full handshake and 24 hours (TS 33.222 cl. 5.4.1.4); the AF keeps the A-KID of each ticket. The AF closes a TLS session (`close_notify`) when its K_AF expires; the next handshake follows `kafExpiry`: `refetch` asks the AAnF again, `reject` refuses.
 - **K.2.** Tickets are accepted for 24 hours from their issue (TS 33.222 cl. 5.3.1.5). K_AF does not enter TLS here: each Digest request is checked against K_AF and its expiry, as in [ua-star.md](ua-star.md).
 
-## 4. Configuration
+## 5. Configuration
 
 In `afcfg.yaml`, one entry per profile:
 
@@ -50,6 +61,10 @@ configuration:
       listen: 192.168.16.129:8444
     - type: psk-tls12
       listen: 192.168.16.129:8445
+    - type: psk-dtls13             # UDP
+      listen: 192.168.16.129:5684
+    - type: psk-dtls12             # UDP
+      listen: 192.168.16.129:5685
     # - type: digest-http          # test only, off by default
     #   listen: 192.168.16.129:8080
   uaStarId: FF00000001             # identifier of digest-http
@@ -57,21 +72,21 @@ configuration:
 
 Without `profiles`, a top-level `listen` is a single `digest-http` server, as in earlier versions.
 
-The client picks the profile with `-profile`. Without a port in `-connect`, it uses the one of the example: 8443, 8444, 8445 or 8080.
+The client picks the profile with `-profile`. Without a port in `-connect`, it uses the one of the example: 8443, 8444, 8445, 5684, 5685 or 8080.
 
 | Option | |
 |---|---|
-| `-profile` | `digest-tls`, `psk-tls13`, `psk-tls12` or `digest-http` (default) |
+| `-profile` | `digest-tls`, `psk-tls13`, `psk-tls12`, `psk-dtls13`, `psk-dtls12` or `digest-http` (default) |
 | `-ca` | PEM certificate of the CA of the AF, required with `digest-tls` |
 | `-tls12` | `digest-tls` in TLS 1.2 only |
-| `-reconnect` | a new TLS connection for each request, resuming the previous session |
-| `-psk-ke-only` | `psk-tls13` offering `psk_ke` only, which the AF refuses: a negative test |
+| `-reconnect` | a new TLS connection or DTLS association for each request, resuming the previous session |
+| `-psk-ke-only` | `psk-tls13` or `psk-dtls13` offering `psk_ke` only, which the AF refuses: a negative test |
 
 In TLS 1.3, wolfSSL tells the client that it offered a ticket, not whether the AF took it; the log of the AF says whether the session was resumed.
 
-## 5. Build and licenses
+## 6. Build and licenses
 
-Go's `crypto/tls` does K.2. It has neither the PSK cipher suites of TS 33.210 nor external PSKs in TLS 1.3, so the PSK profiles use wolfSSL through `af/wolftls`, a cgo binding of this repository:
+Go's `crypto/tls` does K.2. It has neither the PSK cipher suites of TS 33.210, nor external PSKs in TLS 1.3, nor DTLS, so the PSK profiles use wolfSSL through `af/wolftls`, a cgo binding of this repository:
 
 ```bash
 af/scripts/build-wolfssl.sh
@@ -85,15 +100,16 @@ af/scripts/make-test-ca.sh
 af/scripts/build-af.sh
 ```
 
-`build-wolfssl.sh` downloads wolfSSL 5.9.4, checks the SHA-256 of the archive, builds a static library in `af/build/wolfssl` and checks its options: TLS 1.2 and 1.3, DTLS 1.3, PSK, AES-GCM and AES-CCM, SNI, Extended Master Secret, session tickets; no finite field DH, no TLS below 1.2, no early data. `build-af.sh` builds static binaries with the build tag `wolfssl` when the library is there; `AF_WOLFSSL=no` builds without it, and the PSK profiles are then refused.
+`build-wolfssl.sh` downloads wolfSSL 5.9.4, checks the SHA-256 of the archive, builds a static library in `af/build/wolfssl` and checks its options: TLS 1.2 and 1.3, DTLS 1.2 and 1.3 with a settable MTU, PSK, AES-GCM and AES-CCM, SNI, Extended Master Secret, session tickets; no finite field DH, no TLS below 1.2, no early data. `build-af.sh` builds static binaries with the build tag `wolfssl` when the library is there; `AF_WOLFSSL=no` builds without it, and the PSK profiles are then refused.
 
 wolfSSL is licensed under the GNU General Public License v3.0. `af/wolftls` and `af/scripts/build-wolfssl.sh` are under the same license, and so are the AF and client binaries built with the tag. The rest of `af/` is under the Apache License 2.0.
 
-## 6. Limitations
+## 7. Limitations
 
 - `TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384`, recommended by TS 33.210 cl. 6.2.3, is not in wolfSSL and is not offered.
 - The certificate status request extension (OCSP stapling), recommended by TS 33.210 cl. 6.2, is not supported; the test CA has no OCSP responder.
 - HTTP/1.1 only.
 - One profile per port: a port that negotiates K.2 or K.3 in the same `ClientHello` (TS 33.222 cl. 5.4.0.1 NOTE 3) is not supported.
 - The tickets of an AF are sealed with a key of the process: they do not survive a restart.
-- The DTLS and OSCORE profiles of TS 33.535 Annexes C and D are not implemented.
+- No DTLS connection ID (RFC 9147 cl. 9), and the CoAP client takes only piggybacked responses.
+- The OSCORE profile of TS 33.535 Annex D is not implemented.

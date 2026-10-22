@@ -11,8 +11,8 @@ After a successful primary authentication, the UE and the network derive K_AKMA 
 | `free5gc/aanf/` | **AAnF**, the AKMA Anchor Function (TS 33.535 cl. 4.2.1, Naanf_AKMA of TS 29.535). A new NF with the same layout as the free5GC NFs. It installs as a binary in `bin/` and a file in `config/`, and changes no file of free5GC |
 | `free5gc/patches/` | Patches for free5GC: NRF, UDM, AUSF, NEF, `openapi` (Naanf_AKMA models and client), configuration, `run.sh` and the Go test bench |
 | `af/ue/ueransim/patches/` | Patches for UERANSIM: the ME derives K_AKMA, the A-KID and K_AF; a key service gives each application only the K_AF of its own AF_IDs; `nr-akma-selftest` checks the derivations |
-| `af/af/`, `af/uastar/`, `af/ue/uaclient/` | A test AF and a Ua\* client with the profiles of TS 24.109 Annex K: HTTP Digest keyed with K_AF inside TLS (K.2), and TLS 1.3 and TLS 1.2 with K_AF as pre-shared key (K.3). A simplified Ua\*, HTTP Digest without TLS, stays as a test profile, off by default |
-| `af/akmatls/`, `af/wolftls/` | The Ua\* identifiers, the PSK identity and the TLS profile of K.2; a cgo binding to wolfSSL for TLS with a pre-shared key (GPL-3.0) |
+| `af/af/`, `af/uastar/`, `af/ue/uaclient/` | A test AF and a Ua\* client with the profiles of TS 24.109 Annex K: HTTP Digest keyed with K_AF inside TLS (K.2), and TLS 1.3 and TLS 1.2 with K_AF as pre-shared key (K.3); and the DTLS profile of TS 33.535 Annex C, DTLS 1.3 and 1.2 with CoAP inside. A simplified Ua\*, HTTP Digest without TLS, stays as a test profile, off by default |
+| `af/akmatls/`, `af/wolftls/`, `af/coap/` | The Ua\* identifiers, the PSK identity and the TLS profile of K.2; a cgo binding to wolfSSL for TLS and DTLS with a pre-shared key (GPL-3.0); the part of CoAP that the DTLS profiles use |
 | `shared/akma/` | Go library shared by all of the above: the KDF, the SUPI as KDF parameter, the A-KID, the AF_ID and the key encodings |
 | `reference/kdf/` | Independent Python implementation of the KDF that generates the test vectors |
 | `af/scripts/e2e.sh` | End-to-end run with negative tests, from the AF host |
@@ -28,9 +28,9 @@ Tested on free5GC v4.2.3 and UERANSIM v3.2.6 (commit `85a0fbf`, the one of the f
 | Anonymous user access: K_AF without the SUPI | cl. 6.2.2 | directly and through the NEF |
 | K_AF to an AF outside the operator network, through the NEF | cl. 6.3 | `POST /3gpp-akma/v1/retrieve` (TS 29.522 cl. 5.14) |
 | AKMA context removal | cl. 6.6 | requested by the `seed` test tool in the role of the OAM |
-| Ua\* between the UE and the AF over the PDU session | cl. 6.2.1 steps 1 and 9; Annex B | K.2 in TLS 1.3 and 1.2, PSK TLS 1.3 and PSK TLS 1.2, with session resumption; see [docs/ua-profiles.md](docs/ua-profiles.md) |
+| Ua\* between the UE and the AF over the PDU session | cl. 6.2.1 steps 1 and 9; Annexes B and C | K.2 in TLS 1.3 and 1.2, PSK TLS 1.3 and 1.2, PSK DTLS 1.3 and 1.2 with CoAP, with session resumption; see [docs/ua-profiles.md](docs/ua-profiles.md) |
 
-The derivations agree in four implementations: the Python oracle, `shared/akma`, the KDF that free5GC already uses for K_SEAF, and the patched UERANSIM. `af/scripts/e2e.sh` runs 115 checks against a running core: the flows above, every Ua\* profile from the UE, OpenSSL as an independent PSK client, the expiry of K_AF in a TLS session, re-authentication, the AAnF down during an authentication, a subscriber without AKMA, the key service of the UE refusing other AF_IDs and other users, the negative cases of the AAnF and NEF APIs and of the TLS profiles, and no key in any log.
+The derivations agree in four implementations: the Python oracle, `shared/akma`, the KDF that free5GC already uses for K_SEAF, and the patched UERANSIM. `af/scripts/e2e.sh` runs 126 checks against a running core: the flows above, every Ua\* profile from the UE, over TLS and DTLS, OpenSSL as an independent PSK client, the expiry of K_AF in a TLS session, re-authentication, the AAnF down during an authentication, a subscriber without AKMA, the key service of the UE refusing other AF_IDs and other users, the negative cases of the AAnF and NEF APIs and of the TLS profiles, and no key in any log.
 
 ## Architecture
 
@@ -46,7 +46,7 @@ The derivations agree in four implementations: the Python oracle, `shared/akma`,
  │                                         │              │
  │                                        NEF ◀──── 3gpp-akma/v1/retrieve ─ AF outside
  └──────────────────────────────────────────────────────┘
-   UE (UERANSIM) ─── Ua*: TLS with K_AF (K.3), or Digest in TLS (K.2), over the PDU session ───▶ AF
+   UE (UERANSIM) ─── Ua*: (D)TLS with K_AF, or Digest in TLS (K.2), over the PDU session ───▶ AF
 ```
 
 Example topology used throughout the documentation:
@@ -88,7 +88,7 @@ The example configuration files carry the addresses of the example topology. [do
 Read these before you use any of it outside a test bed.
 
 - **No TLS on the SBI.** The SBI runs on h2c, and the NEF–AF interface on plain HTTP. TS 33.535 cl. 4.4.0 and TS 33.501 cl. 12 and 13.1 require protection. The AAnF and the NEF bind each AF_ID to source addresses (local policy). That limits which AF_ID a host can ask for, but it does not authenticate the AF.
-- **Ua\* profiles.** K.2 and the two PSK profiles of TS 24.109 Annex K, without the DTLS and OSCORE profiles of TS 33.535 Annexes C and D. wolfSSL has no `TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384`, which TS 33.210 recommends; the certificate of K.2 comes from a test CA, without OCSP. The simplified Ua\* (`FF00000001`), HTTP Digest without TLS, is a test profile, off by default. See [docs/ua-profiles.md](docs/ua-profiles.md).
+- **Ua\* profiles.** K.2 and the two PSK profiles of TS 24.109 Annex K, and DTLS (TS 33.535 Annex C) with CoAP, without the OSCORE profile of Annex D. RFC 7252 asks CoAP in PSK mode for `TLS_PSK_WITH_AES_128_CCM_8`, which TS 33.210 forbids; the DTLS profiles follow TS 33.210. wolfSSL has no `TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384`, which TS 33.210 recommends; the certificate of K.2 comes from a test CA, without OCSP. The simplified Ua\* (`FF00000001`), HTTP Digest without TLS, is a test profile, off by default. See [docs/ua-profiles.md](docs/ua-profiles.md).
 - **Token issuer of the external AF.** free5GC has no CAPIF, so the AF outside the operator network gets its NEF access token from the NRF. The specified path is the CAPIF Core Function (TS 29.522 cl. 7.2).
 - **Applications in the UE.** The key service of the ME tells applications apart by user (uid). The executable is checked on a best-effort basis. K_AKMA never leaves the ME.
 - **Not implemented:**
@@ -114,7 +114,8 @@ free5gc/patches/          patches for free5GC, one directory per target
 free5gc/scripts/          build, deploy, patch, provision, N6 NAT
 af/af/                    the test AF
 af/akmatls/               Ua* identifiers, PSK identity, TLS profile of K.2
-af/wolftls/               cgo binding to wolfSSL for TLS with a pre-shared key (GPL-3.0)
+af/wolftls/               cgo binding to wolfSSL for TLS and DTLS with a pre-shared key (GPL-3.0)
+af/coap/                  CoAP messages and confirmable exchange (RFC 7252)
 af/uastar/                HTTP Digest of K.2 and of the simplified Ua*
 af/ue/uaclient/           the Ua* client of the UE
 af/ue/ueransim/patches/   patches for UERANSIM (GPL-3.0)

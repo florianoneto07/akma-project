@@ -223,7 +223,7 @@ The profiles of TS 24.109 Annex K, with the Ua\* identifiers of TS 33.220 H.3, d
 | Field | Example | Note |
 |---|---|---|
 | `fqdn` | `af1.akma.example` | the only name accepted in `Host` |
-| `profiles` | | one server per profile; `digest-http` is this one ([ua-profiles.md](ua-profiles.md) section 4) |
+| `profiles` | | one server per profile; `digest-http` is this one ([ua-profiles.md](ua-profiles.md) section 5) |
 | `uaStarId` | `FF00000001` | identifier of `digest-http`, private range, TS 33.220 H.2 NOTE 2 |
 | `listen` | `192.168.16.129:8080` | without `profiles`: a single `digest-http` server |
 | `path` | `/ua/v1/session` | |
