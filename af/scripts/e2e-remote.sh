@@ -11,6 +11,8 @@
 #   R2k AKMA key service of the ME: K_AF only to the application of the AF_ID
 #   R2t Ua* from the UE over the TLS profiles: K.2 in TLS 1.3 and 1.2, PSK
 #       TLS 1.3 and 1.2, each resumed on a second connection
+#   R2d Ua* from the UE over the DTLS profiles, CoAP inside: DTLS 1.3 and
+#       1.2, each resumed on a second association
 #       -> sync A (checks from the AF machine)
 #   R3  new authentication: new A-KID; Ua* with it; Ua* with the previous
 #       A-KID and K_AF, still valid at the AF until expiry
@@ -234,6 +236,25 @@ check R2t.me "the ME gave uaclient the K_AF of each AF_ID of the TLS profiles" \
 ua -profile psk-tls13 -psk-ke-only -connect "$af_ip" -n 1 >"$run/ua-t-psk-ke.out" 2>&1
 check R2t.psk-ke "a ClientHello with psk_ke only is refused (TS 33.210 cl. 6.2.2)" \
     grep -q "wolftls: handshake" "$run/ua-t-psk-ke.out"
+
+# ---------------------------------------------------------------- R2d
+# The DTLS profiles (TS 33.535 Annex C): a CoAP GET over UDP through the user
+# plane, with the K_AF of 01 00 00 00 09 (DTLS 1.3) or of the cipher suite
+# (DTLS 1.2).
+step "R2d Ua* over the DTLS profiles"
+ua -profile psk-dtls13 -connect "$af_ip" -reconnect -n 2 >"$run/ua-d-13.out" 2>&1
+check R2d.dtls13 "DTLS 1.3 with K_AF, CoAP, AF_ID $fqdn.0100000009 (TS 33.535 Annex C), two associations" \
+    test "$(grep -c "AF authenticated by the DTLS handshake with K_AF.*AF_ID $fqdn.0100000009; DTLS 1.3, cipher suite 1301" "$run/ua-d-13.out")" -eq 2
+ua -profile psk-dtls12 -connect "$af_ip" -reconnect -n 2 >"$run/ua-d-12.out" 2>&1
+check R2d.dtls12 "DTLS 1.2 with K_AF, TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256, AF_ID $fqdn.010001D001" \
+    grep -q "AF_ID $fqdn.010001D001; DTLS 1.2, cipher suite D001, resumed false" "$run/ua-d-12.out"
+check R2d.dtls12-resumed "DTLS 1.2: the second association resumed the session" \
+    grep -q "AF_ID $fqdn.010001D001; DTLS 1.2, cipher suite D001, resumed true" "$run/ua-d-12.out"
+check R2d.me "the ME gave uaclient the K_AF of the AF_ID of DTLS 1.3" \
+    grep -aqF "K_AF for AF_ID[$fqdn.0100000009] given to application [uaclient]" "$run/ue.log"
+ua -profile psk-dtls13 -psk-ke-only -connect "$af_ip" -n 1 >"$run/ua-d-psk-ke.out" 2>&1
+check R2d.psk-ke "DTLS 1.3: a ClientHello with psk_ke only is refused (TS 33.210 cl. 6.2.2)" \
+    grep -q "wolftls: handshake" "$run/ua-d-psk-ke.out"
 sync_point A
 
 # ---------------------------------------------------------------- R2n

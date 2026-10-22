@@ -21,6 +21,10 @@
 # first listen; the AAnF of the free5GC host must listen on that aanfUri
 # (sbi.bindingIPv4 of ~/free5gc/config/aanfcfg.yaml).
 #
+# OPENSSL_DTLS13=<openssl binary with DTLS 1.3, such as OpenSSL 4.1> runs
+# check D03, PSK DTLS 1.3 with a UE independent of wolfSSL; without it, D03 is
+# reported as skipped.
+#
 # Output: af/build/e2e/<time>/ with report.md, the results and the logs of
 # both machines. Exit code 0 when every check passes.
 set -uo pipefail
@@ -59,6 +63,7 @@ results="$L/local-results.txt"
 ssh_b() { ssh -o BatchMode=yes -o ConnectTimeout=10 "$host" "$@"; }
 pass() { echo "PASS $1 $2" >>"$results"; }
 fail() { echo "FAIL $1 $2" >>"$results"; }
+skip() { echo "SKIP $1 $2" >>"$results"; }
 expect() { # id description output pattern
     if grep -q -- "$4" <<<"$3"; then pass "$1" "$2"; else fail "$1" "$2 (got: $(head -c 200 <<<"$3" | tr '\n' ' '))"; fi
 }
@@ -206,6 +211,7 @@ group_A() { # system up, A_KID_1 registered
     expect N25 "Ua* with the Host of another AF: 421" "$out" "421 MISDIRECTED_REQUEST"
 
     group_T "$akid1" "$akid12"
+    group_D "$akid1" "$akid12"
 
     out="$(ssh_b "~/akma-tools/seed remove --nrf $nrf --aanf http://$aanf --supi $supi012; ~/akma-tools/seed remove --nrf $nrf --aanf http://$aanf --supi $supi3" 2>&1)"
     expect N26 "test contexts removed" "$(grep -c '^removed' <<<"$out")" "^2$"
@@ -268,7 +274,7 @@ group_T() {
     timeout 20 openssl s_client -quiet -tls1_3 -connect "$af_ip:8447" -servername "$fqdn" \
         -psk_identity "3GPP-AKMA;$akid3" -psk "$kaf7" </dev/null >"$L/t11-held.out" 2>&1
     expect T11 "K_AF expired: the AF closes the TLS session (close_notify)" \
-        "$(wait_log "$L/af-refetch.log" "expired: TLS session with" 5 && echo closed)" "closed"
+        "$(wait_log "$L/af-refetch.log" "expired: TLS 1.3 session with" 5 && echo closed)" "closed"
     fresh_context
     out="$(psk_get "$akid3" "$kaf7" "$af_ip:8447")"
     expect T12 "after the expiry, policy refetch: the AF asks the AAnF again and a new handshake succeeds" \
@@ -307,6 +313,38 @@ group_nef() {
     expect E00 "AFs outside the operator network registered at the NRF through the tunnel" \
         "$(cat "$L/af-nef.log" "$L/af-nef-anon.log" | grep -c 'registered at the NRF')" "^2$"
     python3 -I "$here/scripts/negative/nef_api.py" "${nrf#http://}" "$nef" "$aanf" "$af_ip" "$akid1" >>"$results" 2>&1
+}
+
+# The DTLS profiles (TS 33.535 Annex C): what the AF saw of the associations
+# of the UE in R2d, a UE independent of wolfSSL, and the refusals.
+group_D() {
+    local akid1="$1" unknown="$2" akid3 kaf9 out
+    akid3="$(vec mnc-3-digits a_kid)"
+    kaf9="$(kaf_of mnc-3-digits 0100000009)"
+    echo "== D: DTLS profiles"
+    expect D01 "DTLS 1.3 from the UE: AF_ID $fqdn.0100000009, the second association resumed" \
+        "$(grep -aF "DTLS 1.3 PSK handshake with" "$L/af.log" | grep -aF "A-KID $akid1, AF_ID $fqdn.0100000009")" \
+        "cipher suite 1301, resumed true"
+    expect D02 "DTLS 1.2 from the UE: TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256, AF_ID $fqdn.010001D001, resumed" \
+        "$(grep -aF "DTLS 1.2 PSK handshake with" "$L/af.log" | grep -aF "A-KID $akid1, AF_ID $fqdn.010001D001")" \
+        "cipher suite D001, resumed true"
+    if [ -n "${OPENSSL_DTLS13:-}" ]; then
+        # CoAP GET coaps://af1.akma.example/ua/v1/session (RFC 7252 cl. 3),
+        # built by hand: CON, token "abcd", Uri-Host, Uri-Path.
+        out="$(printf '\x44\x01\x12\x34abcd\x3d\x03af1.akma.example\x82ua\x02v1\x07session' |
+            timeout 10 "$OPENSSL_DTLS13" s_client -quiet -dtls1_3 -connect "$af_ip:5684" -servername "$fqdn" \
+                -psk_identity "3GPP-AKMA;$akid3" -psk "$kaf9" 2>&1 | tr -c '[:print:]' ' ')"
+        expect D03 "PSK DTLS 1.3 with OpenSSL as the UE ($("$OPENSSL_DTLS13" version | cut -d' ' -f1,2)): CoAP 2.05 with the A-KID" \
+            "$out" "\"aKid\":\"$akid3\""
+    else
+        skip D03 "PSK DTLS 1.3 with OpenSSL as the UE: no OPENSSL_DTLS13"
+    fi
+    out="$("$uaclient" -profile psk-dtls13 -connect "$af_ip" -akid "$unknown" -kaf "$kaf9" 2>&1)"
+    expect D04 "DTLS 1.3 with an A-KID unknown to the AAnF: handshake refused" "$out" "wolftls: handshake"
+    expect D04b "the AF logs K_AKMA_NOT_PRESENT of the AAnF" \
+        "$(grep -aF "No K_AKMA at the AAnF for A-KID $unknown (AF_ID $fqdn.0100000009)" "$L/af.log")" "handshake refused"
+    out="$("$uaclient" -profile psk-dtls13 -connect "$af_ip" -vector mnc-3-digits -vectors "$vectors" 2>&1)"
+    expect D05 "DTLS 1.3 with the K_AF of another AF_ID: handshake fails" "$out" "wolftls: handshake"
 }
 
 group_B() { # after the new authentication
@@ -397,12 +435,13 @@ fi
 all="$(cat "$L/remote/remote-results.txt" "$results" 2>/dev/null)"
 npass="$(grep -c '^PASS' <<<"$all")"
 nfail="$(grep -c '^FAIL' <<<"$all")"
+nskip="$(grep -c '^SKIP' <<<"$all")"
 {
     echo "# AKMA end to end — $ts"
     echo
     echo "free5GC host \`$host\`; AF machine \`$(hostname)\`; $(head -1 "$L/preflight.txt")."
     echo
-    echo "**$npass passed, $nfail failed.**"
+    echo "**$npass passed, $nfail failed, $nskip skipped.**"
     echo
     echo "## A-KIDs"
     echo
@@ -410,11 +449,11 @@ nfail="$(grep -c '^FAIL' <<<"$all")"
     grep '^A_KID' "$L/remote/state" 2>/dev/null
     echo '```'
     echo
-    echo "## Free5GC host (R) and AF machine (S, N, T, B, C, L)"
+    echo "## Free5GC host (R) and AF machine (S, N, T, D, B, C, L)"
     echo
     echo "| | Check | Result |"
     echo "|---|---|---|"
-    sed -E 's/^(PASS|FAIL) ([^ ]+) (.*)$/| \2 | \3 | \1 |/' <<<"$all"
+    sed -E 's/^(PASS|FAIL|SKIP) ([^ ]+) (.*)$/| \2 | \3 | \1 |/' <<<"$all"
     echo
     echo "## Evidence"
     echo
@@ -441,5 +480,5 @@ nfail="$(grep -c '^FAIL' <<<"$all")"
 
 echo
 echo "report: $L/report.md"
-echo "$npass passed, $nfail failed"
+echo "$npass passed, $nfail failed, $nskip skipped"
 [ "$nfail" -eq 0 ]
