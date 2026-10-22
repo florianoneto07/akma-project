@@ -1,6 +1,6 @@
 # Ua\* da norma e autorização por aplicação no UE: especificação
 
-**MVP:** MVP-8 · **Data:** 20 de outubro de 2026 · **Estado:** fases (a) e (b) aprovadas pelo responsável em 20/10/2026, com os pontos U1 a U12 como propostos. A fase (a) está implementada e verificada (20/10/2026). A fase (b) está implementada e verificada (21/10/2026): a implementação e as diferenças em relação a este texto estão na seção 3.8, e a verificação, com 115 verificações e nenhuma falha, na seção 3.9. A fase (c), DTLS, foi aprovada pelo responsável em 21/10/2026, com os pontos U13 a U21 como propostos, e está implementada e verificada (22/10/2026): a implementação está na seção 4.7, e a verificação, com 126 verificações e nenhuma falha, na seção 4.8. A fase (d), OSCORE, entra depois (seção 7).
+**MVP:** MVP-8 · **Data:** 20 de outubro de 2026 · **Estado:** fases (a) e (b) aprovadas pelo responsável em 20/10/2026, com os pontos U1 a U12 como propostos. A fase (a) está implementada e verificada (20/10/2026). A fase (b) está implementada e verificada (21/10/2026): a implementação e as diferenças em relação a este texto estão na seção 3.8, e a verificação, com 115 verificações e nenhuma falha, na seção 3.9. A fase (c), DTLS, foi aprovada pelo responsável em 21/10/2026, com os pontos U13 a U21 como propostos, e está implementada e verificada (22/10/2026): a implementação está na seção 4.7, e a verificação, com 126 verificações e nenhuma falha, na seção 4.8. A fase (d), OSCORE, está especificada na seção 7, com os pontos U22 a U35 a aprovar.
 
 Decisões já tomadas pelo responsável em 20/10/2026 (plano, MVP-8):
 
@@ -493,6 +493,25 @@ O `e2e.sh` ganha o passo R2d, com o UE no seu *namespace*, e um grupo D na máqu
 | U20 | *Connection ID* | não | `[MVP]` RFC 9147 §9 o deixa opcional. O endereço do UE não muda durante a sessão PDU; se o mapeamento do NAT do N6 expirar, um novo *handshake* retomado pelo *ticket* resolve |
 | U21 | Conferência independente | compilar à parte, só para o teste, o OpenSSL 4.1 (a versão final, se já tiver saído; senão a *beta* mais nova), que traz o DTLS 1.3, e usar o `s_client -dtls1_3 -psk` contra o AF, como o T05 fez com o TLS 1.3. Não vai para o repositório nem para o guia | o OpenSSL 3.0 da VM do AF não tem DTLS 1.3, e nenhum deles tem `D0 01` no DTLS 1.2: o DTLS 1.2 fica sem conferência independente |
 
+**Fase (d), OSCORE** (a aprovar):
+
+| Nº | Ponto | Proposta | Base |
+|---|---|---|---|
+| U22 | Identificador e AF_ID | `01 00 00 00 08`, AF_ID `<FQDN>.0100000008`, nas políticas do AAnF, do NEF e do UE | `[INTERPRETAÇÃO]` TS 33.220 H.3 dá o `…08` ao OSCORE do Anexo P, que o Anexo D segue (D.1); TS 33.535 A.4 remete ao Anexo H. Como a U18 |
+| U23 | Transporte e recurso | CoAP sobre UDP, sem DTLS, porta 5683; `POST coap://<FQDN>/akma` para estabelecer; depois, `GET /ua/v1/session` protegido, com `2.05` em JSON como nos outros perfis (seção 7.3) | `[3GPP]` D.3.2 para o `/akma`; `[LACUNA]` para o que vem depois: D.3.2 e P.3.2 só dizem que UE e AF seguem com pedidos protegidos |
+| U24 | *CoAP Security protocol identifier* | seguir o arranjo de D.3.5, sem o campo. Alternativa: `h'01'` como primeiro elemento, como P.3.2 dá ao OSCORE | `[LACUNA]` D.3.2 lista o campo e D.3.5 não o codifica (nem P.3.5); um AF que siga D.3.5 não leria um arranjo com ele |
+| U25 | A-KID em CBOR | `RID` em texto, `A-TID` com os 32 octetos, `HPLMN-ID` = MCC seguido do MNC; o AF refaz o texto do A-KID (seção 7.5). Alternativa: o domínio do *realm* inteiro como HPLMN-ID | `[LACUNA]` D.3.5 não dá a forma do HPLMN-ID. TS 23.003 §2.2B: o *Home Network Identifier* de um IMSI é MCC e MNC. Do *realm* não se sabe se o MNC tem dois dígitos, mas o AF refaz o mesmo *realm* nos dois casos |
+| U26 | *Master Secret* | HKDF-SHA-256 completo (*extract* e *expand*), sal vazio, IKM = K_AF, `info` = `AKMA-OSCORE` em ASCII, L = 32. Alternativas: L = 16; só o *expand*, com a K_AF como PRK | `[LACUNA]` D.3.3 escreve `HKDF(KAF, "AKMA-OSCORE")` e remete à RFC 5869, que define as duas etapas; 32 octetos é o tamanho da K_AF e do SHA-256 |
+| U27 | *Master Salt* e demais parâmetros | os octetos dos dois *payloads*, como enviados; *ID Context* nulo, AES-CCM-16-64-128, HKDF SHA-256, versão 1, janela de 32 | `[INTERPRETAÇÃO]` D.3.3 (*"Request Payload \| Response Payload"*); P.3.3; RFC 8613 §3.2 |
+| U28 | N1, N2 e *Sender IDs* | N1 e N2 de 16 octetos aleatórios (o AF aceita N1 de 8 a 64); AF-SID e UE-SID de 4 octetos aleatórios; o UE-SID diferente do AF-SID e dos outros UE-SID do AF | `[LACUNA]` D.3.5 não dá tamanhos; RFC 8613 §3.3: até 7 octetos e par único. Com UE-SID igual ao AF-SID, os dois sentidos teriam a mesma chave e o mesmo espaço de *nonces* |
+| U29 | OSC-INP | `bstr` com o mapa CBOR dentro; o UE não manda; o AF só aceita os valores padrão e recusa os demais com `4.00` | `[LACUNA]` tipo `bstr` e definição como mapa; a resposta de D.3.5 não tem como dizer ao UE o que o AF escolheu. Valores pela RFC 9203 §3.2.1 (`[INTERPRETAÇÃO]` HKDF SHA-256 = `5`) |
+| U30 | Erros | códigos CoAP com a causa no diagnóstico (seção 7.6); erros do OSCORE pela RFC 8613 §8.2 | `[LACUNA]` nem o Anexo D nem o Anexo P definem erros |
+| U31 | K_AF vencida e limites | contextos apagados no vencimento (`4.01`, novo `POST`, política `refetch` ou `reject`); pendente apagado em 60 s; até 4096 contextos, 4 por A-KID; sem a opção Echo | `[3GPP]` TS 33.535 §6.4.2; D.3.4. `[MVP]` os números |
+| U32 | Renovação | Apêndice B.2 da RFC 8613, com o UE iniciando (`-rekey`) e o AF respondendo; R1, R2 e R3 de 8 octetos; o AF não inicia. Alternativa: o AF também inicia | `[3GPP]` D.3.4 permite aos dois lados (*"allows"*). `[MVP]` o AF não inicia: não há o que o leve a renovar antes da K_AF vencer |
+| U33 | Pilha | Go próprio: `af/cbor` e `af/oscore` (Apache-2.0), AES-CCM sobre o `crypto/aes`, conferidos com os vetores de RFC 3610, RFC 8613 e RFC 8949; sem wolfSSL. Alternativas: a libcoap pela cgo; bibliotecas Go de terceiros para CBOR e CCM | o Go não tem AES-CCM; o `af/coap` da fase (c) já é a base; o perfil fica fora da GPLv3 |
+| U34 | Conferência independente | libcoap 4.3.5b compilada à parte, só para o teste, com o contexto calculado em Python (seção 7.9); fora do repositório; pulada sem `LIBCOAP_CLIENT` | como a U21 |
+| U35 | Defeitos do Anexo D | registrar os itens 1 a 5 da seção 7.2 no `registro-de-defeitos-3gpp.md`, fora do repositório | — |
+
 ## 6. Arquivos previstos
 
 - **Fase (a):**
@@ -515,17 +534,150 @@ O `e2e.sh` ganha o passo R2d, com o UE no seu *namespace*, e um grupo D na máqu
   - `af/scripts/e2e.sh` e `e2e-remote.sh` (R2d e grupo D);
   - `desvios.md` (U15 e, se for a escolha, U13);
   - tutorial, guia público e matriz revisão 7.
+- **Fase (d):**
+  - `af/cbor` e `af/oscore` (novos, Apache-2.0); `af/coap` (servidor UDP);
+  - `af/af` (perfil `oscore`) e `af/ue/uaclient` (`-profile oscore`, `-rekey`);
+  - `af/config/afcfg*.yaml`, `free5gc/config/aanfcfg.yaml`, o `nefcfg.yaml` do *patch* de configuração e o *patch* 0005 (AF_ID `…0100000008`);
+  - `af/scripts/e2e.sh` e `e2e-remote.sh` (R2o e grupo O);
+  - `desvios.md`, se algum ponto virar desvio;
+  - tutorial, guia público e matriz revisão 8.
 
 ## 7. Fase (d): OSCORE
 
-Fica para a próxima revisão deste documento, depois da fase (c):
+**Estado (22/10/2026):** **especificada, a aprovar** (pontos U22 a U35, seção 5).
 
-- **OSCORE**, TS 33.535 Anexo D: CoAP, OSCORE (RFC 8613) e CBOR. Duas opções:
-  - em Go, sobre o `af/coap` da fase (c), conferido com os vetores do RFC 8613 Apêndice C;
-  - a libcoap (`--enable-oscore`, sobre o wolfSSL), como no `adaptive-security` do responsável. Lá o contexto OSCORE é estático; o estabelecimento AKMA de D.3 (`POST /akma`, CBOR e HKDF) teria de ser escrito nas duas opções.
+### 7.1 Situação normativa
 
-  Pontos a decidir:
-  - os parâmetros do HKDF;
-  - a forma do HPLMN-ID no A-KID em CBOR;
-  - a remissão de D.3.2 ao "Anexo Y";
-  - o campo que D.3.2 lista e D.3.5 não tem.
+`[3GPP]` TS 33.535 Anexo D, *"Ua\* security protocol: Object Security for Constrained RESTful Environments (OSCORE)"*:
+
+- D.1: segue a arquitetura do Ua do GBA com OSCORE, TS 33.220 Anexo P, com o AF no papel do NAF;
+- D.2.1: **opcional** no UE e no AF; D.2.4: valem os requisitos de P.2.4, isto é, AES-CCM-16-64-128 e HKDF com SHA-256 obrigatórios;
+- D.3.2, passo 1: o UE manda `POST` para `<AF_IP_or_FQDN>/akma` com *"CoAP Security protocol identifier, A-KID, N1, AF-SID, ?OSC-INP"*; passos 2 a 4: o AF pede a K_AF ao AAnF (§6.2); passo 3: o AF responde *"Created"* com N2 e UE-SID;
+- D.3.3: *"OMS = OSCORE Master Secret = HKDF(KAF, "AKMA-OSCORE")"*; *"Master Salt = Request Payload | Response Payload"*; o *Sender ID* do UE é o UE-SID, que o AF gera; o do AF é o AF-SID, que o UE gera; *"HKDF shall be the HMAC-based Key Derivation Function specified in IETF RFC 5869"*;
+- D.3.4: renovação do contexto pelo Apêndice B.2 da RFC 8613; mesmo com a K_AF igual, N1 e N2 têm de mudar a cada estabelecimento ou renovação;
+- D.3.5: CBOR (RFC 8949), *Content-Format* 60. Pedido: `[A-KID : bstr, N1 : bstr, AF-SID : bstr, ? OSC-INP : bstr]`, com `A-KID = [RID : tstr, A-TID : bstr, HPLMN-ID : tstr]` e `OSC-INP = {? 1 => int ; version, ? 3 => int ; hkdf, ? 4 => int ; alg, ? 5 => bstr ; salt, ? 6 => bstr ; contextId}`. Resposta: `[N2 : bstr, UE-SID : bstr]`.
+
+`[3GPP]` TS 33.220 P.3.3, para o que D.3.3 não muda: versão 1, HKDF SHA-256, AES-CCM-16-64-128 e *ID Context* nulo, salvo o que vier no OSC-INP. TS 33.220 H.3: `( 0x01,0x00,0x00,0x00,0x08 )` *"Ua security protocol for OSCORE according to Annex P"*. TS 33.535 A.4 manda tirar o identificador Ua\* do Anexo H.
+
+`[3GPP]` RFC 8613:
+
+- §3.2: os parâmetros do contexto vêm de HKDF(Master Salt, Master Secret, `info`, L), com `info = [id, id_context, alg_aead, type, L]` em CBOR;
+- §3.3: o *Sender ID* tem no máximo 7 octetos com AES-CCM-16-64-128, e o par (*ID Context*, *Sender ID*) é único entre os contextos de um mesmo *Master Secret* e *Master Salt*;
+- §8.2: sem contexto para o `kid`, `4.01` *"Security context not found"*; sem decifrar, `4.00` *"Decryption failed"*;
+- Apêndice B.2: novos contextos com *ID Context* `R2 || R3`, levados no `kid context`.
+
+`[3GPP]` RFC 9203 §3.2.1: os rótulos do OSC-INP (1 versão, 3 HKDF, 4 AEAD, 5 sal, 6 *ID Context*) são os do `OSCORE_Input_Material`. A RFC 9203 identifica o HKDF por um algoritmo HMAC do registro do COSE (RFC 9053 §3.1). `[INTERPRETAÇÃO]` O HKDF SHA-256 é então `5` (HMAC 256/256); o AEAD AES-CCM-16-64-128 é `10`.
+
+`[3GPP]` TS 23.003 §2.2B: quando o SUPI é um IMSI, o *Home Network Identifier* é o MCC (três dígitos) e o MNC (dois ou três).
+
+### 7.2 Defeitos do texto
+
+`[LACUNA]` O Anexo D tem falhas que a implementação precisa resolver:
+
+1. D.3.2 remete a *"TS 33.220 clause Y.2.3"* e D.3.3 a *"clause Y.3.3"*. TS 33.220 não tem Anexo Y; o conteúdo citado está em P.3.2 e P.3.3. É o "Anexo Y" anotado nesta seção antes da fase (c).
+2. D.3.2 põe o *"CoAP Security protocol identifier"* no pedido, e o arranjo de D.3.5 não o tem; o P.3.5 do GBA também não. Ponto U24.
+3. O OSC-INP é `bstr` no arranjo e um mapa CBOR na definição. Ponto U29.
+4. `HKDF(KAF, "AKMA-OSCORE")` não diz o sal, a codificação do rótulo nem o comprimento da saída. Ponto U26.
+5. O HPLMN-ID é `tstr`, sem forma definida. Ponto U25.
+6. Não há respostas de erro, nem no Anexo D nem no Anexo P. Ponto U30.
+7. Editoriais do Anexo P: P.2.4 cita a *"RFC 6813"* (o OSCORE é a RFC 8613); P.3.5 chama a resposta de *"Request Payload"* e repete os campos do pedido, o que o Anexo D corrige.
+
+Os itens 1 a 5 podem entrar no `registro-de-defeitos-3gpp.md` do responsável, fora do repositório (ponto U35).
+
+### 7.3 Procedimento
+
+1. O UE pede ao serviço de chaves do ME a K_AF de `<FQDN>.0100000008` e o A-KID (U22).
+2. O UE manda um CON `POST coap://<FQDN>/akma`, com `Uri-Host` igual ao FQDN, *Content-Format* 60 e o pedido de D.3.5: o A-KID em CBOR (U25), N1 e o AF-SID que ele escolheu (U28). Sem OSC-INP.
+3. O AF confere o pedido, refaz o A-KID em texto e pede ao AAnF a K_AF de `<FQDN>.0100000008` (TS 33.535 §6.2, passos 2 a 4), pelo mesmo caminho dos outros perfis.
+4. O AF escolhe N2 e o UE-SID, deriva o contexto (seção 7.4) e responde `2.01 Created` no ACK, com *Content-Format* 60 e `[N2, UE-SID]`.
+5. O UE deriva o mesmo contexto e manda, protegido pelo OSCORE, `GET /ua/v1/session`. O AF responde, protegido, `2.05` com o JSON dos outros perfis, `{"aKid": …, "kafExpiry": …}` (U23).
+
+O AF só considera a sessão estabelecida quando decifra o primeiro pedido protegido: é ali que o UE prova ter a K_AF. Até lá, o contexto fica pendente (U31).
+
+`[INTERPRETAÇÃO]` Transporte: CoAP sobre UDP, sem DTLS, na porta 5683, a do esquema `coap` (RFC 7252 §6.1). O OSCORE protege o pedido e a resposta de ponta a ponta, e o Anexo P o descreve como independente do transporte (P.1).
+
+### 7.4 Contexto OSCORE
+
+| Parâmetro | Valor | Base |
+|---|---|---|
+| *Master Secret* | HKDF-SHA-256 com sal vazio, IKM = K_AF (32 octetos), `info` = `AKMA-OSCORE` em ASCII (11 octetos, sem NUL), L = 32 | D.3.3; U26 |
+| *Master Salt* | os octetos do *payload* do `POST` seguidos dos do *payload* do `2.01`, como foram enviados | D.3.3; U27 |
+| *Sender ID* do UE (*Recipient ID* do AF) | UE-SID | D.3.3 |
+| *Sender ID* do AF (*Recipient ID* do UE) | AF-SID | D.3.3 |
+| AEAD | AES-CCM-16-64-128 (10) | P.3.3; RFC 8613 §3.2 |
+| HKDF | HKDF SHA-256 | P.3.3; RFC 8613 §3.2 |
+| *ID Context* | nulo; depois de uma renovação, `R2 \|\| R3` | P.3.3; U32 |
+| Versão | 1 | P.3.3 |
+| Janela contra repetição | 32 | RFC 8613 §3.2.2 |
+
+A K_AF de um A-KID e um AF_ID é a mesma enquanto vale (seção 3.9); o *Master Salt* com N1 e N2 é que torna cada contexto único (RFC 8613 §3.3; D.3.4).
+
+### 7.5 Codificação
+
+- **A-KID** (U25): `RID` é o texto do RID (`"0000"`); `A-TID`, os 32 octetos do A-TID, não o seu texto em base64; `HPLMN-ID`, o MCC seguido do MNC (`"208093"`). O AF refaz o A-KID `rid<RID>.atid<A-TID em base64>@5gc.mnc<MNC>.mcc<MCC>.3gppnetwork.org`, com a codificação que o projeto já usa (`shared/akma/akid`), e o MNC com três dígitos.
+- **N1, N2** (U28): 16 octetos aleatórios; o AF aceita N1 de 8 a 64 octetos.
+- **AF-SID, UE-SID** (U28): 4 octetos aleatórios. O AF escolhe um UE-SID diferente do AF-SID do pedido e dos UE-SID dos seus outros contextos.
+- **OSC-INP** (U29): o UE não manda. O AF aceita um OSC-INP só com os valores padrão (1, `5`, `10`) e recusa qualquer outro valor, sal ou *ID Context* com `4.00`, porque a resposta de D.3.5 não tem como dizer ao UE que o AF usou outra coisa.
+- O CBOR do pedido e da resposta usa a codificação determinística de RFC 8949 §4.2.1; o AF aceita as formas mais longas na leitura, mas o *Master Salt* usa os octetos como chegaram.
+
+### 7.6 Erros, expiração e estado
+
+- **Erros do `/akma`** (U30): `4.00 Bad Request` para CBOR malformado ou OSC-INP recusado; `4.15` para *Content-Format* diferente de 60; `4.04` para outro `Uri-Host` ou outro caminho; `4.05` para outro método; `4.03 Forbidden` com `AKMA_KEY_NOT_AVAILABLE` (o AAnF não tem a K_AKMA ou recusa o AF_ID) ou `KAF_EXPIRED` (política `reject`); `5.03` com `AANF_UNAVAILABLE`. A causa vai no *payload* de diagnóstico (RFC 7252 §5.5.2), como nos outros perfis.
+- **Erros do OSCORE**: os de RFC 8613 §8.2: `4.02` para o objeto COSE que não decodifica; `4.01` *"Security context not found"* para `kid` desconhecido; `4.00` *"Decryption failed"*; `4.01` *"Replay detected"* para pedido repetido (RFC 8613 §7.4).
+- **K_AF vencida** (U31): o AF apaga os contextos daquela K_AF. O próximo pedido protegido recebe `4.01` *"Security context not found"*, e o UE faz um novo `POST /akma`, com N1 novo (D.3.4). Daí em diante vale a política, como na U9: `refetch` pede a K_AF de novo ao AAnF; `reject` responde `4.03` com `KAF_EXPIRED`.
+- **Limites** (U31): um contexto pendente que não recebe pedido protegido em 60 s é apagado; no máximo 4096 contextos no AF, e os 4 mais novos por A-KID.
+- **Sem *cookie*.** Ao contrário do DTLS, o `POST` não é autenticado, e cada um faz o AF consultar o AAnF, como a resposta Digest, que leva o A-KID. A resposta `2.01` é menor que o pedido, então o AF não amplifica tráfego. A opção Echo (RFC 9175) conferiria o endereço antes da consulta; ela não está no Anexo D e fica de fora.
+- O A-KID vai em claro no `POST`, como vai a identidade PSK no `ClientHello` do TLS 1.3.
+- Os contextos ficam na memória do AF e não sobrevivem a um reinício; o UE recebe `4.01` e estabelece de novo.
+
+### 7.7 Renovação (RFC 8613 Apêndice B.2)
+
+U32: o UE inicia e o AF responde.
+
+1. O UE escolhe R1 e protege um pedido com *ID Context* = R1, que vai no `kid context`.
+2. O AF acha o contexto pelo `kid`, deriva um com *ID Context* = R1 e confere o pedido. Escolhe R2 e responde `4.01` protegido com *ID Context* = `R2 || R1`, com R2 no `kid context`. Guarda R2 para uso único.
+3. O UE confere a resposta, escolhe R3 e protege o pedido seguinte com *ID Context* = `R2 || R3`.
+4. O AF confere esse pedido; o novo contexto substitui o anterior, e R2 é apagado.
+
+Os demais parâmetros (*Master Secret*, *Master Salt*, os *Sender IDs*) ficam os mesmos. R1, R2 e R3 têm 8 octetos, o mínimo que B.2 sugere. No `uaclient`, a renovação roda com a opção `-rekey`, antes do pedido. O AF não inicia a renovação.
+
+### 7.8 Componentes e licença
+
+| Componente | Conteúdo |
+|---|---|
+| `af/cbor` (novo, Apache-2.0) | o subconjunto de RFC 8949 que o perfil usa: inteiros, `bstr`, `tstr`, arranjos, mapas, `null`; codificação determinística |
+| `af/oscore` (novo, Apache-2.0) | contexto (RFC 8613 §3), objeto COSE e AAD (§5), compressão (§6), proteção e verificação (§8), janela contra repetição (§7.4), Apêndice B.2; AES-CCM-16-64-128 sobre o `crypto/aes` (RFC 3610), HKDF do `crypto/hkdf` |
+| `af/coap` | servidor sobre um *socket* UDP, com a deduplicação (§4.5) por endereço de origem |
+| `af/af` | perfil `oscore`: `/akma`, contextos, `GET /ua/v1/session` protegido |
+| `af/ue/uaclient` | `-profile oscore`, `-rekey`; `-reconnect` faz um novo `POST /akma` a cada pedido |
+
+O Go não tem AES-CCM. Ele fica num arquivo próprio de `af/oscore`, conferido com os vetores de RFC 3610 e com os do Apêndice C da RFC 8613, que exercitam o AEAD, o HKDF e a compressão. O perfil não depende do wolfSSL e existe nos binários com e sem a *tag* `wolfssl` (U33).
+
+### 7.9 Conferência independente
+
+U34: a libcoap 4.3.5b, a mais nova, compilada à parte só para o teste, com `--enable-oscore` sobre o OpenSSL 3.0 da máquina do AF, que tem AES-CCM. O roteiro:
+
+1. monta o pedido de D.3.5 em Python, com a K_AF calculada pelo oráculo a partir do vetor, como no D03;
+2. manda o `POST /akma` com o `coap-client` da libcoap e guarda o *payload* da resposta;
+3. calcula em Python o *Master Secret*, o *Master Salt* e os *Sender IDs*;
+4. escreve a configuração OSCORE da libcoap e faz `coap-client -E` com `GET /ua/v1/session`, esperando `2.05` com o A-KID.
+
+Assim o estabelecimento (CBOR e HKDF) é conferido por um código que não é o do AF, e a proteção OSCORE por outra implementação. Sem a libcoap (variável `LIBCOAP_CLIENT`), a verificação aparece como pulada.
+
+### 7.10 Verificação prevista
+
+| Caso | Esperado |
+|---|---|
+| UE → AF por OSCORE | `2.01` com N2 e UE-SID; `GET` protegido com `2.05` e o A-KID; AF_ID `…0100000008` no log do AAnF |
+| segundo pedido no mesmo contexto | atendido sem novo `POST` e sem nova consulta ao AAnF |
+| renovação (B.2) | o `4.01` protegido com R2, e o pedido com `R2 \|\| R3` atendido |
+| pedido repetido | recusado pela janela |
+| K_AF errada no UE | `4.00` *"Decryption failed"* |
+| A-KID desconhecido; AF_ID fora da política | `4.03` com `AKMA_KEY_NOT_AVAILABLE` |
+| OSC-INP com outro algoritmo | `4.00` |
+| K_AF vencida, `refetch` e `reject` | `4.01` no pedido protegido; novo `POST` atendido (`refetch`) ou `4.03 KAF_EXPIRED` (`reject`) |
+| vetores | RFC 8613 Apêndice C, RFC 3610 e exemplos de RFC 8949 Apêndice A nos testes de unidade |
+| conferência independente | `coap-client` da libcoap com o contexto calculado em Python recebe `2.05` |
+| logs | nenhuma chave |
+
+O `e2e.sh` ganha o passo R2o, com o UE no seu *namespace*, e um grupo O na máquina do AF.
