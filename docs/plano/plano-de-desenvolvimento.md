@@ -1,6 +1,6 @@
 # Plano de desenvolvimento por MVPs
 
-**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) implementado e verificado, com 83 verificações e nenhuma falha (19/10/2026). MVP-7 (repositório público) concluído: publicado no GitHub e instalado numa VM limpa só pelo guia, com 83 verificações e nenhuma falha (20/10/2026). MVP-8 (Ua\* da norma e autorização por aplicação no UE): organização e especificação das fases (a) e (b) aprovadas; fase (a), o serviço de chaves do ME, implementada e verificada, com 88 verificações e nenhuma falha (20/10/2026); fase (b), os perfis TLS (K.2, PSK TLS 1.3 e PSK TLS 1.2), implementada e verificada, com 115 verificações e nenhuma falha (21/10/2026); fase (c), os perfis DTLS 1.3 e DTLS 1.2 com CoAP, implementada e verificada, com 126 verificações e nenhuma falha (22/10/2026); fase (d), o perfil OSCORE, implementada e verificada, com 141 verificações e nenhuma falha (22/10/2026); o CAPIF passou a MVP-9. MVP-12 (renovação da K_AKMA pelo AAnF) com a especificação aprovada (`docs/free5gc-side/renovacao-kakma.md`, pontos K1 a K12), implementado e verificado, com 161 verificações e nenhuma falha (28/10/2026). MVP-13 (V2 do repositório público) proposto em 28/10/2026, a aprovar (pontos L1 a L12).
+**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) implementado e verificado, com 83 verificações e nenhuma falha (19/10/2026). MVP-7 (repositório público) concluído: publicado no GitHub e instalado numa VM limpa só pelo guia, com 83 verificações e nenhuma falha (20/10/2026). MVP-8 (Ua\* da norma e autorização por aplicação no UE): organização e especificação das fases (a) e (b) aprovadas; fase (a), o serviço de chaves do ME, implementada e verificada, com 88 verificações e nenhuma falha (20/10/2026); fase (b), os perfis TLS (K.2, PSK TLS 1.3 e PSK TLS 1.2), implementada e verificada, com 115 verificações e nenhuma falha (21/10/2026); fase (c), os perfis DTLS 1.3 e DTLS 1.2 com CoAP, implementada e verificada, com 126 verificações e nenhuma falha (22/10/2026); fase (d), o perfil OSCORE, implementada e verificada, com 141 verificações e nenhuma falha (22/10/2026); o CAPIF passou a MVP-9. MVP-12 (renovação da K_AKMA pelo AAnF) com a especificação aprovada (`docs/free5gc-side/renovacao-kakma.md`, pontos K1 a K12), implementado e verificado, com 161 verificações e nenhuma falha (28/10/2026). MVP-13 (V2 do repositório público) aprovado em 28/10/2026, com os pontos L1 a L13; em execução.
 **Data:** 15 de outubro de 2026; revisão 3 em 16 de outubro de 2026; aprovação em 16 de outubro de 2026
 **Base:** documentos `00` a `04`, Adendo E, ADR-0001-R2, ADR-0002, ADR-0003, `docs/baseline/ambiente-verificado.md`, `docs/baseline/conferencia-normativa.md`, `docs/literatura/analise-dos-artigos.md`, `docs/conformidade/desvios.md`
 **Revisão 2 (15/10/2026):** conferido contra as normas do acervo (hoje em `specs/`).
@@ -941,7 +941,15 @@ Em todas as fases: o AF escolhe os perfis pela configuração, o AAnF autoriza o
 
 ### MVP-13 — V2 do repositório público
 
-**Estado (28/10/2026):** **proposta, a aprovar** (pontos L1 a L12).
+**Estado (28/10/2026):** **aprovada** pelo responsável, com os pontos L1 a L12 como propostos e o ponto L13, acrescentado por ele: uma terceira lista de recomendações, ao UERANSIM. As três listas se baseiam nas normas. Ao fim, o responsável recebe os comandos de *commit*, *tag* e *push* do repositório público. Em execução.
+
+**Estado (28/10/2026, noite):** documentos prontos neste repositório; faltam a exportação, a verificação em VM limpa (L11) e a publicação.
+
+- **L9, normas.** Baixadas as versões mais recentes: TS 29.503, TS 29.522 e TS 29.535 V20.1.0, com os YAML da Release 20; TS 33.501 V20.3.0, TS 23.502 V20.3.0, TS 24.501 V20.1.0, TS 23.003 V20.1.0, TS 33.210 V20.0.0 e TS 29.500 V20.0.0. TS 33.535, TS 24.109 e TS 33.220 não têm versão nova. Todos os itens continuam; D-H e D-I estão corrigidos em parte (registro de defeitos, conferência de 28/10/2026).
+- **L7, sugestões.** D-Q a D-Z no registro de defeitos. O D-Z, de TS 24.501 §5.4.2.3, saiu da análise do UERANSIM (L13).
+- **L6, free5GC.** O free5GC v4.3.0 saiu em 30/09/2026; F1 a F20 continuam nele (`correcoes-free5gc.md`). Os *patches* continuam para a v4.2.3.
+- **L13, UERANSIM.** A v3.3.0 (07/06/2026) e o `master` (14/10/2026) têm os quatro itens de `docs/af-side/recomendacoes-ueransim.md`. Desde abril de 2025 o UERANSIM deriva uma K_AKMA, com o FC da K_AUSF (`0x6A`) e sem o P0 `"AKMA"`, o que não confere com TS 33.535 A.2.
+- **Públicos.** `public/docs/3gpp-recommendations.md` e `public/docs/ueransim-recommendations.md` (novos), `public/CHANGELOG.md` (novo), `free5gc-fixes.md` (conferência na v4.3.0 e tabela por repositório), `README.md` (V2, MVP-12, recomendações) e `install.md` (parte 12, atualização a partir da V1).
 
 **Objetivo.** Publicar a V2 em `github.com/florianoneto07/akma-free5gc`: o que o projeto fez depois da V1 (MVP-7, 20/10/2026) e as duas listas de recomendações que o responsável vai enviar ao free5GC e à 3GPP ao fim da implementação. Pedido do responsável em 28/10/2026. **Nome:** MVP-13 neste repositório; no repositório público, só V2, sem a numeração dos MVP (decisão de 28/10/2026). O `export-public.sh` recusa a palavra "MVP" na pasta exportada.
 
@@ -972,19 +980,20 @@ Falta, para a V2: o MVP-12 no `README.md`, um registro de mudanças público, a 
 | L10 | Publicação | exportar do *commit* final para uma pasta temporária e sincronizar em `~/akma/akma-free5gc-public`, mantendo o `.git` (`rsync --delete`). Eu mostro `git status` e `git diff --stat` dali; o responsável faz um *commit* para a V2, as *tags* e o *push* | MVP-7: não faço *commit* no repositório público |
 | L11 | Verificação em VM limpa | antes do *push*: um `git bundle` do repositório público instalado no *snapshot* limpo da 192.168.16.132, e o AF na máquina do AF com um clone do mesmo *bundle*, seguindo só os documentos públicos. O `e2e.sh` termina com 161 verificações e nenhuma falha (com `OPENSSL_DTLS13` e `LIBCOAP_CLIENT`). O responsável reverte o *snapshot* | critério 6 do MVP-7. Alternativa: depois do *push*, pelo clone do GitHub, como na V1 |
 | L12 | Atualização V1 → V2 | (a) descrita (L5) e conferida contra os *patches* e configurações das duas versões, sem instalar a V1 antes. (b) Verificada numa VM com a V1 instalada, se houver um *snapshot* assim | (a) recomendada: instalar a V1 numa VM limpa antes da V2 dobra o tempo da verificação |
+| L13 | Recomendações ao UERANSIM | documento novo `docs/ueransim-recommendations.md`, em inglês, com o que o projeto achou no UERANSIM contra as normas: o AKMA no ME, que os *patches* do repositório implementam (TS 33.535 §4.4.3, §6.1, §6.2, Anexo A), e os comportamentos do UE fora da norma vistos nos testes, cada um com a cláusula, o que o UERANSIM faz, como deve ser e o que o repositório faz. Cada item conferido na versão mais recente do UERANSIM. Registro no projeto: `docs/af-side/recomendacoes-ueransim.md` | acrescentado pelo responsável em 28/10/2026 |
 
 **Fora do escopo.**
 
 - O *pull request* ao free5GC e o *rebase* para uma versão mais nova (seção 5, *Upstream*).
 - O CAPIF (MVP-9), o GPSI (MVP-10) e o TLS nas SBI (MVP-11).
 - O envio das recomendações, que fica com o responsável.
-- Recomendações ao UERANSIM. Exemplo: o `Security Mode Complete` com o último `Registration Request`, visto no MVP-12 (`docs/af-side/ue-ueransim.md` §2).
 
 **Pré-requisitos.** MVP-12.
 
 **Arquivos.**
 
-- `public/README.md`, `public/CHANGELOG.md` (novo), `public/docs/install.md`, `public/docs/free5gc-fixes.md` e `public/docs/3gpp-recommendations.md` (novo);
+- `public/README.md`, `public/CHANGELOG.md` (novo), `public/docs/install.md`, `public/docs/free5gc-fixes.md`, `public/docs/3gpp-recommendations.md` (novo) e `public/docs/ueransim-recommendations.md` (novo);
+- `docs/af-side/recomendacoes-ueransim.md` (novo);
 - `docs/defects/registro-de-defeitos-3gpp.md` (D-Q em diante e as versões conferidas) e a cópia em `~/akma`;
 - `docs/free5gc-side/correcoes-free5gc.md` (o repositório de cada item e a versão do free5GC conferida);
 - este plano;
@@ -998,7 +1007,7 @@ Falta, para a V2: o MVP-12 no `README.md`, um registro de mudanças público, a 
    - projeto: nenhuma menção a MVP, DV, ADR, pontos K e U, documentos do projeto ou ao laboratório;
    - dados pessoais: nenhum caminho `/home/<usuário>`, nenhum usuário e nenhum e-mail além dos do autor;
    - chaves: nenhuma cadeia de 64 hexadecimais fora dos vetores de teste.
-3. Os documentos públicos concordam entre si e com o código: o `README.md`, o `CHANGELOG.md`, o guia (com a parte 11 e a atualização a partir da V1), as duas listas (todos os itens com a versão conferida) e o `testing.md` (161 verificações). Os *links* internos resolvem.
+3. Os documentos públicos concordam entre si e com o código: o `README.md`, o `CHANGELOG.md`, o guia (com a parte 11 e a atualização a partir da V1), as três listas (todos os itens com a versão conferida) e o `testing.md` (161 verificações). Os *links* internos resolvem.
 4. Na VM limpa (L11): o UE registra; o A-KID é igual no UE, no AUSF e no AAnF; o Ua\* passa por todos os perfis; a K_AKMA é renovada (R6r); o `e2e.sh` termina com 161 verificações e nenhuma falha.
 5. O registro de defeitos e `correcoes-free5gc.md` dizem a versão conferida de cada item (L6, L9) e trazem as sugestões novas (L7).
 
