@@ -1,6 +1,6 @@
 # Plano de desenvolvimento por MVPs
 
-**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) implementado e verificado, com 83 verificações e nenhuma falha (19/10/2026). MVP-7 (repositório público) concluído: publicado no GitHub e instalado numa VM limpa só pelo guia, com 83 verificações e nenhuma falha (20/10/2026). MVP-8 (Ua\* da norma e autorização por aplicação no UE): organização e especificação das fases (a) e (b) aprovadas; fase (a), o serviço de chaves do ME, implementada e verificada, com 88 verificações e nenhuma falha (20/10/2026); fase (b), os perfis TLS (K.2, PSK TLS 1.3 e PSK TLS 1.2), implementada e verificada, com 115 verificações e nenhuma falha (21/10/2026); fase (c), os perfis DTLS 1.3 e DTLS 1.2 com CoAP, implementada e verificada, com 126 verificações e nenhuma falha (22/10/2026); fase (d), o perfil OSCORE, implementada e verificada, com 141 verificações e nenhuma falha (22/10/2026); o CAPIF passou a MVP-9.
+**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) implementado e verificado, com 83 verificações e nenhuma falha (19/10/2026). MVP-7 (repositório público) concluído: publicado no GitHub e instalado numa VM limpa só pelo guia, com 83 verificações e nenhuma falha (20/10/2026). MVP-8 (Ua\* da norma e autorização por aplicação no UE): organização e especificação das fases (a) e (b) aprovadas; fase (a), o serviço de chaves do ME, implementada e verificada, com 88 verificações e nenhuma falha (20/10/2026); fase (b), os perfis TLS (K.2, PSK TLS 1.3 e PSK TLS 1.2), implementada e verificada, com 115 verificações e nenhuma falha (21/10/2026); fase (c), os perfis DTLS 1.3 e DTLS 1.2 com CoAP, implementada e verificada, com 126 verificações e nenhuma falha (22/10/2026); fase (d), o perfil OSCORE, implementada e verificada, com 141 verificações e nenhuma falha (22/10/2026); o CAPIF passou a MVP-9. MVP-12 (renovação da K_AKMA pelo AAnF) com a especificação aprovada em 28/10/2026 (`docs/free5gc-side/renovacao-kakma.md`, pontos K1 a K12); a V2 do repositório público (MVP-13) vem depois dele.
 **Data:** 15 de outubro de 2026; revisão 3 em 16 de outubro de 2026; aprovação em 16 de outubro de 2026
 **Base:** documentos `00` a `04`, Adendo E, ADR-0001-R2, ADR-0002, ADR-0003, `docs/baseline/ambiente-verificado.md`, `docs/baseline/conferencia-normativa.md`, `docs/literatura/analise-dos-artigos.md`, `docs/conformidade/desvios.md`
 **Revisão 2 (15/10/2026):** conferido contra as normas do acervo (hoje em `specs/`).
@@ -920,6 +920,23 @@ Em todas as fases: o AF escolhe os perfis pela configuração, o AAnF autoriza o
 
 **Pré-requisitos.** MVP-6. O critério 6 do MVP-7, a instalação limpa pelo GitHub, corre em paralelo noutra sessão e não bloqueia.
 
+### MVP-12 — Renovação da K_AKMA pelo AAnF
+
+**Estado (28/10/2026):** especificação **aprovada** pelo responsável, com os pontos K1 a K12 como propostos (`docs/free5gc-side/renovacao-kakma.md`); a implementar.
+
+**Objetivo.** Quando a K_AKMA de um UE passa da idade da política local, o AAnF pede ao UDM uma nova autenticação primária (`Nudm_UECM_AuthTrigger`). O UDM notifica o AMF, e o AMF autentica o UE de novo (TS 33.535 §6.4.4; TS 33.501 §6.1.5). Com a nova autenticação, o AUSF registra no AAnF a nova K_AKMA, e o UE passa a ter um A-KID novo.
+
+**Escopo.** Seções 3 e 4 da especificação:
+
+- `openapi`, UDM e AMF do free5GC: F16 a F19 de `docs/free5gc-side/correcoes-free5gc.md`;
+- AAnF: `kakmaRefresh` e o consumidor do UDM; `seed trigger-auth`;
+- um passo novo do `e2e.sh`;
+- desvio novo DV-12 (POST no `trigger-auth`) e defeito novo D-O.
+
+**Critérios.** Os casos da seção 6 da especificação. Com `kakmaRefresh` desligado, o padrão, o `e2e.sh` atual passa igual.
+
+**Pré-requisitos.** MVP-8.
+
 ---
 
 ## 5. Depois do MVP-6
@@ -939,10 +956,14 @@ Em todas as fases: o AF escolhe os perfis pela configuração, o AAnF autoriza o
 - Normas: TS 23.222 V19.10.0, TS 29.222 V19.8.0 (com os YAML em `specs/openapi/`) e TS 33.122 V19.4.0, em `specs/` desde 19/10/2026.
 - Fecha a parte do DV-9 sobre a origem do *token*. O TLS entre o NEF e o AF continua com o DV-9.
 
-**MVP-12 — Renovação da K_AKMA pelo AAnF** (decisão do responsável de 22/10/2026: MVP próprio, proposto logo depois da fase (d) do MVP-8). O AAnF pede ao UDM uma nova autenticação primária, `Nudm_UECM_AuthTrigger` (TS 33.535 §6.4.4; TS 33.501 §6.1.5 e §14.2.6), com o método POST do defeito D-B.
+**MVP-12 — Renovação da K_AKMA pelo AAnF** (decisão do responsável de 22/10/2026: MVP próprio, depois da fase (d) do MVP-8). Aprovado em 28/10/2026; está na seção 4.
 
-- `[FREE5GC]` O UDM e o AMF da v4.2.3 não têm a operação nem a `Nudm_UECM_Re-AuthenticationNotification`.
-- Escopo a detalhar na proposta: a política do AAnF, o `trigger-auth` no UDM, a notificação ao AMF e a reautenticação do UE pelo AMF.
+**MVP-13 — V2 do repositório público** (pedido do responsável em 28/10/2026: logo depois do MVP-12, antes dos MVP-9 a 11). Uma nova exportação do repositório público, com o que o projeto fez depois do MVP-7 e as recomendações que o responsável vai enviar ao free5GC e à 3GPP ao fim da implementação.
+
+- **Código e guia.** Os perfis Ua\* do MVP-8 (TLS, DTLS e OSCORE, com o serviço de chaves do ME) e a renovação da K_AKMA do MVP-12, com os *patches* novos e o roteiro de testes.
+- **Recomendações ao free5GC.** `docs/free5gc-fixes.md`, em inglês, com tudo de `docs/free5gc-side/correcoes-free5gc.md`: cada mudança com a cláusula da norma, a forma que ela pede e o *patch* do projeto, ou o motivo de estar aberta.
+- **Recomendações à 3GPP.** Um documento público novo, em inglês, com os defeitos de `docs/defects/registro-de-defeitos-3gpp.md` e as divergências de enumeração de TS 23.502. Cada um com a especificação e a versão, a cláusula, o texto atual, o problema e a mudança proposta, que é o que um *Change Request* precisa.
+- O envio ao free5GC e à 3GPP fica com o responsável. O escopo detalhado, a versão (*tag*) e os critérios, como a instalação limpa só pelo guia do MVP-7, saem da proposta do MVP-13.
 
 **Demais itens.** A lista original desta seção, revista em 19/10/2026. A ordem é uma sugestão: cada MVP é proposto e aprovado à parte.
 
@@ -958,7 +979,7 @@ Em todas as fases: o AF escolhe os perfis pela configuração, o AAnF autoriza o
 | Pontos abertos do free5GC: escopos por tipo de consumidor (F4), `exp` e `aud` no `VerifyOAuth` (F5), *webconsole* (F9), 401 do NEF (F12), descadastro do NEF (F14), `complexQuery` (F15) | `docs/free5gc-side/correcoes-free5gc.md` | F4 e F5 junto com o TLS nas SBI; os demais com o *upstream* |
 | NFKC no UE (DV-4); SUPI dos tipos NAI, GLI e GCI (DV-3) | desvios registrados | sob demanda |
 | *Authentication Proxy* (TS 33.535 §4.7) | opcional na norma | sob demanda, depois do MVP-8 |
-| *Upstream* | — | *rebase* para a versão corrente (D4); modelos do Naanf_AKMA gerados pela mesma ferramenta OpenAPI do free5GC; `shared/akma` migrado para `free5gc/util`. O repositório público (MVP-7) é o primeiro passo; o *pull request* pode vir antes dos MVP seguintes: depende de quando o projeto quer abrir a conversa com o free5GC |
+| *Upstream* | — | *rebase* para a versão corrente (D4); modelos do Naanf_AKMA gerados pela mesma ferramenta OpenAPI do free5GC; `shared/akma` migrado para `free5gc/util`. O repositório público (MVP-7) é o primeiro passo, e a V2 (MVP-13) traz a lista de recomendações; o *pull request* pode vir antes dos MVP seguintes: depende de quando o projeto quer abrir a conversa com o free5GC |
 | *Roaming* (`ROAMING_STATUS`, `RoamingRestriction`, `Notify` com `3gpp-Sbi-Callback`); `ServiceDisableNotification` (§6.8) | Release 18. O *roaming* exige uma VPLMN, que o laboratório não tem. O `AuthTrigger` (§6.4.4) passou a MVP-12 | depois do *upstream*, sob demanda |
 | Várias instâncias de AAnF; persistência do contexto; desempenho (ADR-0001-R2 §5.4); verificação formal | — | sob demanda |
 
