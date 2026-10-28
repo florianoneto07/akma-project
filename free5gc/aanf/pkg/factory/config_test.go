@@ -144,8 +144,8 @@ func TestSampleConfig(t *testing.T) {
 	if c.NfInstanceId != "b6f417f0-06fa-4c38-b291-33066f5a5fe7" {
 		t.Errorf("nfInstanceId = %s", c.NfInstanceId)
 	}
-	if strings.Join(c.RoutingIndicators, ",") != "0000" || len(c.Akma.AuthorizedAfs) != 9 ||
-		len(c.Akma.AuthorizedNefs) != 1 || len(c.Akma.AuthorizedNefs[0].AfIds) != 9 || c.Sbi.Port != 8010 {
+	if strings.Join(c.RoutingIndicators, ",") != "0000" || len(c.Akma.AuthorizedAfs) != 10 ||
+		len(c.Akma.AuthorizedNefs) != 1 || len(c.Akma.AuthorizedNefs[0].AfIds) != 10 || c.Sbi.Port != 8010 {
 		t.Errorf("configuration = %+v", c)
 	}
 }

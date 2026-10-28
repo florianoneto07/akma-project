@@ -1,8 +1,8 @@
 diff --git a/config/free5gc-ue.yaml b/config/free5gc-ue.yaml
-index 3d3e9f4..7d152c8 100644
+index 3d3e9f4..0c7b74c 100644
 --- a/config/free5gc-ue.yaml
 +++ b/config/free5gc-ue.yaml
-@@ -15,6 +15,25 @@ routingIndicator: '0000'
+@@ -15,6 +15,26 @@ routingIndicator: '0000'
  
  # AKMA (3GPP TS 33.535): derive K_AKMA and the A-KID after each successful primary authentication
  akma: true
@@ -22,6 +22,7 @@ index 3d3e9f4..7d152c8 100644
 +        - af1.akma.example.0100000007 # TLS 1.3 with K_AF as pre-shared key (3GPP TS 24.109 K.3.3)
 +        - af1.akma.example.010001D001 # (D)TLS 1.2 with K_AF as pre-shared key (3GPP TS 24.109 K.3.2)
 +        - af1.akma.example.0100000009 # DTLS 1.3 with K_AF as pre-shared key (3GPP TS 33.535 Annex C)
++        - af1.akma.example.0100000008 # OSCORE with a context from K_AF (3GPP TS 33.535 Annex D)
 +        - af1.akma.example.FF00000001 # simplified Ua*, test only
 +# Test only: "nr-cli akma-kaf" gives the K_AF of any AF to any local process
 +akmaCliKaf: false

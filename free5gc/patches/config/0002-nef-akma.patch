@@ -1,5 +1,5 @@
 diff --git a/nefcfg.yaml b/nefcfg.yaml
-index 48f8fb6..9da7105 100644
+index 48f8fb6..5126155 100644
 --- a/nefcfg.yaml
 +++ b/nefcfg.yaml
 @@ -5,8 +5,8 @@ info:
@@ -13,7 +13,7 @@ index 48f8fb6..9da7105 100644
      port: 8000 # port used to bind the service
      tls: # the local path of TLS key
        pem: cert/nef.pem # NEF TLS Certificate
-@@ -18,6 +18,41 @@ configuration:
+@@ -18,6 +18,44 @@ configuration:
      - serviceName: nnef-oam # OAM service
      - serviceName: 3gpp-traffic-influence # AF-facing Traffic Influence API
      - serviceName: nnef-callback # Inbound SMF event notification callback
@@ -44,6 +44,9 @@ index 48f8fb6..9da7105 100644
 +        sourceAddresses:
 +          - 192.168.16.129
 +      - afId: af1.akma.example.0100000009 # DTLS 1.3 with K_AF as pre-shared key (3GPP TS 33.535 Annex C)
++        sourceAddresses:
++          - 192.168.16.129
++      - afId: af1.akma.example.0100000008 # OSCORE with a context from K_AF (3GPP TS 33.535 Annex D)
 +        sourceAddresses:
 +          - 192.168.16.129
 +      - afId: af1.akma.example.FF00000001 # simplified Ua*, test only (3GPP TS 33.220 H.2 NOTE 2)
