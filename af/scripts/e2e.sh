@@ -464,7 +464,7 @@ bind="$(ssh_b "sed -n 's/^ *bindingIPv4: *\([0-9.]*\).*/\1/p' ~/free5gc/config/a
     { echo "aanfUri of $afcfg ($aanf) is not the AAnF of $host (bindingIPv4 ${bind:-missing})" >&2; exit 1; }
 {
     echo "commit $(git -C "$repo" describe --always --dirty 2>/dev/null)"
-    for nf in nrf udm ausf config run; do ssh_b "~/akma-free5gc/free5gc/scripts/patch-nf.sh $nf status | head -1"; done
+    for nf in nrf udm ausf amf config run; do ssh_b "~/akma-free5gc/free5gc/scripts/patch-nf.sh $nf status | head -1"; done
     ssh_b "~/akma-free5gc/af/scripts/patch-ueransim.sh status | head -1"
 } | tee "$L/preflight.txt"
 out="$(ssh_b "~/UERANSIM/build/nr-akma-selftest ~/akma-free5gc/shared/akma/testdata/vectors.json" 2>&1)"

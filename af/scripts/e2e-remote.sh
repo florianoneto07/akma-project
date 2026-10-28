@@ -23,6 +23,9 @@
 #       succeeds and the registration in the AAnF fails (TS 33.535 cl. 6.1)
 #   R5  subscriber without AKMA subscription, then restored
 #   R6  remove-context
+#   R6r refresh of K_AKMA by the AAnF (TS 33.535 cl. 6.4.4): the AAnF, with
+#       kakmaRefresh 20s, asks the UDM for a new primary authentication on a
+#       K_AF request; the AMF re-authenticates the registered UE; new A-KID
 #       -> sync C
 #   R7  no key in the logs; logs copied; stop
 #
@@ -376,6 +379,79 @@ check R6.removed "Naanf_AKMA_ContextRemove: removed (204)" grep -q "^removed" "$
 "$seed" remove --nrf "$nrf" --aanf "http://$aanf" --supi "$supi" >"$run/remove-2.out" 2>&1
 check R6.not-found "remove-context again: 404 AKMA_CONTEXT_NOT_FOUND" \
     grep -q "404 (AKMA_CONTEXT_NOT_FOUND)" "$run/remove-2.out"
+
+# ---------------------------------------------------------------- R6r
+# The local authentication policy of the AAnF (TS 33.535 cl. 6.4.4): a copy
+# of its configuration with kakmaRefresh 20s; the installed one is untouched
+# and runs again at the end of the step.
+step "R6r refresh of K_AKMA by the AAnF"
+restart_aanf() { # configuration
+    pkill -INT -x aanf
+    for ((i = 0; i < 15; i++)); do pgrep -x aanf >/dev/null || break; sleep 1; done
+    ./bin/aanf -c "$1" -l "$f5log" >>"$run/aanf-restart.out" 2>&1 </dev/null &
+    for ((i = 0; i < 20; i++)); do ss -ltn | grep -qF "$aanf" && return 0; sleep 1; done
+    return 1
+}
+sed 's/^\( *kakmaRefresh:\).*/\1 20s/' ./config/aanfcfg.yaml >"$run/aanfcfg-refresh.yaml"
+restart_aanf "$run/aanfcfg-refresh.yaml"
+check R6r.policy "AAnF started with kakmaRefresh 20s" \
+    wait_for "$f5log" "older than 20s (TS 33.535 cl. 6.4.4)" 20
+check R6r.registration "new registration: a K_AKMA registered at the AAnF" reauthenticate
+akid6="$(ue_akid)"
+setstate A_KID_6 "$akid6"
+wait_for "$f5log" "AKMA context of $supi registered, A-KID $akid6" 15
+requested="refresh requested from the UDM (TS 33.535 cl. 6.4.4)"
+ua -n 1 >"$run/ua-6.out" 2>&1
+check R6r.young "K_AF of a K_AKMA younger than 20s: no refresh" \
+    bash -c 'grep -q "session established" "$1" && ! grep -aF "K_AKMA of $3 registered" "$2" | grep -qF "$4"' _ \
+    "$run/ua-6.out" "$f5log" "$supi" "$requested"
+sleep 21
+derived="$(count "$run/ue.log" "AKMA key material derived")"
+tun="$(count "$run/ue.log" "TUN interface[uesimtun0")"
+# Another AF_ID: the AF keeps the K_AF of the first one until it expires
+# (TS 33.535 cl. 6.4.2) and would not ask the AAnF again.
+ua -profile psk-tls13 -connect "$af_ip" -n 1 >"$run/ua-7.out" 2>&1
+check R6r.ua "K_AF of a K_AKMA older than 20s, for another AF_ID: provided to the AF" \
+    grep -q "AF authenticated by the TLS handshake with K_AF.*AF_ID $fqdn.0100000007" "$run/ua-7.out"
+check R6r.aanf "the AAnF asks the UDM for the refresh (Nudm_UECM_AuthTrigger)" \
+    wait_for "$f5log" "Refresh of K_AKMA of $supi accepted by the UDM" 15
+check R6r.udm "the UDM notifies the AMF (Nudm_UECM_Re-AuthenticationNotification, TS 33.501 cl. 6.1.5)" \
+    bash -c 'grep -aF "AuthTrigger for $2 from AANF at" "$1" | grep -qF "re-authentication notified to the AMF"' _ \
+    "$f5log" "$supi"
+check R6r.amf "the AMF starts the primary authentication of the registered UE" \
+    grep -aqF "Re-authentication of $supi requested by the UDM: started" "$f5log"
+check R6r.smc "the AMF takes the new KAMF into use with a NAS SMC (TS 33.501 cl. 6.9.4.2)" \
+    wait_for "$f5log" "Re-authentication of $supi requested by the UDM: completed" 15
+check R6r.ue "the UE derives a new A-KID at the NAS SMC" \
+    wait_more "$run/ue.log" "AKMA key material derived" "$derived" 15
+akid7="$(ue_akid)"
+setstate A_KID_7 "$akid7"
+check R6r.new-akid "the new A-KID differs from the previous one" test "$akid7" != "$akid6"
+check R6r.akid-ausf "A-KID of the UE = A-KID derived by the AUSF" \
+    wait_for "$f5log" "K_AKMA and A-KID derived for $supi: A-KID $akid7" 15
+check R6r.akid-aanf "the AAnF replaces the context with the new A-KID (TS 33.535 cl. 6.1 NOTE 1a)" \
+    wait_for "$f5log" "AKMA context of $supi registered, A-KID $akid7 (previous context replaced)" 15
+check R6r.pdu "the PDU session goes on: no new TUN interface" \
+    test "$(count "$run/ue.log" "TUN interface[uesimtun0")" -eq "$tun"
+ua -n 1 >"$run/ua-8.out" 2>&1
+check R6r.ua-new "Ua* through the same PDU session, with the new A-KID" \
+    bash -c 'grep -q "session established" "$1" && grep -aqF "for A-KID $3, expires" "$2"' _ \
+    "$run/ua-8.out" "$f5log" "$akid7"
+check R6r.once "one refresh: none for the new K_AKMA" \
+    test "$(grep -aF "K_AKMA of $supi registered" "$f5log" | grep -cF "$requested")" -eq 1
+"$seed" trigger-auth --nrf "$nrf" --supi "$supi" >"$run/trigger-1.out" 2>&1
+check R6r.udm-interval "another AuthTrigger within 60 s: 403 REAUTHENTICATION_NOT_ALLOWED" \
+    grep -q "UDM answered 403 (REAUTHENTICATION_NOT_ALLOWED" "$run/trigger-1.out"
+"$seed" trigger-auth --nrf "$nrf" --supi "$supi" --method GET >"$run/trigger-2.out" 2>&1
+check R6r.udm-get "trigger-auth with GET: 405, Allow: POST (TS 29.503 table 6.2.3.13.4.1-1)" \
+    bash -c 'grep -q "^405 " "$1" && grep -qx "allow: POST" "$1"' _ "$run/trigger-2.out"
+"$seed" trigger-auth --nrf "$nrf" --supi "$supi" --body '{}' >"$run/trigger-3.out" 2>&1
+check R6r.udm-no-supi "trigger-auth without supi: 400 MANDATORY_IE_MISSING" \
+    grep -q '^400 .*"cause":"MANDATORY_IE_MISSING"' "$run/trigger-3.out"
+"$seed" trigger-auth --nrf "$nrf" --supi imsi-208930000000099 >"$run/trigger-4.out" 2>&1
+check R6r.udm-unknown "trigger-auth for an unknown SUPI: 404 USER_NOT_FOUND" \
+    grep -q "UDM answered 404 (USER_NOT_FOUND" "$run/trigger-4.out"
+check R6r.restored "AAnF back to the installed configuration" restart_aanf ./config/aanfcfg.yaml
 sync_point C
 
 # ---------------------------------------------------------------- R7
