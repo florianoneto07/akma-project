@@ -1,6 +1,6 @@
-# Ponta a ponta e testes negativos (MVP-5 a MVP-8)
+# Ponta a ponta e testes negativos (MVP-5 a MVP-12)
 
-**Data:** 18 de outubro de 2026; MVP-6 em 19 de outubro de 2026; MVP-8 de 20 a 22 de outubro de 2026 · **Resultado do MVP-8, fase (d):** 141 verificações, nenhuma falha (execução `20261022-201824`, seção 5.6) · **Fase (c):** 126 verificações, nenhuma falha (execução `20261022-124514`, seção 5.5) · **Fase (b):** 115 verificações, nenhuma falha (execução `20261021-164401`, seção 5.4) · **Resultado do MVP-6:** 83 verificações, nenhuma falha (execução `20261019-213720`, seção 5.2) · **MVP-5:** 63 verificações, nenhuma falha (execução `20261018-171510`) · **Instalação limpa:** 63 verificações, nenhuma falha, em 19 de outubro de 2026 (execução `20261019-160723`, seção 5.1)
+**Data:** 18 de outubro de 2026; MVP-6 em 19 de outubro de 2026; MVP-8 de 20 a 22 de outubro de 2026; MVP-12 em 28 de outubro de 2026 · **Resultado do MVP-12:** 161 verificações, nenhuma falha (execução `20261028-162316`, seção 5.7) · **MVP-8, fase (d):** 141 verificações, nenhuma falha (execução `20261022-201824`, seção 5.6) · **Fase (c):** 126 verificações, nenhuma falha (execução `20261022-124514`, seção 5.5) · **Fase (b):** 115 verificações, nenhuma falha (execução `20261021-164401`, seção 5.4) · **Resultado do MVP-6:** 83 verificações, nenhuma falha (execução `20261019-213720`, seção 5.2) · **MVP-5:** 63 verificações, nenhuma falha (execução `20261018-171510`) · **Instalação limpa:** 63 verificações, nenhuma falha, em 19 de outubro de 2026 (execução `20261019-160723`, seção 5.1)
 
 ## 1. O que o roteiro faz
 
@@ -36,16 +36,17 @@ As duas máquinas se sincronizam por arquivos-marcadores em três pontos (A, B, 
 | R4 | free5GC | AAnF parado durante uma autenticação (D9) |
 | R5 | free5GC | assinante sem assinatura AKMA; depois restaurada |
 | R6 | free5GC | `remove-context`, e de novo (404) |
+| R6r | free5GC | MVP-12: renovação da K_AKMA pelo AAnF (TS 33.535 §6.4.4). O AAnF sobe com `kakmaRefresh: 20s` (cópia da configuração); K_AF de uma K_AKMA nova não pede renovação; depois de 20 s, K_AF para outro AF_ID, que o AF não tem guardada: o AAnF pede o `trigger-auth`, o UDM notifica o AMF, o AMF autentica o UE registrado e faz o NAS SMC, o UE deriva um A-KID novo, igual ao do AUSF e ao do AAnF, e a sessão PDU continua. Depois, o `seed trigger-auth`: 403 dentro de 60 s, 405 com GET, 400 sem `supi`, 404 para SUPI desconhecido. A configuração instalada volta no fim |
 | C (ponto C) | AF | `retrieve` depois do `remove-context` |
 | R7, L1 | os dois | nenhuma cadeia de 64 hexadecimais nos logs do free5GC, do UE, do gNB e do AF |
 
 ## 2. Pré-requisitos
 
-Na máquina do free5GC, as partes 3 a 7 do tutorial, isto é:
+Na máquina do free5GC, as partes 3 a 7 e 10 do tutorial, isto é:
 
 - o repositório em `~/akma-free5gc`;
-- os *patches* do NRF, do UDM, do AUSF, da configuração e do `run.sh`;
-- o AAnF implantado (`bin/aanf`, `config/aanfcfg.yaml`) e o `seed` em `~/akma-tools/`;
+- os *patches* do NRF, do UDM (os dois), do AUSF, do AMF (parte 10, MVP-12), da configuração e do `run.sh`;
+- o AAnF implantado (`bin/aanf`, `config/aanfcfg.yaml` com a linha `kakmaRefresh`, que o R6r troca numa cópia) e o `seed` em `~/akma-tools/`;
 - o UERANSIM com os *patches*, o `linkIp: 10.100.0.1` do gNB e o `uaclient` em `~/akma-free5gc/af/build/bin/`.
 
 Na máquina do AF: `af/scripts/build-wolfssl.sh`, `af/scripts/make-test-ca.sh`, `af/scripts/build-af.sh` e `free5gc/scripts/build-aanf.sh`; o `openssl` (o grupo T o usa como UE independente); opcionalmente, um OpenSSL 4.1 compilado à parte para o D03 e a libcoap para O04 e O05 (seção 3); acesso SSH por chave à máquina do free5GC; e o `af/config/afcfg.yaml` com o `aanfUri` do AAnF da máquina do free5GC.
@@ -140,7 +141,7 @@ Com `--keep`, o free5GC, o gNB e o UE continuam no ar no fim. Sem ele, o roteiro
 | `remote/` | `free5gc.log`, `ue.log`, `gnb.log`, saídas do cliente Ua\* e do `seed`, `state` (os A-KID) |
 | `af.log`, `af-*.log` | o AF, e os AF de relógio deslocado |
 
-O código de saída é 0 só se nenhuma verificação falhar; uma verificação pulada não conta como falha. Leva cerca de três minutos.
+O código de saída é 0 só se nenhuma verificação falhar; uma verificação pulada não conta como falha. Leva cerca de quatro minutos.
 
 ## 4. Testes negativos
 
@@ -287,6 +288,14 @@ O teste com o UERANSIM em outra máquina (critério 6) está em `docs/af-side/te
 
 - **Verificações novas.** As quatro do R2o e as onze do grupo O (seção 1). Os casos e o resultado de cada um estão em `ua-star-norma.md` §7.12.
 - **Execução anterior, `20261022-201455` (140/1).** O O10 falhou por causa do roteiro: a saída do cliente tem duas linhas, e o `grep` da verificação procura linha por linha. O AF respondeu o esperado, `4.03 KAF_EXPIRED`. A verificação passou a juntar as linhas.
+
+### 5.7 MVP-12, em 28/10/2026
+
+`161 passed, 0 failed, 0 skipped` na execução `20261028-162316`: 80 verificações na máquina do free5GC e 81 na do AF, em cerca de quatro minutos. Com o `OPENSSL_DTLS13` e o `LIBCOAP_CLIENT` da seção 3, recompilados nesta data pelos passos daquela seção. Antes da execução, a máquina do free5GC recebeu as duas cópias do `openapi` com o *patch* `0003`, o UDM com o `0002`, o AMF com o `amf/0001`, o AAnF e o `seed` novos e o `aanfcfg.yaml` com a linha `kakmaRefresh: 0`. As cópias anteriores ficaram em `~/akma-mvp12-*` e `aanfcfg.yaml.mvp8d`.
+
+- **Verificações novas.** As vinte do R6r (seção 1). Os casos e o resultado de cada um estão em `docs/free5gc-side/renovacao-kakma.md` §11.
+- **Execução `20261028-151849` (151/10).** As dez falhas, no R6r: o roteiro pedia, depois de 20 s, a K_AF do mesmo AF_ID, e o AF, que a tinha guardada, não consultou o AAnF; o `seed trigger-auth` repetia o prefixo da API no caminho. Corrigidos o roteiro e o `seed`.
+- **Execução `20261028-154345` (160/1).** O R6r.smc falhou: o UERANSIM pôs o último `Registration Request` no `Security Mode Complete`, e o AMF o tratou como um registro. Corrigido no AMF (`docs/free5gc-side/amf.md` §2).
 
 ## 6. Limitações
 

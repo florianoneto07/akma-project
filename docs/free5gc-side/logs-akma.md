@@ -40,6 +40,8 @@ O nível segue o costume do free5GC: `info` para o evento normal, `warn` para al
 | `debug` | `No AKMA subscription for <SUPI>` | assinante sem `akmaAllowed` | — |
 | `warn` | `Routing Indicator of the SUCI (<RID>) differs from the stored routingId (<RID>) for <SUPI>` | o RID do SUCI e o do UDR diferem | D10 |
 | `error` | `AKMA allowed for <SUPI>, but the stored routingId "<valor>" is not a Routing Indicator: AKMA indication not sent` | `routingId` ausente ou fora do padrão | TS 29.505 Tab. 5.4.2.2-1 |
+| `info` | `AuthTrigger for <SUPI> from <tipo de NF> at <endereço>: re-authentication notified to the AMF <id>`, com `, pending until the UE is reachable` quando o AMF responde 202 | `trigger-auth` aceito (MVP-12, `udm.md` §6) | TS 33.501 §6.1.5.2 passos 1 e 2 |
+| `warn` | `AuthTrigger for <SUPI> from <tipo de NF> at <endereço> refused: <status> <causa> (<detalhe>)` | `trigger-auth` recusado | TS 29.503 tabela 6.2.3.13.4.2.2-2 |
 
 ### 3.2 AUSF
 
@@ -66,6 +68,24 @@ As três últimas mensagens `info` saem da *goroutine* do AKMA (D9). Por isso ap
 | `warn` | `AF at <endereço> not authorized for AF_ID <AF_ID>` | AF fora da política local (403) | TS 33.535 §6.2.1 passo 2 |
 | `info` | `AKMA context of <SUPI> removed` ou `AKMA context of <SUPI> to remove not found` | `remove-context` | TS 33.535 §6.6.1 |
 | `error` | `K_AF derivation failed: <motivo>` | falha interna | — |
+| `info` | `K_AKMA refresh requested from the UDM when a K_AF is asked for a K_AKMA older than <duração> (TS 33.535 cl. 6.4.4)` | partida, com `akma.kakmaRefresh` (MVP-12, `aanf.md` §11) | TS 33.535 §6.4.4 |
+| `info` | `K_AKMA of <SUPI> registered <idade> ago: refresh requested from the UDM (TS 33.535 cl. 6.4.4)` | K_AF entregue para uma K_AKMA mais velha que a política | TS 33.535 §6.4.4 |
+| `info` | `UDM for Nudm_UECM_AuthTrigger: <URI> (discovered at the NRF)` | primeira renovação | TS 29.510 |
+| `info` | `Refresh of K_AKMA of <SUPI> accepted by the UDM: new primary authentication requested` | `trigger-auth` com 204 | TS 33.501 §6.1.5.2 passo 1 |
+| `warn` | `Refresh of K_AKMA of <SUPI> not accepted by the UDM: <status> <causa> (<detalhe>)` | `trigger-auth` recusado ou sem resposta | TS 29.503 tabela 6.2.3.13.4.2.2-2 |
+
+### 3.4 AMF
+
+Categoria `AKMA` nova no AMF, do *patch* `amf/0001` (MVP-12, `amf.md`).
+
+| Nível | Mensagem | Quando | Referência |
+|---|---|---|---|
+| `info` | `Re-authentication of <SUPI> requested by the UDM: started (ngKSI <n>)` | notificação do UDM, UE conectado (204) | TS 33.501 §6.1.5.2 passos 3 e 4 |
+| `info` | `Re-authentication of <SUPI> requested by the UDM: pending (UE not connected)` | UE em CM-IDLE (202) | TS 33.501 §6.1.5.2 passo 3 |
+| `info` | `Re-authentication of <SUPI> requested by the UDM <tempo> ago: started (ngKSI <n>)` | autenticação pendente, depois de `Service Request` ou registro | TS 33.501 §6.1.5.2 passo 3 |
+| `info` | `Re-authentication of <SUPI> requested by the UDM: completed, new KAMF in use (ngKSI <n>)` | `Security Mode Complete` | TS 33.501 §6.1.3.2 e §6.9.4.2 |
+| `warn` | `Re-authentication of <SUPI> requested by the UDM: refused, <status> <causa>` | UE em outro procedimento ou desconhecido | TS 29.503 tabela 6.2.5.6-3 |
+| `warn` | `Re-authentication of <SUPI> requested by the UDM: not started` | o AUSF não respondeu | — |
 
 Além dessas, a categoria `GIN` registra cada requisição HTTP com método, caminho e código, como nas outras NFs (`| 200 | 127.0.0.1 | POST | /naanf-akma/v1/register-anchorkey |`). No NRF, a descoberta do AAnF aparece do mesmo jeito, com `target-nf-type=AANF&routing-indicator=<RID>` no caminho.
 

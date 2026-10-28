@@ -18,6 +18,7 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-9 | NEF–AF externo sem TLS nem certificado de cliente | **implementado** (MVP-6, 19/10/2026) | MVP-6 |
 | DV-10 | Perfis TLS do Ua\* sem `TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384` e sem OCSP *stapling*, recomendados por TS 33.210 | **implementado** (MVP-8, 21/10/2026) | MVP-8 |
 | DV-11 | CoAP sobre DTLS sem a suíte obrigatória de RFC 7252, `TLS_PSK_WITH_AES_128_CCM_8`; vale TS 33.210 | **implementado** (MVP-8, 21/10/2026) | MVP-8 |
+| DV-12 | `trigger-auth` com POST, contra a precedência do YAML (TS 29.503 Anexo A.1), que declara `get` | **implementado** (MVP-12, 28/10/2026) | MVP-12 |
 
 **Consolidação (MVP-5, 18/10/2026).** Nenhum desvio novo surgiu no MVP-5. Estado e evidência de cada um no roteiro ponta a ponta (`docs/af-side/e2e.md`, execução `20261018-171510`):
 
@@ -236,4 +237,21 @@ O certificado de cliente exige mudar o servidor SBI comum do NEF do free5GC. O T
 **Impacto.** Um cliente CoAP que só tenha `TLS_PSK_WITH_AES_128_CCM_8` não conecta ao AF. É o que TS 33.210 quer: sem sigilo futuro, quem obtivesse a K_AF leria as sessões passadas.
 
 **Implementação (21/10/2026).** `af/wolftls/wolftls.go` (listas de suítes, as mesmas do TLS); `af/af/internal/profile/psk_wolfssl.go` (perfis DTLS); `af/coap` (CoAP). Verificação na execução do `e2e.sh` da fase (c) (`docs/af-side/e2e.md`).
+
+## DV-12 — `trigger-auth` com POST, contra a precedência do YAML
+
+**Norma.** Dois textos de TS 29.503 V19.7.0 em conflito (defeito D-B):
+
+- `[3GPP]` tabela 6.2.3.13.4.1-1: a operação customizada `trigger-auth` em `/{ueId}/registrations/trigger-auth` tem o método mapeado POST. §5.3.2.16.2 passo 1: *"The NF Service Consumer sends a POST request (custom method: trigger-auth) to the UDM"*. A tabela 6.2.3.13.4.2.2-1 tem o título *"Data structures supported by the POST Request Body"*;
+- `[3GPP]` `TS29503_Nudm_UECM.yaml` v1.4.2 (Anexo A): `get:` com `requestBody` obrigatório. O Anexo A.1 diz que o YAML *"takes precedence ... with respect to the encoding of information elements and methods"*.
+
+`[DIVERGÊNCIA]` Seguir a tabela contraria a regra de precedência do Anexo A.1. Seguir o YAML exige um GET com corpo obrigatório, que contraria a semântica do GET (RFC 9110 §9.3.1) e o modelo das operações customizadas de TS 29.501 §4.6.1.2, sempre com POST.
+
+**O que o projeto faz.** POST, como a tabela e o procedimento. O UDM responde `405` a um GET em `trigger-auth`, com `Allow: POST`. O cliente do *patch* `openapi/0003` (`AuthTrigger`) e o AAnF usam POST.
+
+**Por quê.** Decidido pelo responsável no defeito D-B (22/10/2026) e confirmado no ponto K2 da especificação do MVP-12, aprovada em 28/10/2026 (`docs/free5gc-side/renovacao-kakma.md`). Três textos de TS 29.503 e o modelo de TS 29.501 apontam POST; só o YAML aponta GET, e um GET com corpo não é tratado de forma previsível por servidores e clientes HTTP.
+
+**Impacto.** Um consumidor que siga o YAML ao pé da letra manda GET e recebe 405. Se a 3GPP corrigir o YAML para POST, o desvio se encerra sem mudança no código.
+
+**Implementação (28/10/2026).** `free5gc/patches/udm/0002-auth-trigger.patch` (rota POST, GET com 405); `free5gc/patches/openapi/0003-home-network-triggered-authentication.patch` (cliente); `free5gc/aanf/internal/sbi/consumer/udm_service.go`. Verificação: teste de unidade `TestAuthTriggerRequests` do UDM e o passo R6r do `e2e.sh` (`docs/af-side/e2e.md`).
 

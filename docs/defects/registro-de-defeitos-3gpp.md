@@ -5,7 +5,7 @@
 
 Cada item registra a inconsistência, as fontes que a evidenciam, a decisão adotada pelo projeto e o grupo de trabalho responsável.
 
-**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio. 28 de outubro de 2026 — D-B: especificação do MVP-12 aprovada. Estes defeitos são a base das recomendações à 3GPP da V2 do repositório público (plano, MVP-13).
+**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio. 28 de outubro de 2026 — D-B: especificação do MVP-12 aprovada. Estes defeitos são a base das recomendações à 3GPP da V2 do repositório público (plano, MVP-13). Na implementação do MVP-12, D-B implementado (DV-12) e D-O e D-P acrescentados, de TS 29.503.
 
 ### Situação no projeto (22/10/2026)
 
@@ -14,7 +14,7 @@ Todos os itens estão no texto das normas; nenhum é defeito do projeto. A decis
 | Item | Implementação |
 |---|---|
 | D-A | `shared/akma/akid`: lê `atid` e `akid`, escreve `atid`; o AAnF, o AF e o NEF usam essa leitura |
-| D-B | ainda não: o projeto não usa o `trigger-auth`, e o UDM e o AMF do free5GC não têm a operação. MVP-12 (decisão do responsável de 22/10/2026), com a especificação aprovada em 28/10/2026 (`docs/free5gc-side/renovacao-kakma.md`) |
+| D-B | DV-12: POST no UDM (`free5gc/patches/udm/0002`), no cliente do `openapi` (`0003`) e no AAnF; GET recebe 405. MVP-12 (28/10/2026, `docs/free5gc-side/renovacao-kakma.md`) |
 | D-C | DV-6: `realm="3GPP-bootstrapping-akma@<FQDN>"` no AF e no cliente |
 | D-D | `shared/akma/codec`: `^[A-Fa-f0-9]{64}$` ao ler, minúsculas ao escrever, no AUSF, no AAnF, no AF e no cliente |
 | D-E | `3GPP-AKMA;<A-KID>` nos perfis PSK (U2) |
@@ -23,6 +23,8 @@ Todos os itens estão no texto das normas; nenhum é defeito do projeto. A decis
 | D-H | editorial, nada a implementar |
 | D-I | o AAnF recusa `CtxRemove` sem `supi` (400) |
 | D-J a D-N | fase (d) do MVP-8 (U24 a U26, U29) |
+| D-O | editorial, nada a implementar |
+| D-P | o AMF do projeto só registra o *callback* no acesso 3GPP, que o YAML declara com 202 |
 
 ### Correspondência com as letras das questões em aberto
 
@@ -40,6 +42,8 @@ Os documentos `00` a `04` e o README usam letras A–E para questões em aberto;
 | — | 204 inalcançável em `retrieve-applicationkey` | D-G |
 | — | Editoriais de TS 29.522 e TS 29.535 | D-H, D-I |
 | — | OSCORE do AKMA: remissões, campo sem codificação, OSC-INP, HKDF, HPLMN-ID | D-J a D-N |
+| — | `trigger-auth`: quem responde 204; "manadatory" | D-O |
+| — | 202 ausente na notificação de reautenticação do acesso não 3GPP | D-P |
 
 ---
 
@@ -273,6 +277,43 @@ O esquema `CtxRemove` não declara `required: [supi]`, embora o texto (Tabela 5.
 **Impacto.** UE e AF com formas diferentes não chegam ao mesmo A-KID. Um AF e um AAnF com codificações diferentes do A-TID também não.
 
 **Decisão do projeto** (U25). HPLMN-ID = MCC seguido do MNC; o AF refaz o *realm* com o MNC em três dígitos e o A-TID em base64, como o resto do projeto.
+
+---
+
+## D-O — Editoriais no `trigger-auth` de TS 29.503 (prioridade baixa)
+
+| | |
+|---|---|
+| **Especificação** | TS 29.503 V19.7.0, §5.3.2.16.2 e tabela 6.2.3.13.4.2.2-2 |
+| **Grupo responsável** | 3GPP CT4 |
+
+**Descrição.**
+
+1. §5.3.2.16.2 passo 2a: *"On success, the NF Service Consumer responds with "204 No Content""*. Quem responde é o UDM, o produtor; o consumidor (o AAnF, por exemplo) é quem manda o pedido no passo 1. O passo 2b do mesmo procedimento já fala do UDM implicitamente (*"If the user does not exist, HTTP status code "404 Not Found" shall be returned"*).
+2. NOTA da tabela 6.2.3.13.4.2.2-2: *"The manadatory HTTP error status code"*, em vez de *"mandatory"*. É o mesmo erro do D-I, em TS 29.535.
+
+**Impacto.** Nenhum na implementação: as tabelas deixam claro quem responde. O passo 2a pode confundir quem lê só o procedimento.
+
+**Proposta.** No passo 2a, *"the UDM responds with "204 No Content""*; na NOTA, *"mandatory"*.
+
+**Decisão do projeto.** Nada a implementar (ponto K12 do MVP-12).
+
+---
+
+## D-P — 202 ausente na notificação de reautenticação do acesso não 3GPP
+
+| | |
+|---|---|
+| **Especificação** | `TS29503_Nudm_UECM.yaml` v1.4.2 (Anexo A de TS 29.503 V19.7.0) × TS 29.503 §5.3.2.15.2 e tabela 6.2.5.6-3 |
+| **Grupo responsável** | 3GPP CT4 |
+
+**Descrição.** O YAML declara o *callback* `reauthNotification` duas vezes: no registro do AMF para o acesso 3GPP (`PUT /{ueId}/registrations/amf-3gpp-access`) e no do acesso não 3GPP (`PUT .../amf-non-3gpp-access`). O primeiro lista a resposta `202` (*"Re-Authentication Notification is accepted and reauthentication pending flag has been set"*); o segundo vai de `204` direto a `307`, sem o `202`. O texto tem uma só notificação: §5.3.2.15.2 passo 2b e a tabela 6.2.5.6-3 definem o `202` para o UE não alcançável, sem distinguir o acesso.
+
+**Impacto.** Pela precedência do YAML (Anexo A.1), um AMF registrado para o acesso não 3GPP não poderia responder `202`, e não teria como dizer ao UDM que marcou a autenticação como pendente. Um UDM gerado do YAML trataria o `202` desse acesso como resposta não declarada.
+
+**Proposta.** Acrescentar o `202`, com a mesma descrição, ao `reauthNotification` do registro para o acesso não 3GPP.
+
+**Decisão do projeto.** Sem efeito no laboratório: o AMF do projeto só registra o `reauthNotifyCallbackUri` no acesso 3GPP (`free5gc/patches/amf/0001`), e o cliente do UDM aceita o `202` de qualquer acesso.
 
 ---
 

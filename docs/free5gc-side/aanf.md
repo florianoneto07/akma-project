@@ -1,6 +1,6 @@
 # AAnF — AKMA Anchor Function
 
-**MVP:** MVP-1 · **Data:** 17 de outubro de 2026 · **Verificado na VM do free5GC** (192.168.16.130) e a partir da VM do AF (192.168.16.129) em 17/10/2026
+**MVP:** MVP-1; seção 11 no MVP-12 · **Data:** 17 de outubro de 2026; seção 11 em 28 de outubro de 2026 · **Verificado na VM do free5GC** (192.168.16.130) e a partir da VM do AF (192.168.16.129) em 17/10/2026
 
 ## 1. O que é e onde fica
 
@@ -17,9 +17,9 @@
 | `free5gc/aanf/internal/context/akma_context.go` | armazenamento dos contextos AKMA |
 | `free5gc/aanf/internal/sbi/{server,api_akma}.go` | servidor h2c, rotas, erros de protocolo |
 | `free5gc/aanf/internal/sbi/processor/` | as três operações |
-| `free5gc/aanf/internal/sbi/consumer/` | Nnrf_NFManagement |
+| `free5gc/aanf/internal/sbi/consumer/` | Nnrf_NFManagement; desde o MVP-12, a descoberta do UDM (Nnrf_NFDiscovery) e o `Nudm_UECM_AuthTrigger` (seção 11) |
 | `free5gc/aanf/internal/util/problem.go` | `ProblemDetails` |
-| `free5gc/aanf/tools/seed/` | ferramenta de teste: papel do AUSF e do AF. Desde o MVP-5, `register` aceita `--gpsi` e `--k-akma`, para os testes negativos do `register-anchorkey` (`docs/af-side/e2e.md` §4) |
+| `free5gc/aanf/tools/seed/` | ferramenta de teste: papel do AUSF e do AF. Desde o MVP-5, `register` aceita `--gpsi` e `--k-akma`, para os testes negativos do `register-anchorkey` (`docs/af-side/e2e.md` §4). Desde o MVP-12, `trigger-auth` faz o que o AAnF faz para renovar a K_AKMA (seção 11) |
 | `free5gc/config/aanfcfg.yaml` | configuração de exemplo do laboratório |
 | `free5gc/scripts/{prepare-openapi,build-aanf,run-aanf,deploy}.sh` | preparação, compilação, execução, implantação |
 
@@ -42,6 +42,7 @@ Além dos campos comuns às NFs do free5GC (`sbi`, `serviceNameList`, `nrfUri`, 
 | `serviceNameList` | `[naanf-akma]` | só esse valor é aceito | `[3GPP]` TS 29.535 §5.1.1 |
 | `routingIndicators` | `["0000"]` | cadeias de 1 a 4 dígitos; vazio = atende qualquer RID. Mesmo sem aspas, `0000` é lido como `"0000"` (teste `TestRoutingIndicatorLeadingZerosKept`) | `[3GPP]` TS 29.510 `AanfInfo`; TS 23.003 §2.2B |
 | `akma.kafLifetime` | `1h` | duração Go positiva; padrão `1h` | `[3GPP]` política do operador (TS 33.535 §5.2); `[MVP]` o valor |
+| `akma.kakmaRefresh` | `0` | duração Go; `0` ou ausente desliga, e é o padrão. Com valor, o AAnF pede a renovação da K_AKMA mais velha que isso (seção 11) | `[3GPP]` política local do operador (TS 33.535 §6.4.4); `[MVP]` o critério e o valor (K3 de `renovacao-kakma.md`) |
 | `akma.authorizedAfs[].afId` | `af1.akma.example.FF00000001` | forma de transporte `<FQDN>.<10 hex>` | `[3GPP]` TS 29.522 `AfId` |
 | `akma.authorizedAfs[].sourceAddresses` | `[192.168.16.129]` | ao menos um endereço IP | `[MVP]` política local (seção 5) |
 | `akma.authorizedNefs[].sourceAddresses` | `[192.168.16.130]` | ao menos um endereço IP: os do NEF | `[MVP]` MVP-6; `nef.md` §4 |
@@ -96,6 +97,7 @@ Em memória (`internal/context/akma_context.go`); `[MVP]` perdido ao reiniciar o
 | O A-KID é comparado pelo conteúdo: RID como cadeia (`"0000"` ≠ `"000"`), A-TID em octetos, *realm* sem distinção de maiúsculas | `[3GPP]` TS 23.003 §2.2B; `[INTERPRETAÇÃO]` o *realm* é nome de domínio |
 | Colisão de A-TID entre SUPIs: o índice fica com o registro mais recente | `[3GPP]` §6.1 NOTA 2 deixa detecção e tratamento em aberto; `[MVP]` a escolha |
 | Chaves apagadas são sobrescritas com zeros (melhor esforço) | `[MVP]` |
+| Cada contexto guarda quando a K_AKMA corrente foi registrada e quando o AAnF pediu a sua renovação pela última vez (seção 11) | `[3GPP]` §6.4.4; `[MVP]` MVP-12 |
 
 ## 5. Autorização
 
@@ -208,3 +210,29 @@ Os erros de protocolo (411, 413, 415, 501…) não foram repetidos pela rede: a 
 - Contexto em memória, perdido ao reiniciar.
 - Exige o NRF corrigido (`nrf.md`): sem o *patch* 0003, os tokens chegam sem `aud` e `register-anchorkey` e `remove-context` respondem 401. Sem os *patches* 0001 e 0002, o perfil fica sem `aanfInfoList` e o AAnF não pode ser descoberto.
 - O AAnF não entra no `run.sh` do free5GC: alterar esse arquivo fica para quando o AAnF for proposto *upstream*.
+
+## 11. Renovação da K_AKMA (MVP-12)
+
+`[3GPP]` TS 33.535 §6.4.1: *"KAKMA shall be re-keyed by running a successful primary authentication"*. §6.4.4: *"the AAnF may decide to refresh the KAKMA based on the operator's local authentication policy by sending the Nudm_UECM_AuthTrigger Request message to the UDM"*. TS 33.501 §6.1.5.2 NOTA A liga essa renovação ao uso das chaves dos AF. Especificação aprovada: `renovacao-kakma.md`, pontos K3 e K9.
+
+**Política** (`akma.kakmaRefresh`; `internal/sbi/processor/refresh_kakma.go`). Depois de entregar uma K_AF, o AAnF olha a idade da K_AKMA do contexto. Se ela foi registrada há mais tempo que `kakmaRefresh`, o AAnF pede ao UDM uma nova autenticação primária, em segundo plano: a resposta ao AF não espera. Pede uma vez por K_AKMA. Se o contexto não mudar, volta a pedir no primeiro pedido de K_AF depois de 5 minutos. A K_AF já entregue vale até expirar (§6.4.2).
+
+**Consumidor do UDM** (`internal/sbi/consumer/udm_service.go`). Na primeira vez, descobre no NRF um UDM com `nudm-uecm` (`target-nf-type=UDM`, `requester-nf-type=AANF`) e guarda o endereço. Com o OAuth2 ligado, pede ao NRF os *tokens* de `nnrf-disc` e de `nudm-uecm` (TS 33.501 §13.4.1). Manda `POST {apiRoot}/nudm-uecm/v1/{supi}/registrations/trigger-auth` com `{"supi": …}` (DV-12) e `User-Agent: AANF-<nfInstanceId>` (TS 29.500 tabela 5.2.2.2-1). Numa falha de rede, esquece o endereço e descobre de novo na vez seguinte. O resto da cadeia está em `udm.md` §6 e `amf.md`.
+
+**Logs** (categoria `AKMA`, nível *info*, sem chaves):
+
+- `K_AKMA refresh requested from the UDM when a K_AF is asked for a K_AKMA older than <duração> (TS 33.535 cl. 6.4.4)`, na partida, quando a política está ligada;
+- `K_AKMA of <SUPI> registered <idade> ago: refresh requested from the UDM (TS 33.535 cl. 6.4.4)`;
+- `UDM for Nudm_UECM_AuthTrigger: <apiRoot> (discovered at the NRF)`;
+- `Refresh of K_AKMA of <SUPI> accepted by the UDM: new primary authentication requested`, ou, em *warning*, `Refresh of K_AKMA of <SUPI> not accepted by the UDM: <status> <causa> (<detalhe>)`.
+
+**Ferramenta.** `seed trigger-auth` manda o mesmo pedido, sem esperar a política, para os testes do UDM. Com `--nrf`, registra-se no NRF como um AF temporário e pede o *token* de `nudm-uecm`. `--method` e `--body` mandam o pedido como dados, para os testes negativos:
+
+```bash
+~/akma-tools/seed trigger-auth --nrf http://127.0.0.10:8000 --supi imsi-208930000000001
+```
+
+A saída é `accepted (204)` ou `UDM answered <status> (<causa>; <detalhe>)`.
+
+**Verificação.** Testes de unidade: `TestRefreshDue` (armazenamento), `TestKakmaRefresh` (configuração), `TestTriggerAuth` (consumidor, com NRF e UDM simulados) e `TestRefreshKAkma` (processador). Ponta a ponta: o passo R6r do `e2e.sh`, com o AAnF reiniciado com `kakmaRefresh: 20s` (`docs/af-side/e2e.md`). Resultado em 28/10/2026: o R6r passou inteiro na execução `20261028-162316`; o AAnF pediu a renovação de uma K_AKMA de 23 s e recebeu o novo contexto 140 ms depois (`renovacao-kakma.md` §11).
+

@@ -1,6 +1,6 @@
 # Matriz de rastreabilidade
 
-**Revisão:** 8 (MVP-8, fase (d): perfil OSCORE do Ua\*). Revisão 7 (MVP-8, fase (c)): perfis DTLS do Ua\*. Revisão 6 (MVP-8, fases (a) e (b)): serviço de chaves do ME e perfis TLS do Ua\*. Revisão 5 (MVP-6): K_AF via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina. Revisão 4 (MVP-5): etapas mínimas do fluxo ligadas a evidências do roteiro ponta a ponta
+**Revisão:** 9 (MVP-12: renovação da K_AKMA pelo AAnF). Revisão 8 (MVP-8, fase (d)): perfil OSCORE do Ua\*. Revisão 7 (MVP-8, fase (c)): perfis DTLS do Ua\*. Revisão 6 (MVP-8, fases (a) e (b)): serviço de chaves do ME e perfis TLS do Ua\*. Revisão 5 (MVP-6): K_AF via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina. Revisão 4 (MVP-5): etapas mínimas do fluxo ligadas a evidências do roteiro ponta a ponta
 **Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 a 3.7 e 4 em 18 de outubro de 2026; revisão 5 em 19 de outubro de 2026; revisões 6 e 7 em 21 de outubro de 2026; revisão 8 em 22 de outubro de 2026
 
 *Nota (16/10/2026):* os caminhos da coluna "Implementação" seguem a estrutura anterior ao plano. A estrutura aprovada (plano §3) é: `akma/` → `shared/akma/`; `NFs/aanf/` → `free5gc/aanf/`; `patches/` → `free5gc/patches/`; `af/` → `af/af/`; `ue/` → `af/ue/`. Os caminhos serão atualizados linha a linha à medida que cada MVP os criar. Os desvios citados como DV-n estão em `docs/conformidade/desvios.md`.
@@ -118,6 +118,23 @@ Evidências: verificações R2o (máquina do free5GC) e O (máquina do AF) da ex
 | K_AF vencida, `refetch` e `reject` | 33.535 6.4.2 | `oscore.Server` (expiração), `keyCache` | [O08], [O09], [O10]; `TestOSCOREExpiry` | **Verificado** (U31) |
 | Conferência independente do OSCORE | — | libcoap 4.3.5b e `oscore-check.py`, fora do código do AF | [O04]; `TestLibcoapClient` | **Verificado** (U34) |
 
+## Renovação da K_AKMA do MVP-12 e evidências (revisão 9)
+
+Evidências: verificações R6r da execução `20261028-162316` de `af/scripts/e2e.sh`, com 161 verificações e nenhuma falha (`docs/af-side/e2e.md` §5.7), e os testes de unidade do UDM, do AMF e do AAnF. Especificação: `docs/free5gc-side/renovacao-kakma.md`.
+
+| Etapa | Cláusula | Implementação | Evidência | Estado |
+|---|---|---|---|---|
+| Política local do AAnF: renovar a K_AKMA mais velha que `kakmaRefresh`, uma vez por K_AKMA | 33.535 6.4.4; 33.501 6.1.5.2 NOTA A | `free5gc/aanf` (`refresh_kakma.go`, `RefreshDue`) | [R6r.young], [R6r.aanf], [R6r.once]; `TestRefreshDue`, `TestRefreshKAkma` | **Verificado** — `[LACUNA]` K3 |
+| AAnF descobre o UDM e manda `Nudm_UECM_AuthTrigger` com o SUPI | 33.501 6.1.5.2 passo 1, 14.2.6; 29.503 5.3.2.16 | `free5gc/aanf` (`udm_service.go`); `openapi/0003` | [R6r.aanf]; `TestTriggerAuth` | **Verificado** — DV-12 |
+| UDM: política, assinatura, registro do AMF; respostas | 33.501 6.1.5.2 NOTA A; 29.503 tabela 6.2.3.13.4.2.2-2 | `udm/0002` | [R6r.udm-interval], [R6r.udm-unknown], [R6r.udm-no-supi]; `TestAuthTrigger`, `TestAuthTriggerInterval` | **Verificado** — `[LACUNA]` K4 |
+| UDM notifica o AMF, sem *token* | 33.501 6.1.5.2 passo 2, 14.2.7, 13.4.1.0; 29.503 5.3.2.15; 29.500 6.7.3 | `udm/0002`; `amf/0001` (rota) | [R6r.udm] | **Verificado** — F20 |
+| AMF registra o `reauthNotifyCallbackUri` | 33.501 6.1.5.2 passo 0b; 29.503 6.2.6.2.2 | `amf/0001` (`udm_service.go`) | [R6r.udm] | **Verificado** (K5) |
+| AMF decide pelo estado do UE: 204, 202 e pendência, 409, 403, 404 | 33.501 6.1.5.2 passo 3; 29.503 tabela 6.2.5.6-3 | `amf/0001` (`hn_auth.go`) | [R6r.amf]; `TestReauthNotificationRefusals`, `TestReauthNotificationIdle` | **Verificado** (K6, com a tabela da norma) |
+| Autenticação primária do UE registrado, com ngKSI novo | 33.501 6.1.5.2 passo 4, 6.1.3.2 passo 6 | `amf/0001` (`handler.go`, `sm.go`) | [R6r.amf], [R6r.akid-ausf]; `TestReauthNotificationStart`, `TestReauthNotificationAbort` | **Verificado** |
+| NAS SMC com o novo K_AMF e volta a `Registered` | 33.501 6.1.3.2, 6.9.4.2 | `amf/0001` (`sm.go`, `build.go`, `HandleSecurityModeComplete`) | [R6r.smc], [R6r.pdu]; `TestSecurityModeCommandOfReauth`, `TestSecurityModeCompleteOfReauth` | **Verificado** (K7) |
+| Nova K_AKMA no AAnF e no UE; A-KID igual nos três | 33.535 6.4.1, 6.1 NOTA 1a | AUSF (`ausf/0001`); UERANSIM (`0001`) | [R6r.ue], [R6r.new-akid], [R6r.akid-aanf], [R6r.ua-new] | **Verificado** |
+| Troca das chaves AS | 33.501 6.9.4.4 (*may*) | — | — | Não feita (K7; o UERANSIM não tem segurança AS) |
+
 ## Derivação criptográfica
 
 | Requisito | Norma | Cláusula | Implementação | Teste | Estado |
@@ -199,7 +216,7 @@ Evidências: verificações R2o (máquina do free5GC) e O (máquina do AF) da ex
 | Consumidor `Naanf_AKMA` no AUSF | TS 29.535 V19.5.0 | 4.2.2.2 | `free5gc/patches/ausf/` (`internal/sbi/consumer/aanf_service.go`) | `TestRegisterAkmaDiscoversAanf`, `TestRegisterAkmaConfiguredUri`; banco de testes; UERANSIM | **Implementado** (MVP-2) |
 | GPSI via `GET /{ueId}/id-translation-result` | TS 29.503 V19.7.0 | 5.2.2.2.10 | — | — | Pendente — política local |
 | Subscrição `ROAMING_STATUS` com `immediateFlag` | TS 29.503 V19.7.0 | 5.5.2.2.2, 6.4.6.2.8 | — | — | Decisão — DV-2 (configurável, desabilitada) |
-| `POST /{ueId}/registrations/trigger-auth` | TS 33.501 §14.2.6; TS 29.503 §5.3.2.16 | — | — | — | Pendente — defeito D-B |
+| `POST /{ueId}/registrations/trigger-auth` | TS 33.501 V19.7.0; TS 29.503 V19.7.0 | 14.2.6; 5.3.2.16, 6.2.3.13 | `free5gc/patches/udm/0002-auth-trigger.patch` | `TestAuthTrigger`, `TestAuthTriggerRequests`; [R6r.udm], [R6r.udm-get] | **Verificado** (MVP-12) — DV-12, defeito D-B |
 
 ## Lado UE (ME)
 

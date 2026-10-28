@@ -1,6 +1,6 @@
 # Tutorial — AKMA sobre o free5GC
 
-Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-6. O MVP-5 foi o primeiro MVP funcional. Em 19/10/2026 ele foi seguido do início numa VM com o free5GC v4.2.3 recém-instalado, e o roteiro da parte 8 terminou com 63 verificações e nenhuma falha (critério 4 do MVP-5).
+Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-12. O MVP-5 foi o primeiro MVP funcional. Em 19/10/2026 ele foi seguido do início numa VM com o free5GC v4.2.3 recém-instalado, e o roteiro da parte 8 terminou com 63 verificações e nenhuma falha (critério 4 do MVP-5).
 
 | Parte | Conteúdo | Disponível |
 |---|---|---|
@@ -13,6 +13,7 @@ Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia of
 | 7 | Preparar o UE (UERANSIM) para o Ua\* | sim |
 | 8 | Executar o fluxo de ponta a ponta | sim |
 | 9 | AF fora da rede do operador, acesso anônimo e UERANSIM em outra máquina | sim |
+| 10 | Renovar a K_AKMA: o AAnF pede uma nova autenticação | sim |
 
 ---
 
@@ -699,13 +700,14 @@ af/scripts/e2e.sh woca@192.168.16.130
 
 Sem o argumento, o roteiro usa a máquina do free5GC do laboratório, `woca@192.168.16.130`. O endereço do AAnF vem do `aanfUri` de `af/config/afcfg.yaml`. Antes de começar, o roteiro confere que é o `sbi.bindingIPv4` do `aanfcfg.yaml` instalado na máquina do free5GC.
 
-O roteiro pede a senha de `sudo` da máquina do free5GC uma vez e leva cerca de três minutos. Ele:
+O roteiro pede a senha de `sudo` da máquina do free5GC uma vez e leva cerca de quatro minutos. Ele:
 
 - aplica o NAT do N6 e cria o *namespace* do UE;
 - sobe o free5GC com o AAnF, o gNB e o UE;
 - autentica no AF a partir do UE, por todos os perfis: o K.2 em TLS 1.3 e 1.2, o PSK em TLS 1.3 e 1.2, o PSK em DTLS 1.3 e 1.2, com CoAP, e o OSCORE, com retomada de sessão e renovação do contexto;
 - confere o PSK TLS 1.3 com o `openssl s_client` no papel do UE, e a expiração da K_AF numa sessão TLS; com um OpenSSL 4.1 em `OPENSSL_DTLS13`, confere também o PSK DTLS 1.3, e com a libcoap em `LIBCOAP_CLIENT`, o OSCORE (`docs/af-side/e2e.md` §3);
 - força novas autenticações primárias: com o AAnF parado, sem assinatura AKMA e com a assinatura restaurada;
+- renova a K_AKMA pelo AAnF, com `kakmaRefresh: 20s`: o UDM notifica o AMF, que autentica de novo o UE registrado (parte 10);
 - roda os testes negativos;
 - encerra tudo.
 
@@ -713,10 +715,10 @@ Cada verificação aparece como `PASS` ou `FAIL`, e o fim mostra o total:
 
 ```
 report: …/af/build/e2e/<data-hora>/report.md
-141 passed, 0 failed, 0 skipped
+161 passed, 0 failed, 0 skipped
 ```
 
-Sem o `OPENSSL_DTLS13`, a verificação D03 aparece como pulada; sem o `LIBCOAP_CLIENT`, a O04 e a O05. Sem os dois: `138 passed, 0 failed, 3 skipped`.
+Sem o `OPENSSL_DTLS13`, a verificação D03 aparece como pulada; sem o `LIBCOAP_CLIENT`, a O04 e a O05. Sem os dois: `158 passed, 0 failed, 3 skipped`.
 
 ### 8.3 Ler o relatório
 
@@ -861,3 +863,106 @@ sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -profile psk-tls13 -n 2
 O gNB mostra `SCTP connection established (192.168.16.130:38412)` e `NG Setup procedure is successful`. O UE mostra o A-KID, que é o mesmo nas linhas do AUSF e do AAnF na tela do free5GC. Para o AF externo, use `ua -profile psk-tls13 -connect 192.168.16.129:8454`.
 
 Resultado do laboratório em 19/10/2026: com o UE na máquina 192.168.16.131, o Ua\* passou com o AF interno, com o AF externo via NEF e com o AF externo anônimo (`docs/af-side/teste-nef.md`).
+
+---
+
+## 10. Renovar a K_AKMA: o AAnF pede uma nova autenticação
+
+A K_AKMA só muda com uma nova autenticação primária (TS 33.535 §6.4.1). Pela política local do operador, o AAnF pode pedir ao UDM essa autenticação (§6.4.4): o UDM avisa o AMF, o AMF autentica de novo o UE registrado, e o AUSF registra no AAnF a K_AKMA e o A-KID novos. O UE deriva os seus no `Security Mode Command` que o AMF manda em seguida. Nada muda no UE do UERANSIM.
+
+O free5GC não tem essa cadeia. Esta parte aplica os *patches* do UDM, do AMF e do `openapi` (`docs/free5gc-side/renovacao-kakma.md`, `udm.md` §6, `amf.md`) e liga a política do AAnF (`aanf.md` §11).
+
+### 10.1 Atualizar o `openapi` e o UDM, corrigir o AMF
+
+Na máquina do free5GC, com o free5GC parado, prepare de novo as duas cópias do `openapi` (seção 4.1). O *script* aplica os *patches* até o `0003`:
+
+```bash
+~/akma-free5gc/free5gc/scripts/prepare-openapi.sh
+```
+
+```bash
+~/akma-free5gc/free5gc/scripts/prepare-openapi.sh ~/akma-free5gc/free5gc/build/openapi-test v1.2.5-0.20260527003827-02dc71b4d94f
+```
+
+Se você seguiu a parte 4 com esta versão do repositório, o UDM já tem os dois *patches* (`patch-nf.sh udm status` diz `patches applied`). Se a seguiu com uma versão anterior, o UDM só tem o `0001`, e o `apply` recusa as mudanças locais. Desfaça com uma cópia do `0001` e aplique de novo:
+
+```bash
+mkdir -p ~/udm-0001 && cp ~/akma-free5gc/free5gc/patches/udm/0001-*.patch ~/udm-0001/
+```
+
+```bash
+~/akma-free5gc/free5gc/scripts/patch-nf.sh udm revert ~/udm-0001
+```
+
+```bash
+~/akma-free5gc/free5gc/scripts/patch-nf.sh udm apply
+```
+
+Depois, o AMF. O *script* guarda `bin/amf.orig` e recompila:
+
+```bash
+~/akma-free5gc/free5gc/scripts/patch-nf.sh amf apply
+```
+
+### 10.2 Ligar a política do AAnF
+
+Compile e instale de novo o AAnF e o `seed` (seções 3.1 e 3.4):
+
+```bash
+free5gc/scripts/build-aanf.sh
+```
+
+```bash
+free5gc/scripts/deploy.sh usuario@maquina-do-free5gc
+```
+
+O `deploy.sh` não sobrescreve a configuração instalada. Acrescente ao bloco `akma` do `~/free5gc/config/aanfcfg.yaml` a idade a partir da qual o AAnF pede a renovação:
+
+```yaml
+  akma:
+    kakmaRefresh: 1m
+```
+
+`0`, ou a linha ausente, desliga a renovação. Com um valor, quando um AF pede a K_AF de uma K_AKMA registrada há mais tempo que isso, o AAnF entrega a K_AF e pede a renovação ao UDM em segundo plano. Pede uma vez por K_AKMA, e de novo depois de 5 minutos se ela não mudar. Um minuto serve para ver a renovação; numa rede de verdade, o valor é a política de autenticação do operador.
+
+### 10.3 Ver a renovação
+
+Suba o free5GC com o AAnF (`./run.sh -aanf`, parte 5), o gNB e o UE no *namespace* (parte 7). Espere um minuto depois do registro do UE e faça um Ua\* com um AF_ID que o AF ainda não usou com esse A-KID. O AF guarda cada K_AF até ela vencer e, para um AF_ID já usado, não consultaria o AAnF:
+
+```bash
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -profile psk-tls13 -n 1
+```
+
+O AF recebe a K_AF, e a tela do free5GC mostra a cadeia, na ordem em que apareceu no laboratório em 28/10/2026 (140 ms, do pedido do AAnF ao contexto novo):
+
+```
+[INFO][AANF][AKMA] K_AKMA of imsi-208930000000001 registered 1m5s ago: refresh requested from the UDM (TS 33.535 cl. 6.4.4)
+[INFO][AANF][AKMA] UDM for Nudm_UECM_AuthTrigger: http://127.0.0.3:8000 (discovered at the NRF)
+[INFO][AMF][AKMA] Re-authentication of imsi-208930000000001 requested by the UDM: started (ngKSI 1)
+[INFO][UDM][AKMA] AuthTrigger for imsi-208930000000001 from AANF at 127.0.0.1: re-authentication notified to the AMF …
+[INFO][AANF][AKMA] Refresh of K_AKMA of imsi-208930000000001 accepted by the UDM: new primary authentication requested
+[INFO][AUSF][AKMA] K_AKMA and A-KID derived for imsi-208930000000001: A-KID rid0000.atid…
+[INFO][AMF][AKMA] Re-authentication of imsi-208930000000001 requested by the UDM: completed, new KAMF in use (ngKSI 1)
+[INFO][AANF][AKMA] AKMA context of imsi-208930000000001 registered, A-KID rid0000.atid… (previous context replaced)
+```
+
+O UE mostra `AKMA key material derived, A-KID[…]` com o A-KID novo, igual ao do AUSF e ao do AAnF. A sessão PDU continua: o próximo Ua\* passa pelo mesmo `uesimtun0`, com o A-KID novo. O AF ainda aceita a K_AF anterior até ela vencer (TS 33.535 §6.4.2).
+
+### 10.4 Pedir a renovação à mão
+
+O `seed` manda o mesmo pedido que o AAnF, sem esperar a política. Na máquina do free5GC:
+
+```bash
+~/akma-tools/seed trigger-auth --nrf http://127.0.0.10:8000 --supi imsi-208930000000001
+```
+
+A saída é `accepted (204)`. Um segundo pedido para o mesmo SUPI em menos de 60 s recebe `UDM answered 403 (REAUTHENTICATION_NOT_ALLOWED; …)`: é a política do UDM (TS 33.501 §6.1.5.2, NOTA A).
+
+### 10.5 Limitações
+
+- Só o acesso 3GPP, e sem a troca das chaves AS, que é opcional (TS 33.501 §6.9.4.4): o UERANSIM não tem segurança AS.
+- O UE em CM-IDLE (resposta `202` e autenticação pendente) só é verificado nos testes de unidade do AMF: o UERANSIM não fica em CM-IDLE.
+- Depois de reiniciar o UDM, o pedido recebe `404 CONTEXT_NOT_FOUND` até o UE se registrar de novo: o UDR do free5GC não guarda o endereço de notificação do AMF.
+
+Para desfazer: `kakmaRefresh: 0` desliga a renovação. `patch-nf.sh amf revert` tira o *patch* do AMF. Para deixar o UDM só com o `0001` da parte 4, `patch-nf.sh udm revert` seguido de `patch-nf.sh udm apply ~/udm-0001`.
+

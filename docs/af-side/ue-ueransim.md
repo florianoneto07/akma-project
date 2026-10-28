@@ -32,6 +32,8 @@ Isso atende ao "antes de comunicar com um AF" do §6.1: nenhuma aplicação fala
 
 O material fica no contexto de segurança NAS (`UeKeys`) e é descartado com ele. A K_AF é derivada sob demanda, a cada pedido de uma aplicação, a partir da K_AKMA corrente.
 
+**Autenticação pedida pela rede doméstica (MVP-12).** O mesmo vale para a autenticação primária que o AMF faz com o UE já registrado, a pedido do UDM (TS 33.501 §6.1.5; `docs/free5gc-side/amf.md`): o `nr-ue` aceita o *Authentication Request* em qualquer estado, guarda o contexto novo como não corrente, com o ngKSI que o AMF mandou, e o põe em uso no *Security Mode Command* seguinte. É ali que deriva a K_AKMA e o A-KID novos, sem mudança no código do UE. `[FREE5GC]` Nessa hora, o `nr-ue` põe no *Security Mode Complete* o último *Registration Request*, porque o registro foi mandado sem contexto de segurança e a marca (`m_lastRegWithoutNsc`) continua ligada depois dele. O AMF do projeto ignora esse conteúdo fora de um registro. Verificado no passo R6r do `e2e.sh`, em 28/10/2026.
+
 ## 3. Entrega à aplicação: serviço de chaves do ME
 
 **Desde o MVP-8, fase (a)** (`ua-star-norma.md` §2; *patch* `0005`). `[3GPP]` TS 33.535 §4.4.3: a aplicação só obtém a K_AF dos AF_IDs a que tem direito e não acessa a K_AF de outra aplicação. A forma de garantir isso fica fora do escopo 3GPP.

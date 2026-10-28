@@ -2,6 +2,15 @@
 
 ## [Não lançado]
 
+### MVP-12 — Renovação da K_AKMA pelo AAnF (28/10/2026)
+- **AAnF:** `akma.kakmaRefresh` (desligado por padrão). Ao entregar uma K_AF de uma K_AKMA mais velha que isso, o AAnF pede ao UDM, em segundo plano, uma nova autenticação primária (`Nudm_UECM_AuthTrigger`, TS 33.535 §6.4.4), uma vez por K_AKMA. Descobre o UDM no NRF e pede os *tokens* quando o OAuth2 está ligado. Cada contexto guarda quando a K_AKMA foi registrada.
+- **`openapi`:** *patch* `0003`, com `AuthTriggerInfo`, `ReauthNotificationInfo`, `reauthNotifyCallbackUri` nos registros do AMF, a operação `AuthTrigger` (POST, DV-12) e a notificação ao AMF.
+- **UDM:** *patch* `0002`, com `trigger-auth` (POST; GET recebe 405), a política de 60 s por SUPI e a notificação ao AMF sem *token* (TS 29.500 §6.7.3).
+- **AMF:** *patch* novo `amf/0001`. O registro no UDM leva o `reauthNotifyCallbackUri`. O AMF recebe a notificação e responde pela tabela 6.2.5.6-3 de TS 29.503; com o UE conectado, autentica-o de novo com um ngKSI novo, faz o NAS SMC e volta a `Registered`; com o UE em CM-IDLE, marca a autenticação como pendente.
+- **Ferramenta:** `seed trigger-auth`.
+- **Roteiro:** passo R6r, com o AAnF numa cópia da configuração com `kakmaRefresh: 20s`. Execução de 28/10/2026: 161 verificações, nenhuma falha.
+- **Documentos:** `renovacao-kakma.md` (especificação aprovada, implementação e verificação), `amf.md` (novo), `udm.md` §6, `aanf.md` §11, `openapi.md`, `logs-akma.md`, F16 a F20 de `correcoes-free5gc.md`, DV-12, D-O e D-P, parte 10 do tutorial; no guia público, a parte 11 e F16 a F20.
+
 ### MVP-8 — Ua\* da norma e autorização por aplicação no UE, fases (a) a (d) (20 a 22/10/2026)
 - **Fase (a), serviço de chaves do ME:** `af/ue/ueransim/patches/0005-akma-key-service.patch`. O `nr-ue` atende num *socket* Unix e dá a cada aplicação, identificada pelo *uid* (`SO_PEERCRED`), só a K_AF dos seus AF_IDs (TS 33.535 §4.4.3). O `akma-kaf` do `nr-cli` só funciona com `akmaCliKaf`. O `uaclient` usa o serviço (`-me-socket`). Execução de 20/10/2026: 88 verificações, nenhuma falha.
 - **Fase (b), perfis TLS** (TS 24.109 Anexo K):

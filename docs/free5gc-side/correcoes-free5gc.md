@@ -1,6 +1,6 @@
 # Correções do free5GC para o AKMA
 
-**Criado em:** 19 de outubro de 2026 · **Atualizado em:** 28 de outubro de 2026 (F16 a F19, MVP-12) · **Base:** free5GC v4.2.3 (NRF v1.4.5, UDM, AUSF e AMF v1.4.5, NEF v1.2.5, `openapi` v1.2.4)
+**Criado em:** 19 de outubro de 2026 · **Atualizado em:** 28 de outubro de 2026 (F16 a F20, MVP-12) · **Base:** free5GC v4.2.3 (NRF v1.4.5, UDM, AUSF e AMF v1.4.5, NEF v1.2.5, `openapi` v1.2.4)
 
 Registro de tudo o que o projeto encontrou no free5GC e que precisa mudar para o AKMA funcionar conforme a norma. Pedido do responsável em 19/10/2026: este registro vai para o repositório público (MVP-7, plano seção 5). A regra de cada entrada:
 
@@ -29,10 +29,11 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
 | F13 | NEF | APIs do AF sem CAPIF e sem TLS mútuo | DV-9; CAPIF planejado (MVP-9) |
 | F14 | NEF | pede o *token* de `nnrf-nfm` para o tipo errado e não se descadastra | aberto |
 | F15 | NRF | `complexQuery` sem `routing-indicator` para `AANF` | aberto |
-| F16 | `openapi` | sem os modelos da autenticação disparada pela rede doméstica | MVP-12, aprovado; a implementar (*patch* `openapi/0003`) |
-| F17 | UDM | sem `Nudm_UECM_AuthTrigger` e sem `Nudm_UECM_Re-AuthenticationNotification` | MVP-12, aprovado; a implementar (*patch* `udm/0002`) |
-| F18 | AMF | sem o *callback* da notificação de reautenticação | MVP-12, aprovado; a implementar (*patch* `amf/0001`) |
-| F19 | AMF | não faz a autenticação primária pedida pela rede doméstica | MVP-12, aprovado; a implementar (*patch* `amf/0001`) |
+| F16 | `openapi` | sem os modelos da autenticação disparada pela rede doméstica | corrigido, *patch* `openapi/0003` (MVP-12) |
+| F17 | UDM | sem `Nudm_UECM_AuthTrigger` e sem `Nudm_UECM_Re-AuthenticationNotification` | corrigido, *patch* `udm/0002` (MVP-12) |
+| F18 | AMF | sem o *callback* da notificação de reautenticação | corrigido, *patch* `amf/0001` (MVP-12) |
+| F19 | AMF | não faz a autenticação primária pedida pela rede doméstica | corrigido, *patch* `amf/0001` (MVP-12) |
+| F20 | AMF, UDM | o AMF exige *token* de acesso nas notificações; o UDM manda a de desregistro com o escopo errado | aberto; a notificação nova do MVP-12 vai sem *token* |
 
 ---
 
@@ -177,7 +178,7 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
   - §6.2.3.13: a operação customizada `trigger-auth` em `{apiRoot}/nudm-uecm/v1/{ueId}/registrations/trigger-auth`;
   - Anexo A: `TS29503_Nudm_UECM.yaml`.
 - **Como deve ser.** Os modelos e a operação no cliente, gerados do YAML pela mesma ferramenta que o free5GC usa para as outras APIs. `[DIVERGÊNCIA]` O YAML declara `get:` com corpo, e a tabela 6.2.3.13.4.1-1 diz POST (defeito D-B). O projeto usa POST (DV-12).
-- **No projeto.** MVP-12, aprovado em 28/10/2026 (`renovacao-kakma.md`, K2 e K8): *patch* `openapi/0003`, escrito à mão no estilo dos gerados, como o F6. `oldGuami` e `ausfRediscoveryInd` são lidos e ignorados.
+- **No projeto.** *Patch* `free5gc/patches/openapi/0003-home-network-triggered-authentication.patch`, escrito à mão no estilo dos gerados, como o F6 (`renovacao-kakma.md`, K2 e K8; `openapi.md`). Ele aplica sobre as duas versões do `openapi` que o free5GC v4.2.3 fixa. `oldGuami` e `ausfRediscoveryInd` são lidos e ignorados.
 
 ## F17 — UDM sem `Nudm_UECM_AuthTrigger` e sem a notificação de reautenticação
 
@@ -194,7 +195,7 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
     - §5.3.2.16 e §6.2.3.13: `trigger-auth`, com `204`, e `404` quando o usuário não existe;
     - §5.3.2.15 e §6.2.5.6: *"The UDM sends a POST request to the reauthNotifyCallbackUri"*.
 - **Como deve ser.** O UDM serve `trigger-auth` e aplica a política local. Se decide seguir, acha o AMF registrado do UE e faz `POST` no `reauthNotifyCallbackUri` com `ReauthNotificationInfo`. Responde ao consumidor com `204`, `403 REAUTHENTICATION_NOT_ALLOWED` ou `404` (`USER_NOT_FOUND`, `CONTEXT_NOT_FOUND`).
-- **No projeto.** MVP-12, aprovado em 28/10/2026 (K2 e K4): *patch* `udm/0002`. POST, com `405` para GET (DV-12). Política do projeto: recusa outro pedido do mesmo SUPI em menos de 60 s. O UDM responde ao AAnF depois da resposta do AMF; a norma não diz se ele espera (`[LACUNA]`).
+- **No projeto.** *Patch* `free5gc/patches/udm/0002-auth-trigger.patch` (K2 e K4; `udm.md`). POST, com `405` para GET (DV-12). Política do projeto: recusa outro pedido do mesmo SUPI em menos de 60 s. O UDM responde ao AAnF depois da resposta do AMF; a norma não diz se ele espera (`[LACUNA]`). A notificação vai sem *token* de acesso (F20).
 
 ## F18 — AMF sem o *callback* da notificação de reautenticação
 
@@ -206,7 +207,7 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
     - `202` quando aceita e o UE não está alcançável (*"the reauthentication pending flag has been set"*);
     - os erros da tabela 6.2.5.6-3: `403 REAUTHENTICATION_NOT_ALLOWED`, `404 CONTEXT_NOT_FOUND` e `409`.
 - **Como deve ser.** O AMF põe `reauthNotifyCallbackUri` no `Nudm_UECM_Registration` e serve essa rota. A resposta segue F19.
-- **No projeto.** MVP-12, aprovado em 28/10/2026 (K5): `<AMF>/namf-callback/v1/reauth/<SUPI>`, no registro do acesso 3GPP, como o `deregCallbackUri`; *patch* `amf/0001`.
+- **No projeto.** *Patch* `free5gc/patches/amf/0001-home-network-triggered-authentication.patch` (K5; `amf.md`): `<AMF>/namf-callback/v1/reauth/<SUPI>`, no registro do acesso 3GPP, como o `deregCallbackUri`. A rota fica fora da verificação de *token* das outras rotas de *callback* (F20).
 
 ## F19 — AMF não faz a autenticação primária pedida pela rede doméstica
 
@@ -220,13 +221,24 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
   - §6.9.4.2: *"After a primary authentication has taken place, new NAS keys from a new KAMF shall be derived"*; o NAS SMC as põe em uso;
   - §6.9.4.4: a troca das chaves AS depois da autenticação *"may be used"*.
 - **Como deve ser.** Com o UE em `Registered`, o AMF faz a autenticação primária fora do registro. Em seguida, faz o NAS SMC com o novo K_AMF e volta a `Registered`, sem esperar um `Registration Request`. Com o UE não alcançável, guarda a pendência e a resolve no próximo `Service Request` ou registro. A falha de autenticação fora do registro não pode depender de um `Registration Reject`.
-- **No projeto.** MVP-12, aprovado em 28/10/2026 (K6 e K7): *patch* `amf/0001`.
-  - UE conectado: `204` e autenticação na hora.
-  - UE registrado e não conectado: `202` e pendência.
-  - UE em outro procedimento: `403 REAUTHENTICATION_NOT_ALLOWED`.
-  - UE desconhecido: `404 CONTEXT_NOT_FOUND`.
+- **No projeto.** *Patch* `free5gc/patches/amf/0001-home-network-triggered-authentication.patch` (K6 e K7; `amf.md`). As respostas seguem a tabela 6.2.5.6-3:
+  - UE conectado: `204` e autenticação na hora, com um ngKSI novo; depois do NAS SMC, o UE volta a `Registered`;
+  - UE registrado e não conectado: `202` e pendência, resolvida depois do próximo `Service Request` ou registro;
+  - registro em curso: `409 TEMPORARY_REJECT_REGISTRATION_ONGOING`; *handover* em curso: `409 TEMPORARY_REJECT_HANDOVER_ONGOING`;
+  - autenticação ou desregistro em curso: `403 REAUTHENTICATION_NOT_ALLOWED`;
+  - UE desconhecido ou desregistrado: `404 CONTEXT_NOT_FOUND`.
 
-  `[MVP]` Sem a troca das chaves AS: o UERANSIM não tem segurança AS. O AUSF do *patch* do MVP-2 (F8) já registra no AAnF a K_AKMA da nova autenticação.
+  Se o AUSF não responde, o AMF não manda `Registration Reject`: responde `500` ao UDM, e o UE segue registrado. O NAS SMC dessa autenticação não pede a mensagem inicial (RINMR) nem a derivação horizontal do K_AMF (HDP). `[MVP]` Sem a troca das chaves AS: o UERANSIM não tem segurança AS. O AUSF do *patch* do MVP-2 (F8) já registra no AAnF a K_AKMA da nova autenticação.
+
+## F20 — AMF exige *token* de acesso nas notificações
+
+- **O que o free5GC faz.** `[FREE5GC]` Com o OAuth2 ligado, o AMF exige um *token* com o escopo `namf-callback` em todas as rotas de `/namf-callback/v1` (`internal/sbi/server.go`), inclusive nas notificações. O SMF e o PCF pedem esse *token* ao NRF antes de notificar o AMF. O UDM manda a notificação de desregistro (`SendOnDeregistrationNotification`, `internal/sbi/processor/notifier.go`) com um *token* de `nudm-uecm` pedido para o tipo UDM; pela leitura do código, o AMF a recusa com 401, porque o escopo não confere.
+- **Onde a norma diz.** `[3GPP]`
+  - TS 29.500 §6.7.3: *"For the notify operation of subscribe/notify semantics service operations, in this release of this specification OAuth 2.0 access token is not used."*
+  - TS 29.500 §6.10.7, NOTA: *"access token is not used in notification / callback, see clause 6.7.3"*.
+  - TS 33.501 §13.4.1.0: *"The OAuth 2.0 framework does not apply to the notification operation."*
+- **Como deve ser.** As rotas que recebem notificações não exigem *token*; quem notifica não pede *token* ao NRF.
+- **No projeto.** Aberto nas notificações que já existiam. Decisão do responsável de 28/10/2026, no MVP-12: a rota nova da notificação de reautenticação fica fora da verificação de *token*, e o UDM a manda sem *token* (`amf.md`, `udm.md`).
 
 ---
 
