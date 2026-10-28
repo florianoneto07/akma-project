@@ -5,7 +5,7 @@
 
 Cada item registra a inconsistência, as fontes que a evidenciam, a decisão adotada pelo projeto e o grupo de trabalho responsável.
 
-**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio.
+**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio. 28 de outubro de 2026 — D-B: especificação do MVP-12 aprovada. Estes defeitos são a base das recomendações à 3GPP da V2 do repositório público (plano, MVP-13).
 
 ### Situação no projeto (22/10/2026)
 
@@ -14,7 +14,7 @@ Todos os itens estão no texto das normas; nenhum é defeito do projeto. A decis
 | Item | Implementação |
 |---|---|
 | D-A | `shared/akma/akid`: lê `atid` e `akid`, escreve `atid`; o AAnF, o AF e o NEF usam essa leitura |
-| D-B | ainda não: o projeto não usa o `trigger-auth`, e o UDM e o AMF do free5GC não têm a operação. MVP próprio, depois da fase (d) do MVP-8 (decisão do responsável de 22/10/2026) |
+| D-B | ainda não: o projeto não usa o `trigger-auth`, e o UDM e o AMF do free5GC não têm a operação. MVP-12 (decisão do responsável de 22/10/2026), com a especificação aprovada em 28/10/2026 (`docs/free5gc-side/renovacao-kakma.md`) |
 | D-C | DV-6: `realm="3GPP-bootstrapping-akma@<FQDN>"` no AF e no cliente |
 | D-D | `shared/akma/codec`: `^[A-Fa-f0-9]{64}$` ao ler, minúsculas ao escrever, no AUSF, no AAnF, no AF e no cliente |
 | D-E | `3GPP-AKMA;<A-KID>` nos perfis PSK (U2) |
@@ -81,7 +81,7 @@ rid012.akid019345346@5gc.mnc012.mcc345.3gppnetwork.org
 2. TS 29.501 V19.5.0, §4.6.1.2 — as duas figuras normativas de operações customizadas são intituladas *"Custom Operation … using HTTP POST"*.
 3. TS 29.501 V19.5.0, Anexo C.4 — o arquétipo de operação customizada modela operação *"unsafe and non-idempotent"*. O método GET é seguro e idempotente por definição de IETF RFC 9110.
 
-**Decisão do projeto.** Adotar POST. A operação (TS 33.535 §6.4.4, opcional) entra num MVP próprio, depois da fase (d) do MVP-8 (decisão do responsável de 22/10/2026): o UDM e o AMF do free5GC não a têm, e ela exige a autenticação primária disparada pela rede doméstica (TS 33.501 §6.1.5).
+**Decisão do projeto.** Adotar POST. A operação (TS 33.535 §6.4.4, opcional) entra no MVP-12 (decisão do responsável de 22/10/2026; especificação aprovada em 28/10/2026, `docs/free5gc-side/renovacao-kakma.md`): o UDM e o AMF do free5GC não a têm, e ela exige a autenticação primária disparada pela rede doméstica (TS 33.501 §6.1.5).
 
 **Observação secundária.** O esquema `AuthTriggerInfo` não declara `required`, embora TS 33.501 §14.2.6 declare *"Input, Required: SUPI"* e a Tabela 6.2.3.13.4.2.2-1 classifique a estrutura como `M`.
 
