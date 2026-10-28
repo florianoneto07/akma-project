@@ -22,7 +22,7 @@ func TestCoAPHandler(t *testing.T) {
 		if mod != nil {
 			mod(req)
 		}
-		return af.srv.CoAP(req, sess, "ue")
+		return af.srv.CoAP(req, sess, "ue", "PSK DTLS")
 	}
 	cause := func(m *coap.Message) string {
 		var e ErrorResponse

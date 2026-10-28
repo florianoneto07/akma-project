@@ -9,12 +9,12 @@ import (
 	"github.com/florianoneto07/akma-free5gc/af/coap"
 )
 
-// CoAP answers a CoAP request on a DTLS association that the handshake
-// authenticated with K_AF (TS 33.535 Annex C): a GET of the resource gets
-// the Application Session Establishment Response (cl. 6.2.1 step 9), in
-// JSON, as on the PSK TLS profiles. remote is the address of the UE, for the
-// log.
-func (s *Server) CoAP(req *coap.Message, sess PSKSession, remote string) *coap.Message {
+// CoAP answers a CoAP request authenticated with K_AF: on a DTLS
+// association (TS 33.535 Annex C), or protected by OSCORE (Annex D), over is
+// "PSK DTLS" or "OSCORE", for the log. A GET of the resource gets the
+// Application Session Establishment Response (cl. 6.2.1 step 9), in JSON, as
+// on the PSK TLS profiles. remote is the address of the UE, for the log.
+func (s *Server) CoAP(req *coap.Message, sess PSKSession, remote, over string) *coap.Message {
 	// Options this server understands; any other critical one is refused
 	// (RFC 7252 cl. 5.4.1).
 	if n, ok := req.UnknownCritical(coap.OptionURIHost, coap.OptionURIPath, coap.OptionURIPort,
@@ -41,7 +41,7 @@ func (s *Server) CoAP(req *coap.Message, sess PSKSession, remote string) *coap.M
 		return coapError(coap.Forbidden, CauseKafExpired)
 	}
 	body, _ := json.Marshal(SessionResponse{AKid: sess.AKid, KafExpiry: sess.KafExpiry.UTC()})
-	logger.UaLog.Infof("UE with A-KID %s served over PSK DTLS (AF_ID %s)", sess.AKid, sess.AfID.Transport())
+	logger.UaLog.Infof("UE with A-KID %s served over %s (AF_ID %s)", sess.AKid, over, sess.AfID.Transport())
 	rsp := &coap.Message{Code: coap.Content, Payload: body}
 	rsp.Add(coap.OptionContentFormat, coap.EncodeUint(uint32(coap.FormatJSON)))
 	return rsp

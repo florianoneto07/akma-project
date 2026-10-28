@@ -66,6 +66,12 @@ func TestInvalid(t *testing.T) {
 		"DTLS port twice": func(c *Configuration) {
 			c.Listen, c.Profiles = "", []Profile{{Type: "psk-dtls13", Listen: ":5684"}, {Type: "psk-dtls12", Listen: ":5684"}}
 		},
+		"OSCORE and DTLS on one port": func(c *Configuration) {
+			c.Listen, c.Profiles = "", []Profile{{Type: "oscore", Listen: ":5683"}, {Type: "psk-dtls13", Listen: ":5683"}}
+		},
+		"OSCORE with a certificate": func(c *Configuration) {
+			c.Listen, c.Profiles = "", []Profile{{Type: "oscore", Listen: ":5683", Certificate: "c.pem", Key: "c.key"}}
+		},
 		"digest-tls without certificate": func(c *Configuration) {
 			c.Listen, c.Profiles = "", []Profile{{Type: "digest-tls", Listen: ":8443"}}
 		},
@@ -120,7 +126,7 @@ func TestSampleConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.AfID.Transport() != "af1.akma.example.FF00000001" || len(s.Profiles) != 5 ||
+	if s.AfID.Transport() != "af1.akma.example.FF00000001" || len(s.Profiles) != 6 ||
 		s.NonceLifetime != 300*time.Second || s.KafExpiry != KafExpiryRefetch || !s.Logger.Enable {
 		t.Fatalf("settings %+v", s)
 	}
@@ -132,6 +138,7 @@ func TestSampleConfig(t *testing.T) {
 		{Type: "psk-tls12", Listen: "192.168.16.129:8445"},
 		{Type: "psk-dtls13", Listen: "192.168.16.129:5684"},
 		{Type: "psk-dtls12", Listen: "192.168.16.129:5685"},
+		{Type: "oscore", Listen: "192.168.16.129:5683"},
 	}
 	for i, p := range s.Profiles {
 		if p.Certificate != "" {
@@ -164,8 +171,9 @@ func TestSampleExternalConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.AfID.Transport() != "af1.akma.example.FF00000001" || len(s.Profiles) != 5 ||
+	if s.AfID.Transport() != "af1.akma.example.FF00000001" || len(s.Profiles) != 6 ||
 		s.Profiles[1].Listen != "192.168.16.129:8454" || s.Profiles[3].Listen != "192.168.16.129:5694" ||
+		s.Profiles[5] != (Profile{Type: "oscore", Listen: "192.168.16.129:5693"}) ||
 		s.NefURI != "http://192.168.16.130:8000" || s.NrfURI != "http://127.0.0.10:8000" || s.AanfURI != "" {
 		t.Fatalf("settings %+v", s)
 	}

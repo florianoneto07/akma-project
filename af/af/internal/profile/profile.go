@@ -1,5 +1,5 @@
 // Package profile opens the Ua* servers of the AF, one per profile of the
-// configuration (TS 33.535 Annex B; TS 24.109 Annex K).
+// configuration (TS 33.535 Annexes B, C and D; TS 24.109 Annex K).
 package profile
 
 import (
@@ -24,15 +24,19 @@ import (
 // Running is a profile being served.
 type Running struct {
 	Profile config.Profile
-	srv     *http.Server // nil for DTLS
+	srv     *http.Server // nil on UDP
 	l       net.Listener
 	release func()
 }
 
 // Start opens the listener of p and serves it with ua.
 func Start(p config.Profile, s *config.Settings, ua *server.Server) (*Running, error) {
-	if akmatls.IsDTLS(p.Type) {
-		stop, err := startDTLS(p, s, ua)
+	if akmatls.IsUDP(p.Type) {
+		start := startDTLS
+		if p.Type == akmatls.ProfileOSCORE {
+			start = startOSCORE
+		}
+		stop, err := start(p, s, ua)
 		if err != nil {
 			return nil, err
 		}

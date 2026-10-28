@@ -166,7 +166,7 @@ func serveCoAP(c *wolftls.Conn, name string, ua *server.Server) {
 			return
 		}
 		out := r.Answer(buf[:n], time.Now(), func(req *coap.Message) *coap.Message {
-			return ua.CoAP(req, sess, remote)
+			return ua.CoAP(req, sess, remote, "PSK DTLS")
 		})
 		if out != nil {
 			if _, err := c.Write(out); err != nil {

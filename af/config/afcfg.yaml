@@ -36,6 +36,11 @@ configuration:
     # on UDP. AF_ID <FQDN>.010001D001, as psk-tls12. Needs wolfSSL.
     - type: psk-dtls12
       listen: 192.168.16.129:5685
+    # CoAP protected by OSCORE with a context from K_AF: POST /akma, then
+    # requests protected with the context (TS 33.535 Annex D), on UDP, the
+    # port of coap. AF_ID <FQDN>.0100000008. Without wolfSSL too.
+    - type: oscore
+      listen: 192.168.16.129:5683
     # Test only: the simplified Ua*, HTTP Digest without TLS, with the AF_ID
     # <FQDN>.<uaStarId>. Off by default.
     # - type: digest-http

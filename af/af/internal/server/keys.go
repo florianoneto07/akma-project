@@ -26,8 +26,8 @@ func source(p KeyProvider) string {
 	return "the AAnF"
 }
 
-// errKafExpired reports a K_AF past its expiry under the reject policy.
-var errKafExpired = errors.New("K_AF expired")
+// ErrKafExpired reports a K_AF past its expiry under the reject policy.
+var ErrKafExpired = errors.New("K_AF expired")
 
 // keyCache holds the K_AF of each AF_ID and A-KID until its expiry: the
 // "active context" of TS 33.535 cl. 6.2.1 step 2. The AF has one AF_ID per
@@ -51,7 +51,7 @@ func newKeyCache(p KeyProvider, policy config.KafExpiry) *keyCache {
 
 // get returns a K_AF valid at now for id and aKid. A K_AF is never used at
 // or after its expiry (TS 33.535 cl. 4.4.0). An expired one is requested
-// again from the AAnF (policy refetch) or refused with errKafExpired (policy
+// again from the AAnF (policy refetch) or refused with ErrKafExpired (policy
 // reject, TS 33.535 cl. 6.4.2).
 func (c *keyCache) get(ctx context.Context, id afid.AfID, aKid string, now time.Time) (aanf.Key, error) {
 	ck := cacheKey{afID: id.Transport(), aKid: aKid}
@@ -65,7 +65,7 @@ func (c *keyCache) get(ctx context.Context, id afid.AfID, aKid string, now time.
 		if c.policy == config.KafExpiryReject {
 			logger.UaLog.Infof("K_AF for A-KID %s expired at %s: access rejected (policy reject)",
 				aKid, k.Expiry.UTC().Format(time.RFC3339))
-			return aanf.Key{}, errKafExpired
+			return aanf.Key{}, ErrKafExpired
 		}
 		logger.UaLog.Infof("K_AF for A-KID %s expired at %s: requesting it again from %s (policy refetch)",
 			aKid, k.Expiry.UTC().Format(time.RFC3339), source(c.provider))

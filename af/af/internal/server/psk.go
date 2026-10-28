@@ -16,7 +16,8 @@ import (
 	"github.com/florianoneto07/akma-free5gc/shared/akma/kdf"
 )
 
-// PSKSession is what a TLS handshake with K_AF as PSK established.
+// PSKSession is what a TLS or DTLS handshake with K_AF as PSK, or an OSCORE
+// context from K_AF, established.
 type PSKSession struct {
 	AKid      string
 	AfID      afid.AfID
@@ -40,15 +41,23 @@ func (s *Server) PSKKey(ctx context.Context, id afid.AfID, identity, remote stri
 		logger.UaLog.Warnf("PSK identity from %s is not 3GPP-AKMA;<A-KID>: handshake refused", remote)
 		return PSKSession{}, kdf.Key{}, ErrPSKIdentity
 	}
+	sess, kaf, err := s.ApplicationKey(ctx, id, aKid, remote)
+	if errors.Is(err, aanf.ErrKeyNotAvailable) {
+		logger.UaLog.Infof("No K_AKMA at the AAnF for A-KID %s (AF_ID %s): handshake refused", aKid, id.Transport())
+	}
+	return sess, kaf, err
+}
+
+// ApplicationKey returns the K_AF of the A-KID aKid for the AF_ID id
+// (TS 33.535 cl. 6.2.1 steps 2 and 9), from the cache or from the AAnF, and
+// the session it gives. remote is the address of the UE, for the log.
+func (s *Server) ApplicationKey(ctx context.Context, id afid.AfID, aKid, remote string) (PSKSession, kdf.Key, error) {
 	key, err := s.keys.get(ctx, id, aKid, s.now())
 	switch {
-	case errors.Is(err, aanf.ErrKeyNotAvailable):
-		logger.UaLog.Infof("No K_AKMA at the AAnF for A-KID %s (AF_ID %s): handshake refused", aKid, id.Transport())
-		return PSKSession{}, kdf.Key{}, err
-	case errors.Is(err, errKafExpired):
+	case errors.Is(err, aanf.ErrKeyNotAvailable), errors.Is(err, ErrKafExpired):
 		return PSKSession{}, kdf.Key{}, err
 	case err != nil:
-		logger.ConsumerLog.Errorf("K_AF for A-KID %s not obtained: %v", aKid, err)
+		logger.ConsumerLog.Errorf("K_AF for A-KID %s (UE at %s) not obtained: %v", aKid, remote, err)
 		return PSKSession{}, kdf.Key{}, err
 	}
 	return PSKSession{AKid: aKid, AfID: id, KafExpiry: key.Expiry}, key.KAf, nil

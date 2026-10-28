@@ -189,7 +189,7 @@ func (s *Server) digest(w http.ResponseWriter, r *http.Request, id afid.AfID) {
 		logger.UaLog.Infof("No K_AKMA at the AAnF for A-KID %s: access rejected", aKid)
 		writeError(w, http.StatusForbidden, CauseAkmaKeyNotAvailable)
 		return
-	case errors.Is(err, errKafExpired):
+	case errors.Is(err, ErrKafExpired):
 		writeError(w, http.StatusForbidden, CauseKafExpired)
 		return
 	case err != nil:
