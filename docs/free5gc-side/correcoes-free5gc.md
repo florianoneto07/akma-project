@@ -1,6 +1,6 @@
 # Correções do free5GC para o AKMA
 
-**Criado em:** 19 de outubro de 2026 · **Atualizado em:** 28 de outubro de 2026 (F16 a F20, MVP-12) · **Base:** free5GC v4.2.3 (NRF v1.4.5, UDM, AUSF e AMF v1.4.5, NEF v1.2.5, `openapi` v1.2.4)
+**Criado em:** 19 de outubro de 2026 · **Atualizado em:** 28 de outubro de 2026 (F16 a F20, MVP-12; conferência no free5GC v4.3.0, MVP-13) · **Base:** free5GC v4.2.3 (NRF v1.4.5, UDM, AUSF e AMF v1.4.5, NEF v1.2.5, `openapi` v1.2.4)
 
 Registro de tudo o que o projeto encontrou no free5GC e que precisa mudar para o AKMA funcionar conforme a norma. Pedido do responsável em 19/10/2026: este registro vai para o repositório público (MVP-7, plano seção 5). A regra de cada entrada:
 
@@ -34,6 +34,41 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
 | F18 | AMF | sem o *callback* da notificação de reautenticação | corrigido, *patch* `amf/0001` (MVP-12) |
 | F19 | AMF | não faz a autenticação primária pedida pela rede doméstica | corrigido, *patch* `amf/0001` (MVP-12) |
 | F20 | AMF, UDM | o AMF exige *token* de acesso nas notificações; o UDM manda a de desregistro com o escopo errado | aberto; a notificação nova do MVP-12 vai sem *token* |
+
+### Conferência no free5GC v4.3.0 (28/10/2026)
+
+Ponto L6 do MVP-13: antes de publicar, cada item conferido na versão mais recente do free5GC. A v4.3.0 saiu em 30/09/2026. Ela fixa o NRF em `4522e4a9`, o UDM em `ba18ef3b`, o AUSF em `b693e38a`, o AMF em `9fc0ac3f`, o NEF em `6cd30f51`, a *webconsole* em `c40b94b6` e o `openapi` v1.3.0 em todas, e traz uma NF nova, o SCP. Fonte: os arquivos dessas versões no GitHub, lidos em 28/10/2026.
+
+**Os vinte itens continuam presentes na v4.3.0.** Os *patches* do projeto seguem para a v4.2.3; portá-los à v4.3.0 é do item *Upstream* do plano. O que se conferiu em cada item:
+
+| Item | Na v4.3.0 |
+|---|---|
+| F1, F2, F15 | `nnrfNFManagementOption` copia os `*Info` conhecidos, sem `aanfInfoList`; `validateQueryParameters` não aceita `AANF`; o filtro de `routing-indicator` trata só AUSF e UDM |
+| F3 | `Aud: request.TargetNfInstanceId` |
+| F4 | nenhuma menção a `allowedOperationsPerNfType` no NRF |
+| F5 | `VerifyOAuth` igual à v1.2.4, só com o modelo renomeado. Os campos `Exp` e `Aud` do modelo de *claims* têm os mesmos nomes JSON que os de `jwt.RegisteredClaims`, que ele também embute; os de fora prevalecem, e a biblioteca `golang-jwt/jwt` v5 não acha `exp` nem `aud` para conferir |
+| F6, F16 | o `openapi` v1.3.0 não tem `aanf/AKMA`, `AkmaKeyInfo`, `AuthTriggerInfo`, `ReauthNotificationInfo` nem `reauthNotifyCallbackUri` |
+| F7, F10, F17 | o UDM não tem `AkmaInd` nem `trigger-auth`; `GetIdTranslationResultProcedure` ainda recebe só GPSI |
+| F8, F9, F11 | nenhuma menção a AKMA no AUSF, na *webconsole* e no NEF |
+| F12 | o 401 do NEF ainda é `{"error": …}` |
+| F13 | nenhuma NF de CAPIF |
+| F14 | `DeregisterNFInstance` ainda pede o *token* de `nnrf-nfm` com `Nrf_NFMgmt_NFType_NEF` |
+| F18, F19, F20 | o AMF não registra `reauthNotifyCallbackUri`, não tem a rota e exige o *token* `namf-callback` em todos os *callbacks*; o UDM ainda pede o *token* de `nudm-uecm` para notificar o desregistro |
+
+### Por repositório do free5GC
+
+Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<repositório>`):
+
+| Repositório | Itens | *Patches* do projeto |
+|---|---|---|
+| `nrf` | F1, F2, F3, F4, F15 | `nrf/0001` a `0003` (F1 a F3) |
+| `openapi` | F5, F6, F16 | `openapi/0001` a `0003` (F6, F16) |
+| `udm` | F7, F10, F17, F20 (a notificação de desregistro) | `udm/0001`, `udm/0002` (F7, F17) |
+| `ausf` | F8 | `ausf/0001` |
+| `amf` | F18, F19, F20 (a verificação de *token* nos *callbacks*) | `amf/0001` (F18, F19) |
+| `nef` | F11, F12, F13, F14 | `nef/0001` (F11) |
+| `webconsole` | F9 | — (*script* `provision-akma-subscriber.sh`) |
+| `free5gc` (configuração, `run.sh`, banco de testes) | integração sem cláusula (abaixo) | `config/`, `run/`, `test/` |
 
 ---
 
