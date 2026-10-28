@@ -23,6 +23,10 @@ configuration:
     - "0000"
   akma:
     kafLifetime: 1h # K_AF lifetime (operator policy, TS 33.535 cl. 5.2)
+    # Refresh of K_AKMA (operator policy, TS 33.535 cl. 6.4.4): when an AF asks for a K_AF of a K_AKMA
+    # registered longer ago than this duration, the AAnF asks the UDM for a new primary authentication
+    # (Nudm_UECM_AuthTrigger). 0 disables it.
+    kakmaRefresh: 0
     roamingStatusSubscription: false # must stay false: not implemented (TS 33.535 cl. 6.2.1 step 5)
     authorizedAfs: # local policy, TS 33.535 cl. 6.2.1 step 2; one AF_ID per Ua* profile and cipher suite
       # "<FQDN>.<Ua* security protocol id>", each with the addresses from which

@@ -149,3 +149,27 @@ func TestSampleConfig(t *testing.T) {
 		t.Errorf("configuration = %+v", c)
 	}
 }
+
+func TestKakmaRefresh(t *testing.T) {
+	for _, c := range []struct {
+		value string
+		want  time.Duration
+		ok    bool
+	}{
+		{"", 0, true},
+		{"0", 0, true},
+		{"20s", 20 * time.Second, true},
+		{"24h", 24 * time.Hour, true},
+		{"-1s", 0, false},
+		{"one day", 0, false},
+	} {
+		a := &Akma{KakmaRefresh: c.value}
+		d, err := a.GetKakmaRefresh()
+		if (err == nil) != c.ok || d != c.want {
+			t.Errorf("kakmaRefresh %q: %v %v", c.value, d, err)
+		}
+		if err := a.validate(); (err == nil) != c.ok {
+			t.Errorf("validate with kakmaRefresh %q: %v", c.value, err)
+		}
+	}
+}
