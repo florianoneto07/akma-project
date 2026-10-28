@@ -207,3 +207,58 @@ func TestResponderPingAndMalformed(t *testing.T) {
 		t.Fatal("answered an acknowledgement")
 	}
 }
+
+// A retransmission that arrives while the server still handles the first
+// copy gets the same response, and the handler runs once (RFC 7252
+// cl. 4.5).
+func TestServerRetransmission(t *testing.T) {
+	pc, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var calls atomic.Int32
+	srv := &Server{Handle: func(req *Message, _ net.Addr) *Message {
+		calls.Add(1)
+		time.Sleep(300 * time.Millisecond)
+		return &Message{Code: Content, Payload: []byte(req.Path())}
+	}}
+	go srv.Serve(pc)
+	defer pc.Close()
+
+	conn, err := net.DialUDP("udp", nil, pc.LocalAddr().(*net.UDPAddr))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	req := &Message{Type: Confirmable, Code: GET, MessageID: 7, Token: []byte{1, 2}}
+	req.SetPath("/a/b")
+	out, _ := req.Marshal()
+	for range 3 {
+		if _, err := conn.Write(out); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	buf := make([]byte, 1500)
+	for i := range 3 {
+		n, err := conn.Read(buf)
+		if err != nil {
+			t.Fatalf("answer %d: %v", i, err)
+		}
+		rsp, err := Parse(buf[:n])
+		if err != nil || rsp.Type != Acknowledgement || rsp.MessageID != 7 || string(rsp.Payload) != "/a/b" {
+			t.Fatalf("answer %d: %+v %v", i, rsp, err)
+		}
+	}
+	if n := calls.Load(); n != 1 {
+		t.Fatalf("handler ran %d times", n)
+	}
+
+	c := NewClient(conn)
+	get := &Message{Code: GET}
+	get.SetPath("/c")
+	rsp, err := c.Do(context.Background(), get)
+	if err != nil || string(rsp.Payload) != "/c" {
+		t.Fatalf("client: %+v %v", rsp, err)
+	}
+}

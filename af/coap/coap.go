@@ -1,8 +1,9 @@
 // Package coap is the part of CoAP (RFC 7252) that the Ua* profiles over
-// DTLS use: the message format (cl. 3), the options (cl. 5.4, 5.10), and a
-// confirmable exchange with a piggybacked response (cl. 4.2, 5.2.1). It has
-// no transport of its own: the messages go over a datagram connection, such
-// as a DTLS association.
+// DTLS and OSCORE use: the message format (cl. 3), the options (cl. 5.4,
+// 5.10), a confirmable exchange with a piggybacked response (cl. 4.2,
+// 5.2.1), and a server over a UDP socket (cl. 4.5). The client has no
+// transport of its own: the messages go over a datagram connection, such as
+// a DTLS association or a connected UDP socket.
 package coap
 
 import (
@@ -119,7 +120,15 @@ func (m *Message) Marshal() ([]byte, error) {
 	b[1] = byte(m.Code)
 	binary.BigEndian.PutUint16(b[2:], m.MessageID)
 	b = append(b, m.Token...)
-	opts := slices.Clone(m.Options)
+	return AppendOptions(b, m.Options, m.Payload)
+}
+
+// AppendOptions appends options in the order of their numbers, options of
+// the same number keeping their order, then the payload marker and the
+// payload, if any (RFC 7252 cl. 3, 3.1). It is also the encoding of the
+// options and payload in the plaintext of OSCORE (RFC 8613 cl. 5.3).
+func AppendOptions(b []byte, options []Option, payload []byte) ([]byte, error) {
+	opts := slices.Clone(options)
 	slices.SortStableFunc(opts, func(a, b Option) int { return int(a.Number) - int(b.Number) })
 	prev := uint16(0)
 	for _, o := range opts {
@@ -135,9 +144,9 @@ func (m *Message) Marshal() ([]byte, error) {
 		b = append(b, o.Value...)
 		prev = o.Number
 	}
-	if len(m.Payload) > 0 {
+	if len(payload) > 0 {
 		b = append(b, 0xFF)
-		b = append(b, m.Payload...)
+		b = append(b, payload...)
 	}
 	return b, nil
 }
@@ -177,33 +186,43 @@ func Parse(b []byte) (*Message, error) {
 	if m.Code == Empty && (tkl != 0 || len(p) != 0) {
 		return nil, fmt.Errorf("%w: empty message with token, options or payload", ErrFormat)
 	}
+	var err error
+	if m.Options, m.Payload, err = ParseOptions(p); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// ParseOptions decodes options and the payload after them (RFC 7252 cl. 3,
+// 3.1; RFC 8613 cl. 5.3).
+func ParseOptions(p []byte) ([]Option, []byte, error) {
+	var opts []Option
 	number := uint32(0)
 	for len(p) > 0 {
 		if p[0] == 0xFF {
 			if len(p) == 1 {
-				return nil, fmt.Errorf("%w: payload marker without payload", ErrFormat)
+				return nil, nil, fmt.Errorf("%w: payload marker without payload", ErrFormat)
 			}
-			m.Payload = slices.Clone(p[1:])
-			break
+			return opts, slices.Clone(p[1:]), nil
 		}
 		dn, ln := uint32(p[0]>>4), uint32(p[0]&0x0F)
 		p = p[1:]
 		var err error
 		var delta, length uint32
 		if delta, p, err = extended(dn, p); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if length, p, err = extended(ln, p); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		number += delta
 		if number > 65535 || uint32(len(p)) < length {
-			return nil, fmt.Errorf("%w: option %d cut short", ErrFormat, number)
+			return nil, nil, fmt.Errorf("%w: option %d cut short", ErrFormat, number)
 		}
-		m.Options = append(m.Options, Option{Number: uint16(number), Value: slices.Clone(p[:length])})
+		opts = append(opts, Option{Number: uint16(number), Value: slices.Clone(p[:length])})
 		p = p[length:]
 	}
-	return m, nil
+	return opts, nil, nil
 }
 
 func extended(n uint32, p []byte) (uint32, []byte, error) {
