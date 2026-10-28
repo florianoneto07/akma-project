@@ -1,6 +1,6 @@
 # Cliente Ua\* do UE
 
-**MVP:** MVP-3 (cliente com vetores), MVP-4 (cliente no UE, com a K_AF do ME, pelo plano de usuário) e MVP-8 (serviço de chaves do ME e perfis TLS da norma) · **Data:** 18 de outubro de 2026; perfis TLS em 21/10/2026
+**MVP:** MVP-3 (cliente com vetores), MVP-4 (cliente no UE, com a K_AF do ME, pelo plano de usuário) e MVP-8 (serviço de chaves do ME e perfis TLS, DTLS e OSCORE da norma) · **Data:** 18 de outubro de 2026; perfis de 21 a 22/10/2026
 
 ## 1. Papel
 
@@ -15,6 +15,7 @@ O cliente `uaclient` (`af/ue/uaclient/`) faz o papel da aplicação do UE nos pe
 | `psk-tls12` (K.3.2) | TLS 1.2 com `ECDHE-PSK`; confere o *hint* `3GPP-AKMA` | `<FQDN>.010001<cipher suite>`, pedido ao ME depois do `ServerHello` |
 | `psk-dtls13` (TS 33.535 Anexo C) | DTLS 1.3 com a K_AF como PSK; `GET` em CoAP confirmável, com retransmissão | `<FQDN>.0100000009`, pedido ao ME antes do `ClientHello` |
 | `psk-dtls12` | DTLS 1.2 com `ECDHE-PSK`; CoAP | `<FQDN>.010001<cipher suite>`, depois do `ServerHello` |
+| `oscore` (TS 33.535 Anexo D) | `POST /akma` em CBOR, deriva o contexto OSCORE da K_AF e dos dois *payloads*, e manda o `GET` protegido; com `4.01` sem proteção, estabelece de novo | `<FQDN>.0100000008`, pedido ao ME antes do `POST` |
 | `digest-http` (padrão; teste) | o Ua\* simplificado de `ua-star.md`, sem TLS | `<FQDN>.<-ua-star-id>` |
 
 Nos perfis Digest:
@@ -24,7 +25,7 @@ Nos perfis Digest:
 - **Credenciais:** responde com o A-KID e a K_AF.
 - **Prova do AF:** só aceita a resposta se o AF provar, pelo `rspauth`, que tem a mesma K_AF.
 
-Nos perfis PSK, o *handshake* autentica os dois lados, e o `GET` do recurso vai sem autenticação HTTP. Os perfis PSK só existem num cliente compilado com o wolfSSL (`build-af.sh` depois de `build-wolfssl.sh`), que fica sob GPLv3.
+Nos perfis PSK, o *handshake* autentica os dois lados, e o `GET` do recurso vai sem autenticação HTTP. Os perfis PSK só existem num cliente compilado com o wolfSSL (`build-af.sh` depois de `build-wolfssl.sh`), que fica sob GPLv3. No perfil OSCORE, o AF prova ter a K_AF ao proteger a resposta com o contexto; o perfil não precisa do wolfSSL.
 
 ## 2. De onde vêm o A-KID e a K_AF
 
@@ -81,10 +82,11 @@ O AF vê a requisição vindo de 192.168.16.130, o endereço da VM do free5GC, p
 |---|---|---|
 | `-profile` | `digest-http` | `digest-tls`, `psk-tls13`, `psk-tls12`, `psk-dtls13`, `psk-dtls12` ou `digest-http` |
 | `-fqdn` | `af1.akma.example` | FQDN do AF: vai no `Host` e no `server_name`, é conferido no `realm` e no certificado, e entra na K_AF |
-| `-connect` | `192.168.16.129` | endereço do AF; sem porta, a do perfil em `afcfg.yaml`: 8443, 8444, 8445, 5684 (UDP), 5685 (UDP) ou 8080 |
+| `-connect` | `192.168.16.129` | endereço do AF; sem porta, a do perfil em `afcfg.yaml`: 8443, 8444, 8445, 5684 (UDP), 5685 (UDP), 5683 (UDP) ou 8080 |
 | `-ca` | — | certificado da CA do AF, PEM; obrigatório com `digest-tls` |
 | `-tls12` | — | `digest-tls` só com TLS 1.2 |
-| `-reconnect` | — | uma conexão TLS ou associação DTLS nova por requisição, retomando a sessão anterior |
+| `-reconnect` | — | uma conexão TLS ou associação DTLS nova por requisição, retomando a sessão anterior; no `oscore`, um `POST /akma` novo por requisição |
+| `-rekey` | — | `oscore`: renova o contexto antes de cada requisição (RFC 8613 Apêndice B.2) |
 | `-psk-ke-only` | — | `psk-tls13` ou `psk-dtls13` oferecendo só `psk_ke`, que TS 33.210 §6.2.2 proíbe; teste negativo |
 | `-path` | `/ua/v1/session` | |
 | `-ua-star-id` | `FF00000001` | identificador Ua\* de `digest-http` (ADR-0003) |

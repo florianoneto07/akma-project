@@ -1,6 +1,6 @@
 # Ua\* da norma e autorização por aplicação no UE: especificação
 
-**MVP:** MVP-8 · **Data:** 20 de outubro de 2026 · **Estado:** fases (a) e (b) aprovadas pelo responsável em 20/10/2026, com os pontos U1 a U12 como propostos. A fase (a) está implementada e verificada (20/10/2026). A fase (b) está implementada e verificada (21/10/2026): a implementação e as diferenças em relação a este texto estão na seção 3.8, e a verificação, com 115 verificações e nenhuma falha, na seção 3.9. A fase (c), DTLS, foi aprovada pelo responsável em 21/10/2026, com os pontos U13 a U21 como propostos, e está implementada e verificada (22/10/2026): a implementação está na seção 4.7, e a verificação, com 126 verificações e nenhuma falha, na seção 4.8. A fase (d), OSCORE, está especificada na seção 7, com os pontos U22 a U35 a aprovar.
+**MVP:** MVP-8 · **Data:** 20 de outubro de 2026 · **Estado:** fases (a) e (b) aprovadas pelo responsável em 20/10/2026, com os pontos U1 a U12 como propostos. A fase (a) está implementada e verificada (20/10/2026). A fase (b) está implementada e verificada (21/10/2026): a implementação e as diferenças em relação a este texto estão na seção 3.8, e a verificação, com 115 verificações e nenhuma falha, na seção 3.9. A fase (c), DTLS, foi aprovada pelo responsável em 21/10/2026, com os pontos U13 a U21 como propostos, e está implementada e verificada (22/10/2026): a implementação está na seção 4.7, e a verificação, com 126 verificações e nenhuma falha, na seção 4.8. A fase (d), OSCORE, foi aprovada pelo responsável em 22/10/2026, com os pontos U22 a U35 como propostos, e está implementada e verificada (22/10/2026): a implementação está na seção 7.11, e a verificação, com 141 verificações e nenhuma falha, na seção 7.12.
 
 Decisões já tomadas pelo responsável em 20/10/2026 (plano, MVP-8):
 
@@ -493,7 +493,7 @@ O `e2e.sh` ganha o passo R2d, com o UE no seu *namespace*, e um grupo D na máqu
 | U20 | *Connection ID* | não | `[MVP]` RFC 9147 §9 o deixa opcional. O endereço do UE não muda durante a sessão PDU; se o mapeamento do NAT do N6 expirar, um novo *handshake* retomado pelo *ticket* resolve |
 | U21 | Conferência independente | compilar à parte, só para o teste, o OpenSSL 4.1 (a versão final, se já tiver saído; senão a *beta* mais nova), que traz o DTLS 1.3, e usar o `s_client -dtls1_3 -psk` contra o AF, como o T05 fez com o TLS 1.3. Não vai para o repositório nem para o guia | o OpenSSL 3.0 da VM do AF não tem DTLS 1.3, e nenhum deles tem `D0 01` no DTLS 1.2: o DTLS 1.2 fica sem conferência independente |
 
-**Fase (d), OSCORE** (a aprovar):
+**Fase (d), OSCORE** (aprovados pelo responsável em 22/10/2026, como propostos):
 
 | Nº | Ponto | Proposta | Base |
 |---|---|---|---|
@@ -510,7 +510,7 @@ O `e2e.sh` ganha o passo R2d, com o UE no seu *namespace*, e um grupo D na máqu
 | U32 | Renovação | Apêndice B.2 da RFC 8613, com o UE iniciando (`-rekey`) e o AF respondendo; R1, R2 e R3 de 8 octetos; o AF não inicia. Alternativa: o AF também inicia | `[3GPP]` D.3.4 permite aos dois lados (*"allows"*). `[MVP]` o AF não inicia: não há o que o leve a renovar antes da K_AF vencer |
 | U33 | Pilha | Go próprio: `af/cbor` e `af/oscore` (Apache-2.0), AES-CCM sobre o `crypto/aes`, conferidos com os vetores de RFC 3610, RFC 8613 e RFC 8949; sem wolfSSL. Alternativas: a libcoap pela cgo; bibliotecas Go de terceiros para CBOR e CCM | o Go não tem AES-CCM; o `af/coap` da fase (c) já é a base; o perfil fica fora da GPLv3 |
 | U34 | Conferência independente | libcoap 4.3.5b compilada à parte, só para o teste, com o contexto calculado em Python (seção 7.9); fora do repositório; pulada sem `LIBCOAP_CLIENT` | como a U21 |
-| U35 | Defeitos do Anexo D | registrar os itens 1 a 5 da seção 7.2 no `registro-de-defeitos-3gpp.md`, fora do repositório | — |
+| U35 | Defeitos do Anexo D | registrar os itens 1 a 5 da seção 7.2 em `docs/defects/registro-de-defeitos-3gpp.md` (D-J a D-N) | — |
 
 ## 6. Arquivos previstos
 
@@ -544,7 +544,7 @@ O `e2e.sh` ganha o passo R2d, com o UE no seu *namespace*, e um grupo D na máqu
 
 ## 7. Fase (d): OSCORE
 
-**Estado (22/10/2026):** **especificada, a aprovar** (pontos U22 a U35, seção 5).
+**Estado (22/10/2026):** **aprovada** pelo responsável, com os pontos U22 a U35 como propostos (seção 5). **Implementada e verificada** (seções 7.11 e 7.12).
 
 ### 7.1 Situação normativa
 
@@ -582,7 +582,7 @@ O `e2e.sh` ganha o passo R2d, com o UE no seu *namespace*, e um grupo D na máqu
 6. Não há respostas de erro, nem no Anexo D nem no Anexo P. Ponto U30.
 7. Editoriais do Anexo P: P.2.4 cita a *"RFC 6813"* (o OSCORE é a RFC 8613); P.3.5 chama a resposta de *"Request Payload"* e repete os campos do pedido, o que o Anexo D corrige.
 
-Os itens 1 a 5 podem entrar no `registro-de-defeitos-3gpp.md` do responsável, fora do repositório (ponto U35).
+Os itens 1 a 5 estão em `docs/defects/registro-de-defeitos-3gpp.md`, como D-J a D-N (ponto U35).
 
 ### 7.3 Procedimento
 
@@ -681,3 +681,52 @@ Assim o estabelecimento (CBOR e HKDF) é conferido por um código que não é o 
 | logs | nenhuma chave |
 
 O `e2e.sh` ganha o passo R2o, com o UE no seu *namespace*, e um grupo O na máquina do AF.
+
+### 7.11 Implementação (22/10/2026)
+
+**Componentes.**
+
+| Componente | Conteúdo |
+|---|---|
+| `af/cbor` (novo) | o subconjunto de RFC 8949 da seção 7.8; a leitura aceita argumentos mais longos que o necessário e recusa comprimentos indefinidos, *tags*, números de ponto flutuante e chaves repetidas |
+| `af/oscore` (novo) | `ccm.go` (AES-CCM, RFC 3610); `context.go` (contexto, *nonce*, AAD, janela); `message.go` (opção OSCORE, proteção e verificação); `server.go` (contextos por *Recipient ID*, limites, Apêndice B.2 do lado do servidor); `client.go` (cliente e Apêndice B.2 do lado do cliente) |
+| `af/akmaoscore` (novo) | os *payloads* de D.3.5, o A-KID em CBOR (U25), o OSC-INP (U29), o *Master Secret* (U26) e o contexto (U27) |
+| `af/coap` | `AppendOptions` e `ParseOptions`, que o texto em claro do OSCORE usa; servidor UDP com uma fila e um `Responder` por endereço de origem |
+| `af/akmatls` | perfil `oscore` e identificador `01 00 00 00 08` |
+| `af/af` | perfil `oscore` sem a *tag* `wolfssl`: `POST /akma` (`server.AKMA`), pedidos protegidos (`server.CoAP`), contextos removidos a cada 10 s quando vencem ou ficam pendentes |
+| `af/ue/uaclient` | `-profile oscore`, `-rekey`; um novo `POST /akma` quando o AF responde `4.01` sem proteção |
+| `af/scripts/oscore-check.py` (novo) | a conferência independente da seção 7.9 |
+| políticas | AF_ID `af1.akma.example.0100000008` no AAnF, no NEF (`0002`) e no UE (`0005`) |
+
+**Testes de unidade.** Os 24 vetores de RFC 3610 (*tags* de 8 e de 10 octetos); os vetores C.1 a C.8 de RFC 8613 (derivação, pedidos e respostas, com e sem *Partial IV*); os exemplos de RFC 8949 Apêndice A que o pacote aceita, e a recusa dos outros; a janela contra repetição; o Apêndice B.2 e a repetição sobre UDP; os *payloads* do Anexo D, com MNC de dois e de três dígitos; o *Master Secret* conferido contra as duas etapas de RFC 5869; o perfil do AF com o `uaclient`: renovação, `-reconnect`, A-KID desconhecido, K_AF de outro AF_ID e vencimento com `refetch`. Com `LIBCOAP_CLIENT`, `TestLibcoapClient` usa a conferência independente contra o AF.
+
+**Conferência independente (U34).** A libcoap 4.3.5b, baixada da *tag* (`383a17d8466cee7c1cb1d4dfbffad2651004850b29eb590e9591c7bedd46741d`, calculado em 22/10/2026: o GitHub não publica o *hash* do arquivo da *tag*), foi compilada no diretório temporário de trabalho, fora do repositório:
+
+- a máquina do AF não tem CMake nem *autotools*: o CMake 3.31.6 veio do próprio Kitware, conferido pelo arquivo SHA-256 da versão;
+- a máquina não tem compilador C++, e a libcoap só o declara em `project()`: a cópia de trabalho do `CMakeLists.txt` passou a declarar só C;
+- a libcoap 4.3.5b usa a API ENGINE, que o OpenSSL 4 retirou. Ela foi ligada ao OpenSSL 3.0.13 da máquina (`libssl.so.3`), como a seção 7.9 previa; os cabeçalhos, que a máquina não tem, vieram do código-fonte da mesma versão (SHA-256 `88525753…cae313`, o do arquivo `.sha256` da versão), sem compilar a biblioteca.
+
+**Diferenças em relação ao texto aprovado.**
+
+1. `[MVP]` **Recurso de sessão sem OSCORE.** Um `GET /ua/v1/session` sem a opção OSCORE recebe `4.01` com a causa `OSCORE_REQUIRED`.
+2. `[MVP]` **R2 do Apêndice B.2.** Cada A-KID guarda no máximo 4 R2 ainda não usados, e eles valem 60 s, como os contextos pendentes.
+3. **Log da renovação.** O AF registra cada renovação (*"renewed (RFC 8613 Appendix B.2), ID Context …"*), para o roteiro conferir do lado do AF.
+4. **Erros do `/akma`.** As causas do diagnóstico são as dos outros perfis, mais `OSC_INP_NOT_SUPPORTED` (OSC-INP recusado) e `UNSUPPORTED_CONTENT_FORMAT` (`4.15`).
+
+### 7.12 Verificação (22/10/2026)
+
+`e2e.sh` com **141 verificações e nenhuma falha** (execução `20261022-201824`; `e2e.md` §5.6), com `OPENSSL_DTLS13` e `LIBCOAP_CLIENT`. Os casos da seção 7.10:
+
+| Caso | Resultado |
+|---|---|
+| UE → AF por OSCORE | atendido: do UE, pelo plano de usuário, `POST /akma` e dois pedidos protegidos no mesmo contexto, AF_ID `…0100000008` [R2o.oscore]; no AF, quatro contextos e uma só consulta ao AAnF para as quatro [O01] |
+| segundo pedido no mesmo contexto | atendido: sem novo `POST` nem nova consulta [R2o.oscore, O01, O02] |
+| renovação (B.2) | atendido: duas renovações, com *ID Context* de 16 octetos, vistas do UE e do AF [R2o.rekey, O03] |
+| pedido repetido | atendido nos testes de unidade (`TestReplayOverUDP`: `4.01` *"Replay detected"*). O roteiro não monta esse caso |
+| K_AF errada no UE | atendido: `4.00` *"Decryption failed"* [O07] |
+| A-KID desconhecido; AF_ID fora da política | atendido: `4.03 AKMA_KEY_NOT_AVAILABLE` [O06, O06b]. O AF_ID fora da política segue o caminho do PSK TLS [T10] |
+| OSC-INP com outro algoritmo | atendido: `4.00 OSC_INP_NOT_SUPPORTED` [O05] |
+| K_AF vencida, `refetch` e `reject` | atendido: contexto removido no vencimento [O08]; com `refetch`, novo `POST` e segunda consulta ao AAnF [O09]; com `reject`, `4.03 KAF_EXPIRED` [O10]. No mesmo cliente, o `4.01` e o novo `POST` automáticos estão em `TestOSCOREExpiry` |
+| vetores | atendido: RFC 3610, RFC 8613 Apêndice C e RFC 8949 Apêndice A (seção 7.11) |
+| conferência independente | atendido: `coap-client` da libcoap 4.3.5b, com o pedido e o contexto calculados por `oscore-check.py`, recebe `2.05` com o A-KID [O04] |
+| logs | atendido: nenhuma cadeia de 64 hexadecimais [L1, R7]. O arquivo de configuração da libcoap, que tem o *Master Secret*, é apagado depois do uso |

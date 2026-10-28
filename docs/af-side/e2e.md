@@ -1,6 +1,6 @@
 # Ponta a ponta e testes negativos (MVP-5 a MVP-8)
 
-**Data:** 18 de outubro de 2026; MVP-6 em 19 de outubro de 2026; MVP-8 de 20 a 22 de outubro de 2026 · **Resultado do MVP-8, fase (c):** 126 verificações, nenhuma falha (execução `20261022-124514`, seção 5.5) · **Fase (b):** 115 verificações, nenhuma falha (execução `20261021-164401`, seção 5.4) · **Resultado do MVP-6:** 83 verificações, nenhuma falha (execução `20261019-213720`, seção 5.2) · **MVP-5:** 63 verificações, nenhuma falha (execução `20261018-171510`) · **Instalação limpa:** 63 verificações, nenhuma falha, em 19 de outubro de 2026 (execução `20261019-160723`, seção 5.1)
+**Data:** 18 de outubro de 2026; MVP-6 em 19 de outubro de 2026; MVP-8 de 20 a 22 de outubro de 2026 · **Resultado do MVP-8, fase (d):** 141 verificações, nenhuma falha (execução `20261022-201824`, seção 5.6) · **Fase (c):** 126 verificações, nenhuma falha (execução `20261022-124514`, seção 5.5) · **Fase (b):** 115 verificações, nenhuma falha (execução `20261021-164401`, seção 5.4) · **Resultado do MVP-6:** 83 verificações, nenhuma falha (execução `20261019-213720`, seção 5.2) · **MVP-5:** 63 verificações, nenhuma falha (execução `20261018-171510`) · **Instalação limpa:** 63 verificações, nenhuma falha, em 19 de outubro de 2026 (execução `20261019-160723`, seção 5.1)
 
 ## 1. O que o roteiro faz
 
@@ -26,7 +26,9 @@ As duas máquinas se sincronizam por arquivos-marcadores em três pontos (A, B, 
 | R2k | free5GC | MVP-8, fase (a): serviço de chaves do ME (TS 33.535 §4.4.3). O `uaclient` recebeu a K_AF do seu AF_ID; outro AF_ID, outro usuário e o `akma-kaf` do `nr-cli` são recusados; a configuração com um AF_ID em duas aplicações não sobe |
 | R2t | free5GC | MVP-8, fase (b): Ua\* do UE pelos perfis TLS, com a K_AF do ME para o AF_ID de cada perfil e *cipher suite*. K.2 em TLS 1.3 (duas conexões, a segunda retomada) e em TLS 1.2; PSK TLS 1.3 e PSK TLS 1.2, duas conexões cada; `ClientHello` só com `psk_ke` recusado |
 | R2d | free5GC | MVP-8, fase (c): Ua\* do UE pelos perfis DTLS, com CoAP: DTLS 1.3 com o AF_ID `…0100000009` e DTLS 1.2 com `…010001D001`, duas associações cada, a segunda retomada; `ClientHello` só com `psk_ke` recusado |
+| R2o | free5GC | MVP-8, fase (d): Ua\* do UE pelo OSCORE: `POST /akma` em CBOR e dois pedidos protegidos no mesmo contexto, AF_ID `…0100000008`; contexto renovado pelo Apêndice B.2 da RFC 8613 antes de cada pedido; um `POST` novo para cada pedido |
 | D (ponto A) | AF | MVP-8, fase (c): o que o AF viu do R2d; DTLS 1.3 com o `openssl s_client` do OpenSSL 4.1 no papel do UE, mandando o GET em CoAP (com `OPENSSL_DTLS13`; sem ela, pulada); A-KID desconhecido e K_AF de outro AF_ID recusados |
+| O (ponto A) | AF | MVP-8, fase (d): o que o AF viu do R2o (quatro contextos, uma consulta ao AAnF, seis pedidos atendidos, duas renovações); o `coap-client` da libcoap no papel do UE, com o pedido e o contexto calculados por `af/scripts/oscore-check.py` (com `LIBCOAP_CLIENT`; sem ela, puladas); OSC-INP com outro algoritmo, A-KID desconhecido e K_AF de outro AF_ID recusados; vencimento da K_AF com `refetch` e `reject`, nos AF de relógio adiantado |
 | T (ponto A) | AF | MVP-8, fase (b): o que o AF viu do R2t (AF_ID de cada *cipher suite*; retomadas); PSK TLS 1.3 com o `openssl s_client` no papel do UE; recusas (K_AF de outro AF_ID, A-KID desconhecido, `psk_ke`, certificado de outro FQDN, AF_ID fora da política do AAnF); expiração da K_AF numa sessão TLS, com as políticas `refetch` e `reject` |
 | R2n | free5GC | MVP-6: Ua\* do UE com os três AF extras; o AAnF entrega via NEF; o NEF repassa a K_AF e não registra o SUPI. MVP-8: Ua\* por PSK TLS 1.3 com um quarto AF extra, externo, na porta 8456 |
 | R3 | free5GC | nova autenticação: A-KID novo, contexto substituído, Ua\* com o novo; Ua\* com o A-KID e a K_AF anteriores, ainda aceitos pelo AF até `expiry` |
@@ -46,7 +48,7 @@ Na máquina do free5GC, as partes 3 a 7 do tutorial, isto é:
 - o AAnF implantado (`bin/aanf`, `config/aanfcfg.yaml`) e o `seed` em `~/akma-tools/`;
 - o UERANSIM com os *patches*, o `linkIp: 10.100.0.1` do gNB e o `uaclient` em `~/akma-free5gc/af/build/bin/`.
 
-Na máquina do AF: `af/scripts/build-wolfssl.sh`, `af/scripts/make-test-ca.sh`, `af/scripts/build-af.sh` e `free5gc/scripts/build-aanf.sh`; o `openssl` (o grupo T o usa como UE independente); opcionalmente, um OpenSSL 4.1 compilado à parte para o D03 (seção 3); acesso SSH por chave à máquina do free5GC; e o `af/config/afcfg.yaml` com o `aanfUri` do AAnF da máquina do free5GC.
+Na máquina do AF: `af/scripts/build-wolfssl.sh`, `af/scripts/make-test-ca.sh`, `af/scripts/build-af.sh` e `free5gc/scripts/build-aanf.sh`; o `openssl` (o grupo T o usa como UE independente); opcionalmente, um OpenSSL 4.1 compilado à parte para o D03 e a libcoap para O04 e O05 (seção 3); acesso SSH por chave à máquina do free5GC; e o `af/config/afcfg.yaml` com o `aanfUri` do AAnF da máquina do free5GC.
 
 O roteiro sobe o AF com os perfis de `afcfg.yaml` e acrescenta o perfil de teste `digest-http` na porta 8080, que os grupos R2, N, R3 a R5 usam. Ele copia a CA de teste para a máquina do free5GC a cada execução. As políticas do AAnF, do NEF e do UE precisam dos AF_IDs dos perfis (`docs/af-side/af.md` §3).
 
@@ -82,6 +84,46 @@ O roteiro recebe o binário em `OPENSSL_DTLS13`. Sem ele, o D03 aparece como pul
 
 ```bash
 OPENSSL_DTLS13=$HOME/openssl41/install/bin/openssl af/scripts/e2e.sh woca@192.168.16.130
+```
+
+As verificações O04 e O05 usam o `coap-client` da libcoap, com OSCORE, no papel do UE. A versão conferida é a 4.3.5b, ligada ao OpenSSL 3.0 do Ubuntu 24.04. Sem CMake, sem compilador C++ e sem os cabeçalhos do OpenSSL na máquina, os passos são estes (`ua-star-norma.md` §7.11):
+
+```bash
+mkdir -p ~/libcoap && cd ~/libcoap && wget https://github.com/Kitware/CMake/releases/download/v3.31.6/cmake-3.31.6-linux-x86_64.tar.gz https://github.com/Kitware/CMake/releases/download/v3.31.6/cmake-3.31.6-SHA-256.txt
+```
+
+```bash
+grep " cmake-3.31.6-linux-x86_64.tar.gz$" cmake-3.31.6-SHA-256.txt | sha256sum -c - && tar -xzf cmake-3.31.6-linux-x86_64.tar.gz
+```
+
+```bash
+wget https://github.com/openssl/openssl/releases/download/openssl-3.0.13/openssl-3.0.13.tar.gz && echo "88525753f79d3bec27d2fa7c66aa0b92b3aa9498dafd93d7cfa4b3780cdae313  openssl-3.0.13.tar.gz" | sha256sum -c -
+```
+
+```bash
+tar -xzf openssl-3.0.13.tar.gz && (cd openssl-3.0.13 && ./Configure --prefix=/usr --libdir=lib/x86_64-linux-gnu linux-x86_64 && make build_generated)
+```
+
+```bash
+wget -O libcoap-4.3.5b.tar.gz https://github.com/obgm/libcoap/archive/refs/tags/v4.3.5b.tar.gz && echo "383a17d8466cee7c1cb1d4dfbffad2651004850b29eb590e9591c7bedd46741d  libcoap-4.3.5b.tar.gz" | sha256sum -c -
+```
+
+```bash
+tar -xzf libcoap-4.3.5b.tar.gz && cd libcoap-4.3.5b && sed -i 's/  LANGUAGES CXX C)/  LANGUAGES C)/; s/CXX_COMPILER_ID/C_COMPILER_ID/g' CMakeLists.txt
+```
+
+```bash
+../cmake-3.31.6-linux-x86_64/bin/cmake -S . -B build -DDTLS_BACKEND=openssl -DOPENSSL_INCLUDE_DIR=$HOME/libcoap/openssl-3.0.13/include -DOPENSSL_SSL_LIBRARY=/usr/lib/x86_64-linux-gnu/libssl.so.3 -DOPENSSL_CRYPTO_LIBRARY=/usr/lib/x86_64-linux-gnu/libcrypto.so.3 -DENABLE_DOCS=OFF -DENABLE_OSCORE=ON -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=$HOME/libcoap/install
+```
+
+```bash
+../cmake-3.31.6-linux-x86_64/bin/cmake --build build -j"$(nproc)" && ../cmake-3.31.6-linux-x86_64/bin/cmake --install build
+```
+
+O roteiro recebe o `coap-client` em `LIBCOAP_CLIENT`, ao lado do `OPENSSL_DTLS13`. Sem ele, O04 e O05 aparecem como pulados:
+
+```bash
+OPENSSL_DTLS13=$HOME/openssl41/install/bin/openssl LIBCOAP_CLIENT=$HOME/libcoap/install/bin/coap-client af/scripts/e2e.sh woca@192.168.16.130
 ```
 
 Os endereços vêm de duas configurações:
@@ -238,6 +280,13 @@ O teste com o UERANSIM em outra máquina (critério 6) está em `docs/af-side/te
 - **Execuções anteriores.**
   - **`20261021-183854` (124/2).** T11: o texto do log do AF no vencimento da K_AF passou a dizer o protocolo (`TLS 1.3 session`), e o roteiro ainda procurava o texto antigo. D03: o segundo `ClientHello` do OpenSSL 4.1, com 1702 octetos, passava do que o wolfSSL lê por padrão com o MTU de 1200 (`ua-star-norma.md` §4.7). O `build-wolfssl.sh` passou a compilar a biblioteca com uma leitura maior.
   - **`20261022-120810` (125/1).** D03 de novo: o AF ainda tinha a biblioteca antiga, porque o Go reaproveitou o binário já ligado (`ua-star-norma.md` §4.7). O `build-af.sh` passou a compilar o *hash* da biblioteca dentro de `af/wolftls`, e o `uaclient` da máquina do free5GC foi trocado pelo compilado de novo.
+
+### 5.6 MVP-8, fase (d), em 22/10/2026
+
+`141 passed, 0 failed, 0 skipped` na execução `20261022-201824`: 60 verificações na máquina do free5GC e 81 na do AF, em cerca de três minutos. Com o `OPENSSL_DTLS13` da seção 5.5 e o `coap-client` da libcoap 4.3.5b em `LIBCOAP_CLIENT` (seção 3). Antes da execução, a máquina do free5GC passou a ter o AF_ID `…0100000008` na política do AAnF, na do NEF (*patch* de configuração `0002`) e na do UE (*patch* `0005`); as cópias anteriores ficaram em `~/akma-mvp8c-*` e `aanfcfg.yaml.mvp8c`.
+
+- **Verificações novas.** As quatro do R2o e as onze do grupo O (seção 1). Os casos e o resultado de cada um estão em `ua-star-norma.md` §7.12.
+- **Execução anterior, `20261022-201455` (140/1).** O O10 falhou por causa do roteiro: a saída do cliente tem duas linhas, e o `grep` da verificação procura linha por linha. O AF respondeu o esperado, `4.03 KAF_EXPIRED`. A verificação passou a juntar as linhas.
 
 ## 6. Limitações
 

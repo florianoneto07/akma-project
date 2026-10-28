@@ -1,12 +1,12 @@
 # AF de teste
 
-**MVP:** MVP-3; perfis TLS no MVP-8 · **Data:** 18 de outubro de 2026; perfis em 21/10/2026 · **Verificado** contra o AAnF da VM do free5GC em 18/10/2026 (`teste-af.md`) e, com os perfis TLS, no `e2e.sh` (`e2e.md`)
+**MVP:** MVP-3; perfis TLS, DTLS e OSCORE no MVP-8 · **Data:** 18 de outubro de 2026; perfis de 21 a 22/10/2026 · **Verificado** contra o AAnF da VM do free5GC em 18/10/2026 (`teste-af.md`) e, com os perfis TLS, no `e2e.sh` (`e2e.md`)
 
 ## 1. O que o AF faz
 
 `[3GPP]` TS 33.535 §6.2.1: o AF recebe do UE o A-KID na requisição de estabelecimento de sessão (passo 1). Se não tem contexto ativo para aquele A-KID, pede a K_AF ao AAnF com `Naanf_AKMA_ApplicationKey_Get`, enviando o A-KID e o próprio AF_ID (passo 2). Com a K_AF, responde ao UE (passo 9).
 
-O AF serve os perfis de TS 24.109 Anexo K, cada um na sua porta (`ua-star-norma.md` §3):
+O AF serve os perfis de TS 24.109 Anexo K e de TS 33.535 Anexos C e D, cada um na sua porta (`ua-star-norma.md` §3, §4 e §7):
 
 | Perfil | Como o UE se autentica | AF_ID pedido ao AAnF |
 |---|---|---|
@@ -15,11 +15,14 @@ O AF serve os perfis de TS 24.109 Anexo K, cada um na sua porta (`ua-star-norma.
 | `psk-tls12` (K.3.2) | TLS 1.2 `ECDHE-PSK` com a K_AF, *hint* `3GPP-AKMA` | `<FQDN>.010001D001` |
 | `psk-dtls13` (TS 33.535 Anexo C) | DTLS 1.3 com a K_AF como PSK externa, `psk_dhe_ke`, *cookie* no `HelloRetryRequest`; CoAP `GET` dentro | `<FQDN>.0100000009` |
 | `psk-dtls12` | DTLS 1.2 `ECDHE-PSK` com a K_AF, `HelloVerifyRequest`; CoAP dentro | `<FQDN>.010001D001` |
+| `oscore` (TS 33.535 Anexo D) | `POST /akma` em CBOR, depois pedidos CoAP protegidos pelo OSCORE com o contexto derivado da K_AF | `<FQDN>.0100000008` |
 | `digest-http` (teste, desligado por padrão) | o Ua\* simplificado de `ua-star.md`, sem TLS | `<FQDN>.<uaStarId>` |
 
 Nos perfis DTLS, o AF responde em CoAP (RFC 7252): `GET coaps://<FQDN>/ua/v1/session` recebe `2.05 Content` com o mesmo JSON dos perfis TLS (`ua-star-norma.md` §4.2). O AF só pede a K_AF ao AAnF depois do *cookie* (U16).
 
-Os perfis PSK precisam do AF compilado com o wolfSSL (`af/scripts/build-wolfssl.sh` antes de `build-af.sh`); o binário fica sob GPLv3. Sem ele, o AF recusa partir com um perfil PSK na configuração.
+No perfil OSCORE, o AF responde ao `POST coap://<FQDN>/akma` com `2.01 Created`, N2 e UE-SID, e guarda o contexto, pendente até o primeiro pedido protegido. O `GET` protegido de `/ua/v1/session` recebe o mesmo JSON. O contexto é removido quando a K_AF vence (`ua-star-norma.md` §7.6).
+
+Os perfis PSK precisam do AF compilado com o wolfSSL (`af/scripts/build-wolfssl.sh` antes de `build-af.sh`); o binário fica sob GPLv3. Sem ele, o AF recusa partir com um perfil PSK na configuração. O perfil OSCORE não precisa do wolfSSL.
 
 Nos perfis Digest:
 
@@ -67,14 +70,14 @@ Os campos e os padrões estão em `ua-star.md` §11; os perfis, em `ua-star-norm
 | Campo | Valor |
 |---|---|
 | `fqdn` | `af1.akma.example` |
-| `profiles` | `digest-tls` em `192.168.16.129:8443`, com `certificate` e `key` de `make-test-ca.sh`; `psk-tls13` em `:8444`; `psk-tls12` em `:8445`; `psk-dtls13` em UDP `:5684`; `psk-dtls12` em UDP `:5685`. O `digest-http` em `:8080` fica comentado: o `e2e.sh` o acrescenta |
+| `profiles` | `digest-tls` em `192.168.16.129:8443`, com `certificate` e `key` de `make-test-ca.sh`; `psk-tls13` em `:8444`; `psk-tls12` em `:8445`; `psk-dtls13` em UDP `:5684`; `psk-dtls12` em UDP `:5685`; `oscore` em UDP `:5683`. O `digest-http` em `:8080` fica comentado: o `e2e.sh` o acrescenta |
 | `uaStarId` | `FF00000001`, só do `digest-http` |
 | `kafExpiry` | `refetch` |
 | `aanfUri` | `http://192.168.16.130:8010` |
 
 Sem `profiles`, o `listen` de antes vale como um perfil `digest-http`. Com `profiles`, `listen` não pode aparecer.
 
-Cada AF_ID dos perfis precisa estar em `akma.authorizedAfs` do `aanfcfg.yaml`, com o endereço do AF (`docs/free5gc-side/aanf.md` §2): `af1.akma.example.` mais `0100011301`, `0100011302`, `0100011303`, `010001C02B` e `010001C02C` (K.2 com certificado ECDSA), `0100000007`, `010001D001`, `0100000009` e `FF00000001`. O mesmo vale para a política do NEF e para a do UE.
+Cada AF_ID dos perfis precisa estar em `akma.authorizedAfs` do `aanfcfg.yaml`, com o endereço do AF (`docs/free5gc-side/aanf.md` §2): `af1.akma.example.` mais `0100011301`, `0100011302`, `0100011303`, `010001C02B` e `010001C02C` (K.2 com certificado ECDSA), `0100000007`, `010001D001`, `0100000009`, `0100000008` e `FF00000001`. O mesmo vale para a política do NEF e para a do UE.
 
 **AF fora da rede do operador (MVP-6).** Com `nefUri` no lugar de `aanfUri`, o AF pede a K_AF ao NEF (`POST {nefUri}/3gpp-akma/v1/retrieve`, TS 29.522 §4.4.23.2; TS 33.535 §6.3). Especificação: `docs/free5gc-side/nef.md`.
 

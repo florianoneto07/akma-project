@@ -89,6 +89,7 @@ akmaKeyService:
         - af1.akma.example.0100000007   # TLS 1.3 com a K_AF como PSK (K.3.3)
         - af1.akma.example.010001D001   # (D)TLS 1.2 com a K_AF como PSK (K.3.2)
         - af1.akma.example.0100000009   # DTLS 1.3 com a K_AF como PSK (TS 33.535 Anexo C)
+        - af1.akma.example.0100000008   # OSCORE com o contexto da K_AF (TS 33.535 Anexo D)
         - af1.akma.example.FF00000001   # Ua* simplificado, teste
 akmaCliKaf: false
 ```

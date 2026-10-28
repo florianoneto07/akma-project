@@ -1,7 +1,7 @@
 # Matriz de rastreabilidade
 
-**Revisão:** 7 (MVP-8, fase (c): perfis DTLS do Ua\*). Revisão 6 (MVP-8, fases (a) e (b)): serviço de chaves do ME e perfis TLS do Ua\*. Revisão 5 (MVP-6): K_AF via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina. Revisão 4 (MVP-5): etapas mínimas do fluxo ligadas a evidências do roteiro ponta a ponta
-**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 a 3.7 e 4 em 18 de outubro de 2026; revisão 5 em 19 de outubro de 2026; revisões 6 e 7 em 21 de outubro de 2026
+**Revisão:** 8 (MVP-8, fase (d): perfil OSCORE do Ua\*). Revisão 7 (MVP-8, fase (c)): perfis DTLS do Ua\*. Revisão 6 (MVP-8, fases (a) e (b)): serviço de chaves do ME e perfis TLS do Ua\*. Revisão 5 (MVP-6): K_AF via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina. Revisão 4 (MVP-5): etapas mínimas do fluxo ligadas a evidências do roteiro ponta a ponta
+**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 a 3.7 e 4 em 18 de outubro de 2026; revisão 5 em 19 de outubro de 2026; revisões 6 e 7 em 21 de outubro de 2026; revisão 8 em 22 de outubro de 2026
 
 *Nota (16/10/2026):* os caminhos da coluna "Implementação" seguem a estrutura anterior ao plano. A estrutura aprovada (plano §3) é: `akma/` → `shared/akma/`; `NFs/aanf/` → `free5gc/aanf/`; `patches/` → `free5gc/patches/`; `af/` → `af/af/`; `ue/` → `af/ue/`. Os caminhos serão atualizados linha a linha à medida que cada MVP os criar. Os desvios citados como DV-n estão em `docs/conformidade/desvios.md`.
 
@@ -101,6 +101,22 @@ Evidências: verificações R2d (máquina do free5GC) e D (máquina do AF) da ex
 | CoAP dentro do DTLS: `GET` da sessão, `2.05` em JSON | RFC 7252 3, 4.2, 5.2.1 | `af/coap`; `server.CoAP` | [R2d], [D03]; `TestCoAPHandler`, testes de `af/coap` | **Verificado** — `[LACUNA]` U14 |
 | Conferência independente do DTLS 1.3 | — | OpenSSL 4.1 *beta* 2, fora do repositório | [D03]; `TestOpenSSLDTLS13Client` | **Verificado** (U21) |
 | Retomada; K_AF vencida | 33.222 5.4.1.4; 33.535 6.4.2 | *tickets* do `af/wolftls`; `Expired` | [R2d.dtls12-resumed], [D01]; `TestDTLSResumption`, `TestDTLSExpiry`, `TestPSKExpiry` | **Verificado** (U19) |
+
+## Perfil OSCORE do MVP-8 e evidências (revisão 8)
+
+Evidências: verificações R2o (máquina do free5GC) e O (máquina do AF) da execução `20261022-201824` de `af/scripts/e2e.sh`, com 141 verificações e nenhuma falha (`docs/af-side/e2e.md` §5.6), e testes de `af/oscore`, `af/cbor`, `af/akmaoscore`, `af/coap`, `af/af/internal/server` e `af/af/internal/profile`. Especificação: `docs/af-side/ua-star-norma.md` §7.
+
+| Etapa | Cláusula | Implementação | Evidência | Estado |
+|---|---|---|---|---|
+| UE como cliente CoAP; `POST /akma` com A-KID, N1 e AF-SID em CBOR | 33.535 D.2.2, D.3.2 passo 1, D.3.5 | `af/akmaoscore`, `af/ue/uaclient` (`oscore`) | [R2o.oscore], [O01]; `TestRequest` | **Verificado** — `[LACUNA]` U24, U25 |
+| AF pede a K_AF ao AAnF e responde `2.01` com N2 e UE-SID | 33.535 D.3.2 passos 2 e 3; 6.2 | `server.AKMA` | [O01], [O06], [O06b]; `TestOSCORE`, `TestOSCOREErrors` | **Verificado** — `[LACUNA]` U30 |
+| Identificador Ua\* do OSCORE `01 00 00 00 08` | 33.220 H.3; 33.535 A.4 | `af/akmatls` (`UaStarOSCORE`); políticas | [O01], [R2o.me] | **Verificado** — `[INTERPRETAÇÃO]` U22 |
+| Contexto OSCORE: *Master Secret* = HKDF(K_AF, "AKMA-OSCORE"), *Master Salt* = pedido ‖ resposta, *Sender IDs* | 33.535 D.3.3; 33.220 P.3.3 | `akmaoscore.MasterSecret`, `akmaoscore.Context` | [O04]; `TestMasterSecret`, `TestContexts` | **Verificado** — `[LACUNA]` U26, `[INTERPRETAÇÃO]` U27 |
+| OSCORE: AES-CCM-16-64-128, HKDF SHA-256, proteção, janela contra repetição | 33.220 P.2.4; RFC 8613 | `af/oscore` | [R2o.oscore], [O02], [O07]; vetores de RFC 3610 e RFC 8613 Apêndice C; `TestReplayOverUDP` | **Verificado** (U33) |
+| Renovação do contexto | 33.535 D.3.4; RFC 8613 B.2 | `oscore.Client.Renew`, `oscore.Server` | [R2o.rekey], [O03]; `TestClientServer` | **Verificado** (U32) |
+| OSC-INP só com os valores padrão | 33.535 D.3.5; RFC 9203 3.2.1 | `akmaoscore.ParseRequest` | [O05]; `TestRequestRefused` | **Verificado** — `[LACUNA]` U29 |
+| K_AF vencida, `refetch` e `reject` | 33.535 6.4.2 | `oscore.Server` (expiração), `keyCache` | [O08], [O09], [O10]; `TestOSCOREExpiry` | **Verificado** (U31) |
+| Conferência independente do OSCORE | — | libcoap 4.3.5b e `oscore-check.py`, fora do código do AF | [O04]; `TestLibcoapClient` | **Verificado** (U34) |
 
 ## Derivação criptográfica
 
