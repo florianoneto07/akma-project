@@ -5,7 +5,7 @@
 
 Cada item registra a inconsistência, as fontes que a evidenciam, a decisão adotada pelo projeto e o grupo de trabalho responsável.
 
-**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio. 28 de outubro de 2026 — D-B: especificação do MVP-12 aprovada. Estes defeitos são a base das recomendações à 3GPP da V2 do repositório público (plano, MVP-13). Na implementação do MVP-12, D-B implementado (DV-12) e D-O e D-P acrescentados, de TS 29.503.
+**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio. 28 de outubro de 2026 — D-B: especificação do MVP-12 aprovada. Estes defeitos são a base das recomendações à 3GPP da V2 do repositório público (plano, MVP-13). Na implementação do MVP-12, D-B implementado (DV-12) e D-O e D-P acrescentados, de TS 29.503. No MVP-13: todos os itens conferidos nas versões mais recentes das normas (seção seguinte), e as lacunas que o projeto teve de decidir acrescentadas como sugestões, D-Q a D-Z.
 
 ### Situação no projeto (22/10/2026)
 
@@ -25,6 +25,35 @@ Todos os itens estão no texto das normas; nenhum é defeito do projeto. A decis
 | D-J a D-N | fase (d) do MVP-8 (U24 a U26, U29) |
 | D-O | editorial, nada a implementar |
 | D-P | o AMF do projeto só registra o *callback* no acesso 3GPP, que o YAML declara com 202 |
+| D-Q | A-TID em base64 no A-KID (ADR-0002), configurável no AAnF |
+| D-R | a K_AF é a PSK do TLS 1.3 e o PSK do *premaster* do TLS 1.2, sem KDF a mais (U1) |
+| D-S | `3GPP-AKMA;<A-KID>` também no TLS 1.2 (U2) |
+| D-T | DTLS 1.2 com o procedimento e o identificador Ua\* do TLS 1.2 (U13) |
+| D-U | CoAP dentro do DTLS (U14) |
+| D-V | códigos CoAP com a causa no diagnóstico (U30) |
+| D-W | DV-11: só as suítes de TS 33.210 |
+| D-X | o UDM responde ao `trigger-auth` depois do AMF (K4 do MVP-12) |
+| D-Y | DV-9: o NRF emite o *token* do AF externo |
+| D-Z | o AMF ignora o conteúdo fora de um registro (MVP-12) |
+
+### Conferência nas versões mais recentes (28/10/2026)
+
+Pedido do responsável (MVP-13, ponto L9): antes de publicar as recomendações, cada item conferido na versão mais recente da norma no arquivo da 3GPP (`https://www.3gpp.org/ftp/Specs/archive/`), baixada em `specs/` fora do controle de versão. As versões de TS 33.535 (V19.0.0), TS 24.109 (V19.0.0) e TS 33.220 (V19.1.0) continuam as mais recentes. TS 29.522, TS 29.535 e TS 29.503 têm a V20.1.0 (Release 20, setembro de 2026), com os YAML `TS29522_AKMA.yaml`, `TS29535_Naanf_AKMA.yaml` v1.3.0-alpha.1 e `TS29503_Nudm_UECM.yaml` v1.5.0-alpha.2.
+
+| Item | Versão conferida | Situação |
+|---|---|---|
+| D-A | TS 29.522 V20.1.0 | presente: o texto diz `"rid<value>.atid<value>"`, e o exemplo, `rid012.akid019345346@…` |
+| D-B | `TS29503_Nudm_UECM.yaml` v1.5.0-alpha.2 | presente: `get:` |
+| D-C, D-F | TS 24.109 V19.0.0; TS 33.535 V19.0.0 | presentes (sem versão nova) |
+| D-D | `TS29535_Naanf_AKMA.yaml` v1.3.0-alpha.1; `TS29522_AKMA.yaml` da V20.1.0 | presente: `kAkma` e `kaf` só `type: string` |
+| D-E, D-J a D-N | TS 33.535 V19.0.0; TS 33.220 V19.1.0 | presentes (sem versão nova) |
+| D-G | TS 29.535 V20.1.0 | presente: o 204 e o 403 `K_AKMA_NOT_PRESENT` no mesmo §4.2.2.3.2 |
+| D-H | TS 29.522 V20.1.0 | em parte: a remissão a 5.14.5.3.4 e a "table 5.14.5.2-1" foram corrigidas; "Routing Indicatorand" continua. Novo: "retrievel" na descrição de `notifUri` |
+| D-I | TS 29.535 V20.1.0 | em parte: "retrieval notification" corrigido; continuam o `CtxRemove` sem `required`, o título `3gpp-akma` do YAML e um "manadatory" |
+| D-O | TS 29.503 V20.1.0 | presente: passo 2a de §5.3.2.16.2 e "manadatory" em várias notas |
+| D-P | `TS29503_Nudm_UECM.yaml` v1.5.0-alpha.2 | presente |
+| D-Q a D-Z | as versões citadas em cada item | presentes |
+| TS 23.502 | V20.3.0 | presentes: §5.2.3.2 sem `AuthTrigger`; consumidores de `Nudm_EventExposure_Subscribe` só NEF e SMS-GMSC |
 
 ### Correspondência com as letras das questões em aberto
 
@@ -44,6 +73,7 @@ Os documentos `00` a `04` e o README usam letras A–E para questões em aberto;
 | — | OSCORE do AKMA: remissões, campo sem codificação, OSC-INP, HKDF, HPLMN-ID | D-J a D-N |
 | — | `trigger-auth`: quem responde 204; "manadatory" | D-O |
 | — | 202 ausente na notificação de reautenticação do acesso não 3GPP | D-P |
+| — | Sugestões: lacunas que o projeto teve de decidir | D-Q a D-Z |
 
 ---
 
@@ -51,7 +81,7 @@ Os documentos `00` a `04` e o README usam letras A–E para questões em aberto;
 
 | | |
 |---|---|
-| **Especificação** | TS 29.522 V19.7.0, Tabela 5.14.5.4-1, tipo `AKId` |
+| **Especificação** | TS 29.522 V19.7.0, Tabela 5.14.5.4.2-1, tipo `AKId` |
 | **Grupo responsável** | 3GPP CT3 |
 
 **Descrição.** No mesmo parágrafo, o texto normativo prescreve que a parte `username` do A-KID tenha o formato `"rid<value>.atid<value>"`, com `"atid"` como rótulo do A-TID, enquanto o exemplo imediatamente subsequente emprega `"akid"`:
@@ -317,6 +347,162 @@ O esquema `CtxRemove` não declara `required: [supi]`, embora o texto (Tabela 5.
 
 ---
 
+## Sugestões: lacunas que o projeto teve de decidir
+
+Acrescentadas em 28/10/2026 (MVP-13, ponto L7), a pedido do responsável ("erros ou sugestões"). Não são contradições do texto, como D-A a D-P. São pontos em que a norma não diz o bastante para duas implementações interoperarem, e o projeto teve de escolher.
+
+## D-Q — Codificação do A-TID no A-KID
+
+| | |
+|---|---|
+| **Especificações** | TS 33.535 V19.0.0, §6.1 e Anexo A.3; TS 29.522 V20.1.0, Tabela 5.14.5.4.2-1, tipo `AKId` |
+| **Grupo responsável** | 3GPP SA3 e CT3 |
+
+**Descrição.** TS 33.535 §6.1: *"A-KID shall be in NAI format as specified in clause 2.2 of IETF RFC 7542 [6], i.e. username@realm. The username part shall include the RID and the A-TID"*. O A-TID é a saída da KDF do Anexo A.3, 256 bits. Nenhuma das normas diz como esses bits viram os caracteres do *username*: hexadecimal, base64, base64url. TS 29.522 dá o formato `"rid<value>.atid<value>"`, também sem a codificação. É a questão C do projeto.
+
+**Impacto.** UE, AUSF, AAnF e AF precisam do mesmo texto do A-KID. Duas codificações diferentes dão A-KIDs diferentes para o mesmo A-TID, e o AF não obtém a K_AF.
+
+**Proposta.** Fixar a codificação, por exemplo a hexadecimal minúscula de 64 caracteres, a mesma dos outros valores de 256 bits nas APIs (D-D), ou base64 com o alfabeto permitido no *username* de RFC 7542.
+
+**Decisão do projeto** (ADR-0002). Base64, configurável no AAnF (`akma.aKid`).
+
+## D-R — Derivação da PSK e do *premaster* a partir da K_AF
+
+| | |
+|---|---|
+| **Especificações** | TS 24.109 V19.0.0, K.3.2 f) e K.3.3; TS 33.535 V19.0.0, B.1.3 |
+| **Grupo responsável** | 3GPP CT1 e SA3 |
+
+**Descrição.** TS 24.109 K.3.2 f): *"the UE and AF shall derive the TLS premaster secret from KAF (AKMA Application Key)"*. K.3.3: *"The UE shall derive the TLS external PSK from the AF specific key KAF"* e *"The AF shall derive the TLS external PSK from the AF specific key KAF"*. Nenhuma das cláusulas, nem TS 33.535 B.1.3, nem TS 33.210, dá a função de derivação: a K_AF pode ser a própria PSK, ou entrar numa KDF.
+
+**Impacto.** UE e AF com derivações diferentes não completam o *handshake*.
+
+**Proposta.** Dizer que a K_AF é usada diretamente: no TLS 1.2, como o PSK de RFC 4279 e RFC 5489 no *premaster secret*; no TLS 1.3, como a PSK externa, com SHA-256. A separação de chaves por protocolo já está no AF_ID (TS 33.220 H.2). Ou definir a KDF no Anexo A de TS 33.535.
+
+**Decisão do projeto** (U1). A K_AF diretamente, nos dois casos.
+
+## D-S — Separador da identidade PSK no TLS 1.2
+
+| | |
+|---|---|
+| **Especificação** | TS 24.109 V19.0.0, K.3.2 e) |
+| **Grupo responsável** | 3GPP CT1 |
+
+**Descrição.** K.3.2 e): o `psk_identity` *"shall contain a prefix "3GPP-AKMA" and the A-KID"*, sem separador. Para o TLS 1.3, K.3.3 1) d) diz *"a prefix indicating the PSK identity name space, i.e. "3GPP-AKMA", a separator character ";" and the A-KID"*. O GBA usa `;` (TS 24.109 §5.3.3.1.2). D-E trata da mesma omissão no TLS 1.3 de TS 33.535.
+
+**Impacto.** `3GPP-AKMA<A-KID>` e `3GPP-AKMA;<A-KID>` são identidades diferentes.
+
+**Proposta.** Acrescentar o separador `";"` a K.3.2 e), como em K.3.3.
+
+**Decisão do projeto** (U2). `3GPP-AKMA;<A-KID>` nos dois TLS.
+
+## D-T — DTLS 1.2 no AKMA
+
+| | |
+|---|---|
+| **Especificações** | TS 33.535 V19.0.0, C.1.1 e C.2; TS 33.220 V19.1.0, Anexo H.3; TS 33.210 V20.0.0, §6.2.1 |
+| **Grupo responsável** | 3GPP SA3 |
+
+**Descrição.** TS 33.210 §6.2.1: *"If DTLS is supported then DTLS 1.2 as specified in RFC 6347 [49] shall be supported and DTLS 1.3 as specified in RFC 9147 [75] should be supported"*. TS 33.535 C.1.1: *"The PSK identity specified in B.1 for TLS is also applicable for DTLS"*, e B.1 inclui o TLS 1.2. Mas C.2 só tem os procedimentos do DTLS 1.3, e TS 33.220 H.3 não dá identificador Ua\* ao DTLS 1.2: `(0x01,0x00,0x00,0x00,0x09)` é o *"Ua security protocol for DTLS according to Annex O"*, que só descreve o DTLS 1.3, e `(0x01,0x00,0x01,yy,zz)` é dito *"for TLS 1.2"*.
+
+**Impacto.** Quem segue TS 33.210 e oferece DTLS 1.2 não tem procedimento nem AF_ID definidos para ele.
+
+**Proposta.** Acrescentar a C.2 o procedimento do DTLS 1.2 e dizer qual identificador Ua\* ele usa; ou dizer que o AKMA só usa DTLS 1.3.
+
+**Decisão do projeto** (U13). DTLS 1.2 com o procedimento do TLS 1.2 e `01 00 01 yy zz` da suíte; o `…09` fica só para o DTLS 1.3, para não repartir a mesma K_AF entre as duas versões (RFC 8446 Apêndice E.7).
+
+## D-U — Protocolo de aplicação dentro do DTLS
+
+| | |
+|---|---|
+| **Especificações** | TS 33.535 V19.0.0, Anexo C; TS 33.220 V19.1.0, Anexo O.2.2 |
+| **Grupo responsável** | 3GPP SA3 |
+
+**Descrição.** O Anexo C de TS 33.535 não diz o que vai dentro do DTLS. O Anexo O de TS 33.220, que ele adapta, diz: *"It does not have any dependency on the application layer protocol."*
+
+**Impacto.** UE e AF precisam do mesmo protocolo de aplicação para trocar qualquer coisa. Com CoAP, o protocolo usual sobre DTLS, vem a suíte obrigatória da RFC 7252 (D-W).
+
+**Proposta.** Nomear o protocolo, ou dizer que ele é escolhido pela aplicação e como o UE e o AF o combinam.
+
+**Decisão do projeto** (U14). CoAP (RFC 7252), esquema `coaps`.
+
+## D-V — Erros do perfil OSCORE
+
+| | |
+|---|---|
+| **Especificações** | TS 33.535 V19.0.0, Anexo D; TS 33.220 V19.1.0, Anexo P |
+| **Grupo responsável** | 3GPP SA3 |
+
+**Descrição.** O Anexo D define o pedido `POST /akma` e a resposta de sucesso (D.3.2, D.3.5), mas nenhuma resposta de erro: A-KID desconhecido, K_AF indisponível, AF não autorizado, `OSC-INP` não suportado. O Anexo P de TS 33.220 também não. O perfil HTTP do Anexo B tem os seus erros.
+
+**Impacto.** Cada AF responde de um jeito, e o UE não sabe se deve refazer a autenticação primária, tentar de novo ou desistir.
+
+**Proposta.** Definir as respostas de erro do recurso `/akma`, com códigos CoAP e as mesmas causas do Anexo B.
+
+**Decisão do projeto** (U30). Códigos CoAP com a causa no *payload* de diagnóstico; os erros do OSCORE pela RFC 8613 §8.2.
+
+## D-W — Suíte obrigatória do CoAP com PSK contra o perfil de TS 33.210
+
+| | |
+|---|---|
+| **Especificações** | TS 33.535 V19.0.0, C.2.1; TS 33.210 V20.0.0, §6.2; RFC 7252 §9.1.3.1 |
+| **Grupo responsável** | 3GPP SA3 |
+
+**Descrição.** TS 33.535 C.2.1: *"The TLS profile specified in TS 33.210 [13] clause 6.2 apply to DTLS 1.3"*. TS 33.210 §6.2.3: *"Only cipher suites with AEAD (e.g. GCM) and PFS (i.e., ECDHE) shall be supported."* RFC 7252 §9.1.3.1, para o CoAP no modo PSK: *"Implementations in these modes MUST support the mandatory-to-implement cipher suite TLS_PSK_WITH_AES_128_CCM_8"*, uma suíte de DTLS 1.2 sem ECDHE.
+
+**Impacto.** Um UE ou AF que use CoAP sobre DTLS não cumpre as duas regras ao mesmo tempo.
+
+**Proposta.** Dizer, junto com D-U, que no Ua\* valem as suítes de TS 33.210 e não a suíte obrigatória da RFC 7252.
+
+**Decisão do projeto** (DV-11). Só as suítes de TS 33.210.
+
+## D-X — Quando o UDM responde ao `trigger-auth`
+
+| | |
+|---|---|
+| **Especificações** | TS 29.503 V20.1.0, §5.3.2.16.2; TS 33.501 V20.3.0, §6.1.5.2 |
+| **Grupo responsável** | 3GPP CT4 |
+
+**Descrição.** TS 33.501 §6.1.5.2 passo 1: *"The UDM may acknowledge the request with an Nudm_UECM_AuthTrigger Response to the NF"*. TS 29.503 §5.3.2.16.2 tem o `204` de sucesso e o `404` de usuário inexistente. Nenhuma das duas diz se o `204` vem antes ou depois da `Nudm_UECM_Re-AuthenticationNotification` ao AMF, nem o que o UDM responde quando o AMF recusa (`403`, `409`) ou marca a autenticação como pendente (`202`).
+
+**Impacto.** O consumidor (o AAnF) não sabe se um `204` quer dizer que a autenticação vai acontecer. A política do AAnF para pedir de novo depende disso.
+
+**Proposta.** Dizer se o UDM responde depois do AMF e, nesse caso, como mapeia as respostas da tabela 6.2.5.6-3 nas do `trigger-auth`, que não tem `409`.
+
+**Decisão do projeto** (K4 do MVP-12). O UDM responde depois do AMF: `204` para `204` e `202`; `403 REAUTHENTICATION_NOT_ALLOWED` para `403` e `409`; `404 CONTEXT_NOT_FOUND` para `404`.
+
+## D-Y — Servidor de autorização do NEF sem CAPIF
+
+| | |
+|---|---|
+| **Especificações** | TS 29.522 V20.1.0, §6; TS 33.501 V20.3.0, §12.4 |
+| **Grupo responsável** | 3GPP CT3 |
+
+**Descrição.** TS 29.522 §6: *"When CAPIF is not supported and/or not used, the access to the NEF Northbound APIs shall be authorized by means of OAuth2 protocol (see IETF RFC 6749 [13]), based on local configuration, using the "Client Credentials" authorization grant as defined in clause 12.4 of 3GPP TS 33.501 [6]. When OAuth2 is used, a client shall obtain a "token" from the authorization server prior to consuming services offered by any NEF Northbound API."* Nem essa cláusula nem TS 33.501 §12.4 dizem qual é o servidor de autorização. Com CAPIF, é o CAPIF Core Function (TS 29.522 §7.2).
+
+**Impacto.** Sem CAPIF, cada operador escolhe: o NRF, um servidor próprio. O AF não sabe onde pedir o *token*.
+
+**Proposta.** Nomear o servidor de autorização quando o CAPIF não é usado, ou dizer que ele é dado por configuração ao AF.
+
+**Decisão do projeto** (DV-9). O NRF, por configuração local.
+
+## D-Z — Alcance do `NAS message container` no `Security Mode Complete`
+
+| | |
+|---|---|
+| **Especificação** | TS 24.501 V20.1.0, §5.4.2.3 e §4.4.6 |
+| **Grupo responsável** | 3GPP CT1 |
+
+**Descrição.** §5.4.2.3: *"If, prior to receiving the SECURITY MODE COMMAND message, the UE without a valid 5G NAS security context had sent a REGISTRATION REQUEST message the UE shall include the entire REGISTRATION REQUEST message in the NAS message container IE of the SECURITY MODE COMPLETE message as described in clause 4.4.6."* A frase não diz que vale só para o procedimento de registro em curso. §4.4.6 a), a proteção da mensagem NAS inicial, fala do *"security mode control procedure"* que segue aquele `REGISTRATION REQUEST`. Do lado da rede, §5.4.2.3 diz que o AMF *"shall complete the ongoing registration procedure by considering the REGISTRATION REQUEST message contained in the NAS message container IE as the message that triggered the procedure"*, e não diz o que fazer quando nenhum registro está em curso.
+
+**Impacto.** Numa autenticação primária pedida pela rede doméstica (TS 33.501 §6.1.5), depois do registro, um UE que leia a frase ao pé da letra põe no `Security Mode Complete` o `REGISTRATION REQUEST` antigo. O UERANSIM faz assim, e o AMF do free5GC o tratava como um registro novo (MVP-12).
+
+**Proposta.** Limitar a regra ao procedimento de controle do modo de segurança iniciado durante o registro em que o `REGISTRATION REQUEST` foi enviado, e dizer que o AMF ignora o conteúdo fora de um procedimento em curso.
+
+**Decisão do projeto.** O AMF ignora o conteúdo durante a autenticação pedida pela rede (`free5gc/patches/amf/0001`); o UE do UERANSIM não muda.
+
+---
+
 ## Divergências de enumeração em TS 23.502
 
 Registradas para rastreabilidade; não constituem defeito submetível, por serem listas de contexto em especificação de Stage 2.
@@ -327,4 +513,4 @@ Registradas para rastreabilidade; não constituem defeito submetível, por serem
 | TS 23.502 V19.8.0 §5.2.3.5.2 | A lista de consumidores de `Nudm_EventExposure_Subscribe` inclui apenas NEF e SMS-GMSC; TS 29.503 §5.2.2.1 lista o AAnF entre os consumidores do UDM, incluído pelo CR 1180 (18.4.0) |
 | TS 33.535 V19.0.0 §4.3.0 NOTA 1 e §7.4 × TS 23.502 §5.2.3.5.2 | A TS 33.535 aponta `Nudm_EventExposure_Subscribe` (TS 23.502 §5.2.3.5.2) como serviço do UDM usado pelo AKMA; a cláusula apontada não lista o AAnF como consumidor. Inconsistência entre as duas normas (acrescentado em 16/10/2026) |
 
-As duas primeiras linhas foram conferidas também na V19.9.0, cópia disponível no acervo (Adendo E).
+As duas primeiras linhas foram conferidas também na V19.9.0, cópia disponível no acervo (Adendo E), e as três na V20.3.0, em 28/10/2026.
