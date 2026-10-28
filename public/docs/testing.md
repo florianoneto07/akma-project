@@ -149,6 +149,46 @@ Give the binary in `OPENSSL_DTLS13`; without it, D03 is reported as skipped (`SK
 OPENSSL_DTLS13=$HOME/openssl41/install/bin/openssl af/scripts/e2e.sh user@192.168.16.130
 ```
 
+Checks O04 and O05 run `coap-client` of libcoap, with OSCORE, as the UE; `af/scripts/oscore-check.py` computes the request and the security context with code of its own. The check was done with libcoap 4.3.5b linked to the OpenSSL 3.0 of Ubuntu 24.04. On a host without CMake, a C++ compiler or the OpenSSL headers, these steps build it without installing anything:
+
+```bash
+mkdir -p ~/libcoap && cd ~/libcoap && wget https://github.com/Kitware/CMake/releases/download/v3.31.6/cmake-3.31.6-linux-x86_64.tar.gz https://github.com/Kitware/CMake/releases/download/v3.31.6/cmake-3.31.6-SHA-256.txt
+```
+
+```bash
+grep " cmake-3.31.6-linux-x86_64.tar.gz$" cmake-3.31.6-SHA-256.txt | sha256sum -c - && tar -xzf cmake-3.31.6-linux-x86_64.tar.gz
+```
+
+```bash
+wget https://github.com/openssl/openssl/releases/download/openssl-3.0.13/openssl-3.0.13.tar.gz && echo "88525753f79d3bec27d2fa7c66aa0b92b3aa9498dafd93d7cfa4b3780cdae313  openssl-3.0.13.tar.gz" | sha256sum -c -
+```
+
+```bash
+tar -xzf openssl-3.0.13.tar.gz && (cd openssl-3.0.13 && ./Configure --prefix=/usr --libdir=lib/x86_64-linux-gnu linux-x86_64 && make build_generated)
+```
+
+```bash
+wget -O libcoap-4.3.5b.tar.gz https://github.com/obgm/libcoap/archive/refs/tags/v4.3.5b.tar.gz && echo "383a17d8466cee7c1cb1d4dfbffad2651004850b29eb590e9591c7bedd46741d  libcoap-4.3.5b.tar.gz" | sha256sum -c -
+```
+
+```bash
+tar -xzf libcoap-4.3.5b.tar.gz && cd libcoap-4.3.5b && sed -i 's/  LANGUAGES CXX C)/  LANGUAGES C)/; s/CXX_COMPILER_ID/C_COMPILER_ID/g' CMakeLists.txt
+```
+
+```bash
+../cmake-3.31.6-linux-x86_64/bin/cmake -S . -B build -DDTLS_BACKEND=openssl -DOPENSSL_INCLUDE_DIR=$HOME/libcoap/openssl-3.0.13/include -DOPENSSL_SSL_LIBRARY=/usr/lib/x86_64-linux-gnu/libssl.so.3 -DOPENSSL_CRYPTO_LIBRARY=/usr/lib/x86_64-linux-gnu/libcrypto.so.3 -DENABLE_DOCS=OFF -DENABLE_OSCORE=ON -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=$HOME/libcoap/install
+```
+
+```bash
+../cmake-3.31.6-linux-x86_64/bin/cmake --build build -j"$(nproc)" && ../cmake-3.31.6-linux-x86_64/bin/cmake --install build
+```
+
+The libcoap source archive of a tag has no published hash; the one above is the one computed here. The sed lines drop the C++ that the project declares and does not use. libcoap 4.3.5b does not build with OpenSSL 4, which has no ENGINE API. Give `coap-client` in `LIBCOAP_CLIENT`; without it, O04 and O05 are reported as skipped:
+
+```bash
+OPENSSL_DTLS13=$HOME/openssl41/install/bin/openssl LIBCOAP_CLIENT=$HOME/libcoap/install/bin/coap-client af/scripts/e2e.sh user@192.168.16.130
+```
+
 With `--keep`, free5GC, the gNB and the UE stay up at the end. The files go to `af/build/e2e/<date-time>/`:
 
 | File | Content |
@@ -158,7 +198,7 @@ With `--keep`, free5GC, the gNB and the UE stay up at the end. The files go to `
 | `remote/` | `free5gc.log`, `ue.log`, `gnb.log`, outputs of the Ua\* client and of `seed`, `state` (the A-KIDs) |
 | `af.log`, `af-*.log` | the AF, and the extra AFs |
 
-The exit code is 0 only when no check fails; a skipped check is not a failure. It takes about three minutes and runs 126 checks: 56 on the free5GC host and 70 on the AF host.
+The exit code is 0 only when no check fails; a skipped check is not a failure. It takes about three minutes and runs 141 checks: 60 on the free5GC host and 81 on the AF host.
 
 ### 5.2 Groups
 
@@ -170,8 +210,10 @@ The exit code is 0 only when no check fails; a skipped check is not a failure. I
 | R2k | free5GC host | the key service of the ME (TS 33.535 cl. 4.4.3): `uaclient` got the K_AF of its AF_ID; another AF_ID, another user and `nr-cli akma-kaf` are refused; a configuration that gives one AF_ID to two applications does not start |
 | R2t | free5GC host | Ua\* from the UE over the TLS profiles, with the K_AF of the ME for the AF_ID of each profile and cipher suite: K.2 in TLS 1.3 (two connections, the second resumed) and in TLS 1.2; PSK TLS 1.3 and PSK TLS 1.2, two connections each; a ClientHello with `psk_ke` only refused |
 | R2d | free5GC host | Ua\* from the UE over the DTLS profiles, with CoAP: DTLS 1.3 with the AF_ID `…0100000009` and DTLS 1.2 with `…010001D001`, two associations each, the second resumed; a ClientHello with `psk_ke` only refused |
+| R2o | free5GC host | Ua\* from the UE over OSCORE: `POST /akma` in CBOR and two protected requests in one context, AF_ID `…0100000008`; the context renewed by RFC 8613 Appendix B.2 before each request; a new `POST` for each request |
 | N (point A) | AF host | negative tests of the AAnF API, of `register-anchorkey`, of the RID and of the AF; anonymous access directly at the AAnF |
 | D (point A) | AF host | what the AF saw of R2d; DTLS 1.3 with `openssl s_client` of OpenSSL 4.1 as the UE, sending the CoAP GET (with `OPENSSL_DTLS13`; skipped without it); unknown A-KID and K_AF of another AF_ID refused |
+| O (point A) | AF host | what the AF saw of R2o (four contexts, one AAnF query, six requests served, two renewals); `coap-client` of libcoap as the UE, with the request and the context computed by `oscore-check.py` (with `LIBCOAP_CLIENT`; skipped without it); an OSC-INP with another algorithm, an unknown A-KID and the K_AF of another AF_ID refused; K_AF expiry with `refetch` and `reject`, on the AFs with a shifted clock |
 | T (point A) | AF host | what the AF saw of R2t (the AF_ID of each cipher suite, the resumptions); PSK TLS 1.3 with `openssl s_client` as the UE; refusals (K_AF of another AF_ID, unknown A-KID, `psk_ke`, certificate of another FQDN, AF_ID outside the policy of the AAnF); K_AF expiry in a TLS session, with the `refetch` and `reject` policies |
 | E (point A) | AF host | tunnel to the NRF; four extra AFs (external on 8083, external anonymous on 8084, internal anonymous on 8085, external with PSK TLS 1.3 on 8456); the NEF API |
 | R2n | free5GC host | Ua\* from the UE with the four extra AFs, the last one over PSK TLS 1.3; the AAnF hands K_AF through the NEF; the NEF relays it and does not log the SUPI |
