@@ -5,12 +5,12 @@ import (
 	"fmt"
 )
 
-// PSKConfig describes TLS or DTLS sessions with the AF authenticated with
-// K_AF as pre-shared key (TS 24.109 K.3; TS 33.222 cl. 5.4; TS 33.535
-// Annex C).
+// PSKConfig describes sessions with the AF authenticated with K_AF: TLS or
+// DTLS with K_AF as pre-shared key (TS 24.109 K.3; TS 33.222 cl. 5.4;
+// TS 33.535 Annex C), or OSCORE with a context from K_AF (Annex D).
 type PSKConfig struct {
-	// Profile is akmatls.ProfilePSKTLS13, ProfilePSKTLS12, ProfilePSKDTLS13
-	// or ProfilePSKDTLS12.
+	// Profile is akmatls.ProfilePSKTLS13, ProfilePSKTLS12, ProfilePSKDTLS13,
+	// ProfilePSKDTLS12 or ProfileOSCORE.
 	Profile   string
 	FQDN      string // sent in server_name and Host, and the FQDN of the AF_ID
 	Connect   string // host:port to connect to
@@ -22,11 +22,15 @@ type PSKConfig struct {
 	// by the AF, after the ServerHello (TS 33.222 cl. 5.4.0.2 NOTE 0).
 	Keys KeySource
 	// Reconnect opens a new connection for each request, which offers the
-	// session of the previous one.
+	// session of the previous one; with OSCORE, a new POST /akma for each
+	// request.
 	Reconnect bool
 	// OfferPSKKEOnly offers psk_ke and not psk_dhe_ke in TLS 1.3, which
 	// TS 33.210 cl. 6.2.2 forbids. Test only.
 	OfferPSKKEOnly bool
+	// Renew renews the OSCORE context before each request (RFC 8613
+	// Appendix B.2; TS 33.535 D.3.4).
+	Renew bool
 }
 
 // ErrNotPSK reports a handshake that the AF did not complete with the

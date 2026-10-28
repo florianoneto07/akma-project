@@ -102,6 +102,9 @@ type Result struct {
 	TLSVersion  uint16 `json:"-"`
 	CipherSuite uint16 `json:"-"`
 	Resumed     bool   `json:"-"`
+	// IDContext is the ID Context of the OSCORE context, set by a renewal
+	// (RFC 8613 Appendix B.2).
+	IDContext []byte `json:"-"`
 }
 
 // Session keeps the Digest state of one protection space: the challenge and

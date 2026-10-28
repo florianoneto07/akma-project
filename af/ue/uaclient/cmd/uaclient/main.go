@@ -3,7 +3,8 @@
 // K.2); TLS 1.3 or TLS 1.2 with K_AF as pre-shared key (psk-tls13 and
 // psk-tls12, K.3); DTLS 1.3 or DTLS 1.2 with K_AF as pre-shared key and
 // CoAP inside (psk-dtls13 and psk-dtls12, TS 33.535 Annex C); the PSK
-// profiles in a client built with wolfSSL; or the simplified Ua* protocol of
+// profiles in a client built with wolfSSL; CoAP protected by OSCORE with a
+// context from K_AF (oscore, Annex D); or the simplified Ua* protocol of
 // package uastar (digest-http, test only). The A-KID and K_AF
 // come from the AKMA key service of the ME of UERANSIM (-me-socket), from
 // nr-cli for tests (-nr-cli, -ue), from a shared/akma vector (-vector) or
@@ -39,9 +40,10 @@ var defaultPorts = map[string]string{
 	akmatls.ProfilePSKTLS12:   "8445",
 	akmatls.ProfilePSKDTLS13:  "5684",
 	akmatls.ProfilePSKDTLS12:  "5685",
+	akmatls.ProfileOSCORE:     "5683",
 }
 
-const profiles = "digest-tls, psk-tls13, psk-tls12, psk-dtls13, psk-dtls12 or digest-http"
+const profiles = "digest-tls, psk-tls13, psk-tls12, psk-dtls13, psk-dtls12, oscore or digest-http"
 
 func main() {
 	var (
@@ -49,7 +51,8 @@ func main() {
 		profile   = flag.String("profile", akmatls.ProfileDigestHTTP, "Ua* profile: "+profiles)
 		connect   = flag.String("connect", "192.168.16.129", "address of the AF, with the port of the profile when absent")
 		caFile    = flag.String("ca", "", "certificate of the CA of the AF, PEM (digest-tls)")
-		reconnect = flag.Bool("reconnect", false, "a new TLS connection or DTLS association for each request, resuming the previous session")
+		reconnect = flag.Bool("reconnect", false, "a new TLS connection or DTLS association for each request, resuming the previous session; oscore: a new POST /akma for each request")
+		rekey     = flag.Bool("rekey", false, "oscore: renew the security context before each request (RFC 8613 Appendix B.2)")
 		tls12     = flag.Bool("tls12", false, "digest-tls: TLS 1.2 only")
 		pskKEOnly = flag.Bool("psk-ke-only", false, "psk-tls13, psk-dtls13: offer psk_ke and not psk_dhe_ke (test only; the AF refuses it)")
 		path      = flag.String("path", "/ua/v1/session", "protected resource")
@@ -74,6 +77,7 @@ func main() {
 		vector: *vector, vectors: *vectors, qop: *qop, userAgent: *userAgent, count: *count,
 		bind: *bind, meSocket: *meSocket, nrCli: *nrCli, ue: *ue, uaStarID: *uaStarID,
 		profile: *profile, caFile: *caFile, reconnect: *reconnect, pskKEOnly: *pskKEOnly, tls12: *tls12,
+		rekey: *rekey,
 	}
 	if err := run(o); err != nil {
 		msg := err.Error()
@@ -89,7 +93,7 @@ type options struct {
 	fqdn, connect, path, aKid, kafHex, kafB64, kafFile, vector, vectors, qop, userAgent string
 	count                                                                               int
 	bind, meSocket, nrCli, ue, uaStarID, profile, caFile                                string
-	reconnect, pskKEOnly, tls12                                                         bool
+	reconnect, pskKEOnly, tls12, rekey                                                  bool
 }
 
 // session is a Digest or a PSK session.
@@ -147,6 +151,16 @@ func run(o options) error {
 		}
 		defer ds.Close()
 		s = ds
+	case akmatls.ProfileOSCORE:
+		oc, err := uaclient.NewOSCORESession(uaclient.PSKConfig{
+			Profile: o.profile, FQDN: o.fqdn, Connect: o.connect, Path: o.path, LocalAddr: o.bind, Keys: keys,
+			Reconnect: o.reconnect, Renew: o.rekey,
+		})
+		if err != nil {
+			return err
+		}
+		defer oc.Close()
+		s = oc
 	default:
 		return fmt.Errorf("-profile %q is not %s", o.profile, profiles)
 	}
@@ -186,6 +200,11 @@ func describe(profile string, r uaclient.Result) string {
 	}
 	auth := "AF authenticated by rspauth"
 	switch {
+	case profile == akmatls.ProfileOSCORE:
+		auth = "AF authenticated by the OSCORE context from K_AF"
+		if r.IDContext != nil {
+			tlsState = fmt.Sprintf("; context renewed, ID Context %x", r.IDContext)
+		}
 	case akmatls.IsDTLS(profile):
 		auth = "AF authenticated by the DTLS handshake with K_AF"
 	case r.NC == "":
