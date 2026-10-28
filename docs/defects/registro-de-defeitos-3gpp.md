@@ -5,11 +5,28 @@
 
 Cada item registra a inconsistência, as fontes que a evidenciam, a decisão adotada pelo projeto e o grupo de trabalho responsável.
 
-**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados.
+**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio.
+
+### Situação no projeto (22/10/2026)
+
+Todos os itens estão no texto das normas; nenhum é defeito do projeto. A decisão de cada um:
+
+| Item | Implementação |
+|---|---|
+| D-A | `shared/akma/akid`: lê `atid` e `akid`, escreve `atid`; o AAnF, o AF e o NEF usam essa leitura |
+| D-B | ainda não: o projeto não usa o `trigger-auth`, e o UDM e o AMF do free5GC não têm a operação. MVP próprio, depois da fase (d) do MVP-8 (decisão do responsável de 22/10/2026) |
+| D-C | DV-6: `realm="3GPP-bootstrapping-akma@<FQDN>"` no AF e no cliente |
+| D-D | `shared/akma/codec`: `^[A-Fa-f0-9]{64}$` ao ler, minúsculas ao escrever, no AUSF, no AAnF, no AF e no cliente |
+| D-E | `3GPP-AKMA;<A-KID>` nos perfis PSK (U2) |
+| D-F | DV-5: RFC 7616 com SHA-256 |
+| D-G | DV-7: o AAnF nunca responde 204; o AF e o NEF tratam o 204 |
+| D-H | editorial, nada a implementar |
+| D-I | o AAnF recusa `CtxRemove` sem `supi` (400) |
+| D-J a D-N | fase (d) do MVP-8 (U24 a U26, U29) |
 
 ### Correspondência com as letras das questões em aberto
 
-Os documentos `00` a `04` e o README usam letras A–E para questões em aberto; este registro usa D-A a D-I para defeitos. As letras não coincidem:
+Os documentos `00` a `04` e o README usam letras A–E para questões em aberto; este registro usa D-A a D-N para defeitos. As letras não coincidem:
 
 | Questão (README, adendos) | Assunto | Item deste registro |
 |---|---|---|
@@ -22,6 +39,7 @@ Os documentos `00` a `04` e o README usam letras A–E para questões em aberto;
 | — | RFC 3310 no Digest do AKMA | D-F |
 | — | 204 inalcançável em `retrieve-applicationkey` | D-G |
 | — | Editoriais de TS 29.522 e TS 29.535 | D-H, D-I |
+| — | OSCORE do AKMA: remissões, campo sem codificação, OSC-INP, HKDF, HPLMN-ID | D-J a D-N |
 
 ---
 
@@ -63,7 +81,7 @@ rid012.akid019345346@5gc.mnc012.mcc345.3gppnetwork.org
 2. TS 29.501 V19.5.0, §4.6.1.2 — as duas figuras normativas de operações customizadas são intituladas *"Custom Operation … using HTTP POST"*.
 3. TS 29.501 V19.5.0, Anexo C.4 — o arquétipo de operação customizada modela operação *"unsafe and non-idempotent"*. O método GET é seguro e idempotente por definição de IETF RFC 9110.
 
-**Decisão do projeto.** Adotar POST. Item fora do escopo do MVP, pois TS 33.535 §6.4.4 emprega linguagem permissiva.
+**Decisão do projeto.** Adotar POST. A operação (TS 33.535 §6.4.4, opcional) entra num MVP próprio, depois da fase (d) do MVP-8 (decisão do responsável de 22/10/2026): o UDM e o AMF do free5GC não a têm, e ela exige a autenticação primária disparada pela rede doméstica (TS 33.501 §6.1.5).
 
 **Observação secundária.** O esquema `AuthTriggerInfo` não declara `required`, embora TS 33.501 §14.2.6 declare *"Input, Required: SUPI"* e a Tabela 6.2.3.13.4.2.2-1 classifique a estrutura como `M`.
 
@@ -180,6 +198,81 @@ Tabela 5.14.5.1-1 remete `ServiceDisableNotif` à cláusula "5.15.5.3.4" (é 5.1
 | **Grupo responsável** | 3GPP CT3 |
 
 O esquema `CtxRemove` não declara `required: [supi]`, embora o texto (Tabela 5.1.6.2.3-1) diga que `supi` *"shall be included"*; `info.title` do YAML é `3gpp-akma` (título da API do NEF); as respostas 307/308 de `register-anchorkey` falam em *"retrieval notification"*; "manadatory" nas notas das tabelas. Impacto técnico só no primeiro: a validação pelo esquema aceita `CtxRemove` vazio — a implementação deve exigir `supi`.
+
+---
+
+## D-J — Remissões erradas no OSCORE do AKMA
+
+| | |
+|---|---|
+| **Especificação** | TS 33.535 V19.0.0, Anexo D, cláusulas D.3.2 e D.3.3 |
+| **Grupo responsável** | 3GPP SA3 |
+
+**Descrição.** D.3.2 dá a semântica dos parâmetros do pedido por *"TS 33.220 [4], clause Y.2.3. Step 1"* e a de N2 e UE-SID por *"clause P.2.3. Step 3"*; D.3.3 parte do contexto de *"TS 33.220 [4], clause Y.3.3"*. TS 33.220 V19.1.0 não tem Anexo Y, e P.2.3 é *"Requirements on the NAF"*, sem passos. O conteúdo citado está em P.3.2 (passos 1 e 3) e P.3.3.
+
+**Impacto.** Editorial: o conteúdo se acha pelo assunto. Mas D.3.3 só dá parte do contexto e deixa o resto (versão, HKDF, AEAD, *ID Context*) para a cláusula citada, que precisa ser a certa.
+
+**Decisão do projeto.** Ler as remissões como P.3.2 e P.3.3.
+
+---
+
+## D-K — Campo do pedido OSCORE sem codificação
+
+| | |
+|---|---|
+| **Especificação** | TS 33.535 V19.0.0, D.3.2 iii) e D.3.5; TS 33.220 V19.1.0, P.3.2 e P.3.5 |
+| **Grupo responsável** | 3GPP SA3 |
+
+**Descrição.** D.3.2 iii) lista no pedido *"CoAP Security protocol identifier, A-KID, N1, AF-SID, ?OSC-INP"*. O arranjo CBOR de D.3.5 é `[A-KID, N1, AF-SID, ? OSC-INP]`, sem o identificador. O Anexo P do GBA tem a mesma diferença: P.3.2 dá ao campo o valor `"01"` para o OSCORE, e P.3.5 não o codifica.
+
+**Impacto.** Uma implementação que siga D.3.2 manda um arranjo que outra, que siga D.3.5, não lê.
+
+**Decisão do projeto** (U24). Seguir o arranjo de D.3.5, sem o campo.
+
+---
+
+## D-L — Tipo e negociação do OSC-INP
+
+| | |
+|---|---|
+| **Especificação** | TS 33.535 V19.0.0, D.3.5; TS 33.220 V19.1.0, P.3.3 e P.3.5 |
+| **Grupo responsável** | 3GPP SA3 |
+
+**Descrição.** No arranjo, `? OSC-INP: bstr`; na definição, `OSC-INP = {…}`, um mapa CBOR. Os rótulos (1 versão, 3 HKDF, 4 AEAD, 5 sal, 6 *ID Context*) são os do `OSCORE_Input_Material` da RFC 9203 §3.2.1, que admite texto ou inteiro para o HKDF e o AEAD; o Anexo D só admite inteiro. O sal (5) concorre com o *Master Salt* que D.3.3 define. A resposta, `[N2, UE-SID]`, não tem como dizer ao UE qual valor o AF adotou.
+
+**Impacto.** Um OSC-INP como mapa e outro como `bstr` com o mapa dentro não interoperam. Um AF que não aceite o algoritmo pedido não tem como recusá-lo dentro do procedimento.
+
+**Decisão do projeto** (U29). `bstr` com o mapa dentro; o UE não manda OSC-INP; o AF só aceita os valores padrão e recusa os demais com `4.00`.
+
+---
+
+## D-M — Parâmetros do HKDF do *Master Secret*
+
+| | |
+|---|---|
+| **Especificação** | TS 33.535 V19.0.0, D.3.3; TS 33.220 V19.1.0, P.3.3 |
+| **Grupo responsável** | 3GPP SA3 |
+
+**Descrição.** *"OMS = OSCORE Master Secret = HKDF(KAF, "AKMA-OSCORE")"*, com HKDF *"specified in IETF RFC 5869"*. A RFC 5869 define HKDF(sal, IKM, info, L) em duas etapas. O texto não diz o sal, a codificação do rótulo nem o comprimento L do *Master Secret*. O Anexo P tem a mesma forma, com `"GBA-OSCORE"`.
+
+**Impacto.** Escolhas diferentes de sal, de codificação ou de L dão *Master Secrets* diferentes, e o primeiro pedido protegido não decifra.
+
+**Decisão do projeto** (U26). HKDF-SHA-256 completo, sal vazio, IKM = K_AF, `info` = `AKMA-OSCORE` em ASCII, L = 32.
+
+---
+
+## D-N — Forma do HPLMN-ID no A-KID em CBOR
+
+| | |
+|---|---|
+| **Especificação** | TS 33.535 V19.0.0, D.3.5 |
+| **Grupo responsável** | 3GPP SA3 |
+
+**Descrição.** `A-KID = [RID : tstr, A-TID : bstr, HPLMN-ID : tstr]`, sem a forma do HPLMN-ID: o MCC e o MNC (o *Home Network Identifier* de TS 23.003 §2.2B), o domínio do *realm* ou outra. Com o A-TID em octetos, o AF tem de refazer o texto do A-KID para consultar o AAnF, e a codificação textual do A-TID também não está fixada (questão C, ADR-0002).
+
+**Impacto.** UE e AF com formas diferentes não chegam ao mesmo A-KID. Um AF e um AAnF com codificações diferentes do A-TID também não.
+
+**Decisão do projeto** (U25). HPLMN-ID = MCC seguido do MNC; o AF refaz o *realm* com o MNC em três dígitos e o A-TID em base64, como o resto do projeto.
 
 ---
 
