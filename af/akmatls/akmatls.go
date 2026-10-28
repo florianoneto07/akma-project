@@ -1,6 +1,7 @@
 // Package akmatls holds what the AF and the UE share in the TLS profiles of
 // the Ua* reference point (TS 33.535 Annex B; TS 24.109 Annex K; TS 33.222
-// cl. 5.3 and 5.4): the Ua* security protocol identifiers of TS 33.220 H.3,
+// cl. 5.3 and 5.4): the names of all the Ua* profiles, the Ua* security
+// protocol identifiers of TS 33.220 H.3,
 // the PSK identity, and the crypto/tls configuration of the shared key-based
 // UE authentication with certificate-based AF authentication (K.2). The PSK
 // handshakes themselves are in package wolftls.
@@ -32,6 +33,9 @@ const (
 	// ProfilePSKDTLS12 is DTLS 1.2 with K_AF as PSK, with the procedure of
 	// TLS 1.2, CoAP inside.
 	ProfilePSKDTLS12 = "psk-dtls12"
+	// ProfileOSCORE is CoAP protected by OSCORE with a security context from
+	// K_AF (TS 33.535 Annex D), over UDP.
+	ProfileOSCORE = "oscore"
 	// ProfileDigestHTTP is the simplified Ua* protocol of package uastar,
 	// HTTP Digest without TLS. Test only.
 	ProfileDigestHTTP = "digest-http"
@@ -51,8 +55,16 @@ func UaStarTLS(cipherSuite uint16) afid.UaStarID {
 // which TS 33.535 Annex C takes over for AKMA.
 var UaStarDTLS13 = afid.UaStarID{0x01, 0x00, 0x00, 0x00, 0x09}
 
+// UaStarOSCORE is the Ua* security protocol identifier of OSCORE,
+// 01 00 00 00 08: the one TS 33.220 H.3 gives to the OSCORE of its Annex
+// P, which TS 33.535 Annex D follows (D.1).
+var UaStarOSCORE = afid.UaStarID{0x01, 0x00, 0x00, 0x00, 0x08}
+
 // IsDTLS reports whether profile runs over DTLS.
 func IsDTLS(profile string) bool { return profile == ProfilePSKDTLS13 || profile == ProfilePSKDTLS12 }
+
+// IsUDP reports whether profile runs over UDP: DTLS or OSCORE.
+func IsUDP(profile string) bool { return IsDTLS(profile) || profile == ProfileOSCORE }
 
 // IdentityHint is the psk_identity_hint of the AF in TLS 1.2 (TS 24.109
 // K.3.2 d)) and the prefix of the PSK identity.
