@@ -14,7 +14,8 @@ What to do **after installing free5GC** with the official guide to use AKMA (3GP
 | 8 | End-to-end run |
 | 9 | AF outside the operator network, anonymous access, context removal |
 | 10 | UERANSIM on another host |
-| 11 | Undo |
+| 11 | Refresh K_AKMA: the AAnF asks for a new authentication |
+| 12 | Undo |
 
 ---
 
@@ -740,13 +741,14 @@ af/scripts/e2e.sh user@192.168.16.130
 
 `FREE5GC_HOST=user@192.168.16.130` works in place of the argument. The address of the AAnF comes from `aanfUri` in `af/config/afcfg.yaml`. Before it starts, the script checks that it is the `sbi.bindingIPv4` of the `aanfcfg.yaml` installed on the free5GC host.
 
-The script asks once for the `sudo` password of the free5GC host and takes about three minutes. It:
+The script asks once for the `sudo` password of the free5GC host and takes about four minutes. It:
 
 - applies the N6 NAT and creates the namespace of the UE;
 - starts free5GC with the AAnF, the gNB and the UE;
 - authenticates the UE at the AF over every profile: K.2 in TLS 1.3 and 1.2, PSK in TLS 1.3 and 1.2, PSK in DTLS 1.3 and 1.2 with CoAP, and OSCORE, with session resumption and context renewal;
 - checks PSK TLS 1.3 with `openssl s_client` as the UE, and the expiry of K_AF in a TLS session; with an OpenSSL 4.1 in `OPENSSL_DTLS13`, it also checks PSK DTLS 1.3, and with libcoap in `LIBCOAP_CLIENT`, OSCORE ([testing.md](testing.md) section 5.1);
 - forces new primary authentications: with the AAnF down, without the AKMA subscription and with it restored;
+- refreshes K_AKMA through the AAnF, with `kakmaRefresh: 20s`: the UDM notifies the AMF, which re-authenticates the registered UE (part 11);
 - runs the negative tests;
 - stops everything.
 
@@ -754,10 +756,10 @@ Each check prints `PASS` or `FAIL`, and the end shows the total:
 
 ```
 report: …/af/build/e2e/<date-time>/report.md
-141 passed, 0 failed, 0 skipped
+161 passed, 0 failed, 0 skipped
 ```
 
-Without `OPENSSL_DTLS13`, check D03 is reported as skipped; without `LIBCOAP_CLIENT`, checks O04 and O05. Without both: `138 passed, 0 failed, 3 skipped`.
+Without `OPENSSL_DTLS13`, check D03 is reported as skipped; without `LIBCOAP_CLIENT`, checks O04 and O05. Without both: `158 passed, 0 failed, 3 skipped`.
 
 ### 8.3 Read the report
 
@@ -906,7 +908,94 @@ The gNB shows `SCTP connection established (192.168.16.130:38412)` and `NG Setup
 
 ---
 
-## 11. Undo
+## 11. Refresh K_AKMA: the AAnF asks for a new authentication
+
+K_AKMA only changes with a new primary authentication (TS 33.535 cl. 6.4.1). By the local policy of the operator, the AAnF may ask the UDM for one (cl. 6.4.4): the UDM notifies the AMF, the AMF authenticates the registered UE again, and the AUSF registers the new K_AKMA and A-KID at the AAnF. The UE derives its own at the Security Mode Command the AMF sends next. Nothing changes in the UERANSIM UE.
+
+free5GC has none of this chain. This part applies the patches of the UDM, the AMF and `openapi` ([free5gc-fixes.md](free5gc-fixes.md), F16 to F19) and turns on the policy of the AAnF ([aanf.md](aanf.md) section 8).
+
+### 11.1 Update `openapi` and the UDM, fix the AMF
+
+On the free5GC host, with free5GC stopped, prepare both `openapi` copies again (section 4.1); the script applies every patch up to `0003`:
+
+```bash
+~/akma-free5gc/free5gc/scripts/prepare-openapi.sh
+```
+
+```bash
+~/akma-free5gc/free5gc/scripts/prepare-openapi.sh ~/akma-free5gc/free5gc/build/openapi-test v1.2.5-0.20260527003827-02dc71b4d94f
+```
+
+If you did part 4 with this version of the repository, the UDM already has both patches (`patch-nf.sh udm status` says `patches applied`). With an older version it only has `0001`, and `apply` refuses the local changes. Revert with a copy of `0001` and apply again:
+
+```bash
+mkdir -p ~/udm-0001 && cp ~/akma-free5gc/free5gc/patches/udm/0001-*.patch ~/udm-0001/
+```
+
+```bash
+~/akma-free5gc/free5gc/scripts/patch-nf.sh udm revert ~/udm-0001
+```
+
+```bash
+~/akma-free5gc/free5gc/scripts/patch-nf.sh udm apply
+```
+
+Then the AMF. The script keeps `bin/amf.orig` and rebuilds:
+
+```bash
+~/akma-free5gc/free5gc/scripts/patch-nf.sh amf apply
+```
+
+### 11.2 Turn on the policy of the AAnF
+
+Build and install the AAnF and `seed` again (sections 3.1 and 3.4):
+
+```bash
+free5gc/scripts/build-aanf.sh
+```
+
+```bash
+free5gc/scripts/deploy.sh user@free5gc-host
+```
+
+`deploy.sh` keeps the installed configuration. Add to the `akma` block of `~/free5gc/config/aanfcfg.yaml` the age after which the AAnF asks for the refresh:
+
+```yaml
+  akma:
+    kakmaRefresh: 1m
+```
+
+`0`, or no line, turns it off. With a value, when an AF asks for the K_AF of a K_AKMA registered longer ago, the AAnF hands out the K_AF and asks the UDM for the refresh in the background, once per K_AKMA, and again after 5 minutes if the K_AKMA did not change. One minute is enough to watch it; in a real network the value is the authentication policy of the operator.
+
+### 11.3 Watch the refresh
+
+Start free5GC with the AAnF (`./run.sh -aanf`, part 5), the gNB and the UE in its namespace (part 7). Wait one minute after the UE registers, then run a Ua\* with an AF_ID the AF has not used yet with this A-KID; the AF keeps each K_AF until it expires and would not ask the AAnF again:
+
+```bash
+sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -profile psk-tls13 -n 1
+```
+
+The AF gets the K_AF, and the console of free5GC shows the chain: the AAnF (`K_AKMA of <SUPI> registered <age> ago: refresh requested from the UDM`), the UDM (`AuthTrigger for <SUPI> from AANF at <address>: re-authentication notified to the AMF <id>`), the AMF (`Re-authentication of <SUPI> requested by the UDM: started`), the AUSF with the new A-KID, the AMF again (`completed, new KAMF in use`) and the AAnF (`AKMA context of <SUPI> registered, A-KID <new A-KID> (previous context replaced)`). The UE prints `AKMA key material derived, A-KID[...]` with the same new A-KID. The PDU session goes on: the next Ua\* goes through the same `uesimtun0`, with the new A-KID. The AF still accepts the previous K_AF until it expires (TS 33.535 cl. 6.4.2).
+
+### 11.4 Ask for the refresh by hand
+
+`seed` sends the same request as the AAnF, without waiting for the policy. On the free5GC host:
+
+```bash
+~/akma-tools/seed trigger-auth --nrf http://127.0.0.10:8000 --supi imsi-208930000000001
+```
+
+It prints `accepted (204)`. A second request for the same SUPI within 60 s gets `UDM answered 403 (REAUTHENTICATION_NOT_ALLOWED; ...)`: that is the policy of the UDM (TS 33.501 cl. 6.1.5.2, NOTE A).
+
+### 11.5 Limitations
+
+- 3GPP access only, and no AS re-keying, which is optional (TS 33.501 cl. 6.9.4.4): UERANSIM has no AS security.
+- A UE in CM-IDLE (answer `202` and a pending authentication) is only covered by the unit tests of the AMF: UERANSIM does not stay in CM-IDLE.
+- After a restart of the UDM, the request gets `404 CONTEXT_NOT_FOUND` until the UE registers again: the UDR of free5GC does not keep the notification address of the AMF.
+
+---
+
+## 12. Undo
 
 Everything above is undone in reverse order, with free5GC stopped:
 
@@ -915,7 +1004,7 @@ Everything above is undone in reverse order, with free5GC stopped:
 ```
 
 ```bash
-for nf in nef test run config ausf udm nrf; do ~/akma-free5gc/free5gc/scripts/patch-nf.sh $nf revert; done
+for nf in nef test run config amf ausf udm nrf; do ~/akma-free5gc/free5gc/scripts/patch-nf.sh $nf revert; done
 ```
 
 ```bash

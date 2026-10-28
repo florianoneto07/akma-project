@@ -198,7 +198,7 @@ With `--keep`, free5GC, the gNB and the UE stay up at the end. The files go to `
 | `remote/` | `free5gc.log`, `ue.log`, `gnb.log`, outputs of the Ua\* client and of `seed`, `state` (the A-KIDs) |
 | `af.log`, `af-*.log` | the AF, and the extra AFs |
 
-The exit code is 0 only when no check fails; a skipped check is not a failure. It takes about three minutes and runs 141 checks: 60 on the free5GC host and 81 on the AF host.
+The exit code is 0 only when no check fails; a skipped check is not a failure. It takes about four minutes and runs 161 checks: 80 on the free5GC host and 81 on the AF host.
 
 ### 5.2 Groups
 
@@ -222,6 +222,7 @@ The exit code is 0 only when no check fails; a skipped check is not a failure. I
 | R4 | free5GC host | AAnF down during a primary authentication: the authentication succeeds, the registration fails |
 | R5 | free5GC host | subscriber without an AKMA subscription, then restored |
 | R6 | free5GC host | `remove-context`, and again (404) |
+| R6r | free5GC host | refresh of K_AKMA by the AAnF (TS 33.535 cl. 6.4.4), with a copy of its configuration with `kakmaRefresh: 20s`: a K_AF for a young K_AKMA asks for nothing; after 20 s, a K_AF for another AF_ID makes the AAnF send `trigger-auth`; the UDM notifies the AMF, the AMF re-authenticates the registered UE and runs the NAS SMC, the UE derives a new A-KID equal to the AUSF's and the AAnF's, and the PDU session goes on. Then `seed trigger-auth`: 403 within 60 s, 405 with GET, 400 without `supi`, 404 for an unknown SUPI. The installed configuration comes back at the end |
 | C (point C) | AF host | `retrieve` after `remove-context` |
 | R7, L1 | both | no string of 64 hex digits in the logs of free5GC, of the UE, of the gNB and of the AF |
 
