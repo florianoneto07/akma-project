@@ -34,6 +34,23 @@ The AAnF is not in this list: it is a new NF (`free5gc/aanf/`, [aanf.md](aanf.md
 | F19 | AMF | does not run the primary authentication the home network asks for | fixed, `amf/0001` |
 | F20 | AMF, UDM | the AMF requires an access token on notifications; the UDM sends the deregistration one with the wrong scope | open; the new notification goes without a token |
 
+**Checked against free5GC v4.3.0.** The patches here are for v4.2.3. On 28 October 2026 every item was checked again in free5GC v4.3.0 (30 September 2026: NRF `4522e4a9`, UDM `ba18ef3b`, AUSF `b693e38a`, AMF `9fc0ac3f`, NEF `6cd30f51`, web console `c40b94b6`, `openapi` v1.3.0). All twenty are still there. For F5, the claims model of `openapi` declares `Exp` and `Aud` with the same JSON names as the `jwt.RegisteredClaims` it embeds; the outer fields win, so `golang-jwt/jwt` v5 finds no `exp` or `aud` to check.
+
+### By repository
+
+One issue or pull request per repository of `github.com/free5gc`:
+
+| Repository | Items | Patches here |
+|---|---|---|
+| `nrf` | F1, F2, F3, F4, F15 | `nrf/0001` to `0003` (F1 to F3) |
+| `openapi` | F5, F6, F16 | `openapi/0001` to `0003` (F6, F16) |
+| `udm` | F7, F10, F17, F20 (deregistration notification) | `udm/0001`, `udm/0002` (F7, F17) |
+| `ausf` | F8 | `ausf/0001` |
+| `amf` | F18, F19, F20 (token check on callbacks) | `amf/0001` (F18, F19) |
+| `nef` | F11, F12, F13, F14 | `nef/0001` (F11) |
+| `webconsole` | F9 | none; `free5gc/scripts/provision-akma-subscriber.sh` works around it |
+| `free5gc` (configuration, `run.sh`, test bench) | the integration changes at the end | `config/`, `run/`, `test/` |
+
 ---
 
 ## F1 — The NRF drops `aanfInfoList`

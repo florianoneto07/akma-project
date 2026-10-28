@@ -15,7 +15,8 @@ What to do **after installing free5GC** with the official guide to use AKMA (3GP
 | 9 | AF outside the operator network, anonymous access, context removal |
 | 10 | UERANSIM on another host |
 | 11 | Refresh K_AKMA: the AAnF asks for a new authentication |
-| 12 | Undo |
+| 12 | Upgrading from V1 |
+| 13 | Undo |
 
 ---
 
@@ -995,7 +996,73 @@ It prints `accepted (204)`. A second request for the same SUPI within 60 s gets 
 
 ---
 
-## 12. Undo
+## 12. Upgrading from V1
+
+For a host that runs V1 of this repository. Between V1 and V2, one patch changed (`free5gc/patches/config/0002`) and four are new (`openapi/0003`, `udm/0002`, `amf/0001`, UERANSIM `0005`); the patches of the NRF, AUSF, NEF, `run.sh` and test bench are the same. `patch-nf.sh` and `patch-ueransim.sh` reverse exactly the patches they find, so the changed sets are reverted with the V1 copies first.
+
+### 12.1 free5GC host
+
+With free5GC and the AAnF stopped, keep a copy of the V1 patches before updating the clone:
+
+```bash
+cp -r ~/akma-free5gc/free5gc/patches ~/akma-v1-patches && cp -r ~/akma-free5gc/af/ue/ueransim/patches ~/akma-v1-ueransim-patches
+```
+
+Revert the configuration, the UDM and UERANSIM with them:
+
+```bash
+~/akma-free5gc/free5gc/scripts/patch-nf.sh config revert ~/akma-v1-patches/config
+```
+
+```bash
+~/akma-free5gc/free5gc/scripts/patch-nf.sh udm revert ~/akma-v1-patches/udm
+```
+
+```bash
+~/akma-free5gc/af/scripts/patch-ueransim.sh revert ~/akma-v1-ueransim-patches
+```
+
+Update the clone to V2 and prepare both `openapi` copies again (section 4.1):
+
+```bash
+cd ~/akma-free5gc && git pull
+```
+
+```bash
+~/akma-free5gc/free5gc/scripts/prepare-openapi.sh
+```
+
+```bash
+~/akma-free5gc/free5gc/scripts/prepare-openapi.sh ~/akma-free5gc/free5gc/build/openapi-test v1.2.5-0.20260527003827-02dc71b4d94f
+```
+
+Apply the new and changed sets:
+
+```bash
+for nf in config udm amf; do ~/akma-free5gc/free5gc/scripts/patch-nf.sh $nf apply; done
+```
+
+```bash
+~/akma-free5gc/af/scripts/patch-ueransim.sh apply
+```
+
+The UERANSIM patch `0005` adds the key service of the ME and its policy to `free5gc-ue.yaml` (part 7). With UERANSIM on another host (part 10), run the two UERANSIM commands there, with the V1 copy of its patches.
+
+### 12.2 AAnF
+
+Build and install the AAnF and `seed` again (sections 3.1 and 3.4). `deploy.sh` keeps the installed `aanfcfg.yaml`. V2 adds, in the `akma` block, one AF_ID per Ua\* profile in `authorizedAfs` and `authorizedNefs`, and `kakmaRefresh` (part 11). Copy them from `free5gc/config/aanfcfg.yaml`, or replace the file with `deploy.sh --force-config`, which shows the differences, and set your addresses again (section 1.2).
+
+### 12.3 AF host
+
+Update the clone, then build wolfSSL, the test CA and the AF (part 6):
+
+```bash
+af/scripts/build-wolfssl.sh && af/scripts/make-test-ca.sh && af/scripts/build-af.sh
+```
+
+`af/config/afcfg.yaml` has one listener per Ua\* profile; set your addresses again. Then run `af/scripts/e2e.sh` (part 8): `161 passed, 0 failed`.
+
+## 13. Undo
 
 Everything above is undone in reverse order, with free5GC stopped:
 
