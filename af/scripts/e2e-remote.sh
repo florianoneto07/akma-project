@@ -13,6 +13,8 @@
 #       TLS 1.3 and 1.2, each resumed on a second connection
 #   R2d Ua* from the UE over the DTLS profiles, CoAP inside: DTLS 1.3 and
 #       1.2, each resumed on a second association
+#   R2o Ua* from the UE over OSCORE: POST /akma, requests protected with the
+#       context, renewal (RFC 8613 Appendix B.2), a new POST per request
 #       -> sync A (checks from the AF machine)
 #   R3  new authentication: new A-KID; Ua* with it; Ua* with the previous
 #       A-KID and K_AF, still valid at the AF until expiry
@@ -255,6 +257,23 @@ check R2d.me "the ME gave uaclient the K_AF of the AF_ID of DTLS 1.3" \
 ua -profile psk-dtls13 -psk-ke-only -connect "$af_ip" -n 1 >"$run/ua-d-psk-ke.out" 2>&1
 check R2d.psk-ke "DTLS 1.3: a ClientHello with psk_ke only is refused (TS 33.210 cl. 6.2.2)" \
     grep -q "wolftls: handshake" "$run/ua-d-psk-ke.out"
+
+# ---------------------------------------------------------------- R2o
+# The OSCORE profile (TS 33.535 Annex D): POST /akma in CBOR over UDP through
+# the user plane, then requests protected with the context from the K_AF of
+# 01 00 00 00 08.
+step "R2o Ua* over OSCORE"
+ua -profile oscore -connect "$af_ip" -n 2 >"$run/ua-o.out" 2>&1
+check R2o.oscore "OSCORE with a context from K_AF, AF_ID $fqdn.0100000008 (TS 33.535 Annex D), two requests in one context" \
+    test "$(grep -c "AF authenticated by the OSCORE context from K_AF.*AF_ID $fqdn.0100000008" "$run/ua-o.out")" -eq 2
+ua -profile oscore -connect "$af_ip" -rekey -n 2 >"$run/ua-o-rekey.out" 2>&1
+check R2o.rekey "the context renewed before each request by RFC 8613 Appendix B.2 (D.3.4)" \
+    test "$(grep -c "AF_ID $fqdn.0100000008; context renewed, ID Context [0-9a-f]\{32\}" "$run/ua-o-rekey.out")" -eq 2
+ua -profile oscore -connect "$af_ip" -reconnect -n 2 >"$run/ua-o-reconnect.out" 2>&1
+check R2o.reconnect "a new POST /akma for each request, with new N1 and N2 (D.3.4)" \
+    test "$(grep -c "AF authenticated by the OSCORE context from K_AF.*AF_ID $fqdn.0100000008" "$run/ua-o-reconnect.out")" -eq 2
+check R2o.me "the ME gave uaclient the K_AF of the AF_ID of OSCORE" \
+    grep -aqF "K_AF for AF_ID[$fqdn.0100000008] given to application [uaclient]" "$run/ue.log"
 sync_point A
 
 # ---------------------------------------------------------------- R2n

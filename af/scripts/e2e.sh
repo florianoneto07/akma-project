@@ -25,6 +25,10 @@
 # check D03, PSK DTLS 1.3 with a UE independent of wolfSSL; without it, D03 is
 # reported as skipped.
 #
+# LIBCOAP_CLIENT=<coap-client of libcoap with OSCORE> runs checks O04 and O05,
+# the OSCORE profile with a UE independent of the code of the AF
+# (af/scripts/oscore-check.py); without it, they are reported as skipped.
+#
 # Output: af/build/e2e/<time>/ with report.md, the results and the logs of
 # both machines. Exit code 0 when every check passes.
 set -uo pipefail
@@ -122,14 +126,16 @@ af_variant() {
 }
 
 # psk_variant <name> <listen> ["key: value"]... -> pid of an extra AF with one
-# psk-tls13 server; each line replaces the key of the base or is added. The
-# base is $PSK_BASE, af/config/afcfg.yaml when unset.
+# server of the profile $PSK_TYPE, psk-tls13 when unset; each line replaces
+# the key of the base or is added. The base is $PSK_BASE, af/config/afcfg.yaml
+# when unset.
 psk_variant() {
     local name="$1" listen="$2"
     shift 2
-    digest_http_only "${PSK_BASE:-$afcfg}" "$listen" | awk -v listen="$listen" -v extra="$(printf '%s\n' "$@")" '
+    digest_http_only "${PSK_BASE:-$afcfg}" "$listen" | awk -v listen="$listen" -v type="${PSK_TYPE:-psk-tls13}" \
+        -v extra="$(printf '%s\n' "$@")" '
         BEGIN { n = split(extra, kv, "\n"); for (i = 1; i <= n; i++) if (kv[i] != "") { k = kv[i]; sub(/:.*/, "", k); over[k] = kv[i] } }
-        /^  listen:/ { print "  profiles:"; print "    - type: psk-tls13"; print "      listen: " listen; next }
+        /^  listen:/ { print "  profiles:"; print "    - type: " type; print "      listen: " listen; next }
         /^  [a-zA-Z]+:/ { k = $1; sub(/:$/, "", k); if (k in over) { print "  " over[k]; done[k] = 1; next } }
         { print }
         /^  aanfUri:/ { for (k in over) if (!(k in done)) { print "  " over[k]; done[k] = 1 } }' >"$L/afcfg-$name.yaml"
@@ -212,6 +218,7 @@ group_A() { # system up, A_KID_1 registered
 
     group_T "$akid1" "$akid12"
     group_D "$akid1" "$akid12"
+    group_O "$akid1" "$akid12"
 
     out="$(ssh_b "~/akma-tools/seed remove --nrf $nrf --aanf http://$aanf --supi $supi012; ~/akma-tools/seed remove --nrf $nrf --aanf http://$aanf --supi $supi3" 2>&1)"
     expect N26 "test contexts removed" "$(grep -c '^removed' <<<"$out")" "^2$"
@@ -347,6 +354,66 @@ group_D() {
     expect D05 "DTLS 1.3 with the K_AF of another AF_ID: handshake fails" "$out" "wolftls: handshake"
 }
 
+# The OSCORE profile (TS 33.535 Annex D): what the AF saw of the requests of
+# the UE in R2o, the independent check with libcoap, the negative cases, and
+# the expiry of K_AF with the clock-shifted AFs of group T.
+group_O() {
+    local akid1="$1" unknown="$2" akid3 kaf8 out pid
+    akid3="$(vec mnc-3-digits a_kid)"
+    kaf8="$(kaf_of mnc-3-digits 0100000008)"
+    echo "== O: OSCORE profile"
+    expect O01 "OSCORE from the UE: four POST /akma, AF_ID $fqdn.0100000008, one K_AF from the AAnF" \
+        "$(grep -acF "OSCORE context for A-KID $akid1, AF_ID $fqdn.0100000008" "$L/af.log")$(grep -acF "K_AF for A-KID $akid1 and AF_ID $fqdn.0100000008 obtained" "$L/af.log")" "^41$"
+    expect O02 "six requests of the UE protected by OSCORE served (D.3.2 steps 5 and 6)" \
+        "$(grep -acF "UE with A-KID $akid1 served over OSCORE (AF_ID $fqdn.0100000008)" "$L/af.log")" "^6$"
+    expect O03 "the context renewed twice by RFC 8613 Appendix B.2 (D.3.4)" \
+        "$(grep -aF "OSCORE context of A-KID $akid1, AF_ID $fqdn.0100000008 with UE-SID" "$L/af.log" |
+            grep -acF "renewed (RFC 8613 Appendix B.2), ID Context")" "^2$"
+    if [ -n "${LIBCOAP_CLIENT:-}" ]; then
+        out="$(python3 -I "$here/scripts/oscore-check.py" --coap-client "$LIBCOAP_CLIENT" --af "$af_ip:5683" \
+            --fqdn "$fqdn" --akid "$akid3" --kaf "$kaf8" --dir "$L/oscore-check" 2>&1)"
+        expect O04 "OSCORE with coap-client of libcoap as the UE, context from oscore-check.py: 2.05 with the A-KID" \
+            "$out" "\"aKid\":\"$akid3\""
+        out="$(python3 -I "$here/scripts/oscore-check.py" --coap-client "$LIBCOAP_CLIENT" --af "$af_ip:5683" \
+            --fqdn "$fqdn" --akid "$akid3" --kaf "$kaf8" --dir "$L/oscore-check" --osc-inp-alg 11 2>&1)"
+        expect O05 "OSC-INP with another AEAD algorithm: 4.00 OSC_INP_NOT_SUPPORTED" "$out" "4.00.*OSC_INP_NOT_SUPPORTED"
+    else
+        skip O04 "OSCORE with coap-client of libcoap as the UE: no LIBCOAP_CLIENT"
+        skip O05 "OSC-INP with another AEAD algorithm: no LIBCOAP_CLIENT"
+    fi
+    out="$("$uaclient" -profile oscore -connect "$af_ip" -akid "$unknown" -kaf "$kaf8" 2>&1)"
+    expect O06 "OSCORE with an A-KID unknown to the AAnF: 4.03 AKMA_KEY_NOT_AVAILABLE" "$out" "4.03 AKMA_KEY_NOT_AVAILABLE"
+    expect O06b "the AF logs K_AKMA_NOT_PRESENT of the AAnF" \
+        "$(grep -aF "No K_AKMA at the AAnF for A-KID $unknown (AF_ID $fqdn.0100000008)" "$L/af.log")" "OSCORE context refused"
+    out="$("$uaclient" -profile oscore -connect "$af_ip" -vector mnc-3-digits -vectors "$vectors" 2>&1)"
+    expect O07 "OSCORE with the K_AF of another AF_ID: 4.00 Decryption failed (RFC 8613 cl. 8.2)" "$out" \
+        '4.00 response "Decryption failed"'
+
+    # K_AF of 1 h seen 10 s before its expiry by an AF clock 3590 s ahead
+    # (TS 33.535 cl. 6.4.2), as in group T.
+    pid="$(PSK_TYPE=oscore psk_variant oscore-refetch "$af_ip:5687" "clockOffset: 3590s" "kafExpiry: refetch")"
+    fresh_context
+    sleep 1
+    "$uaclient" -profile oscore -connect "$af_ip:5687" -akid "$akid3" -kaf "$kaf8" >"$L/o-refetch-1.out" 2>&1
+    expect O08 "K_AF expired: the AF removes the OSCORE context" \
+        "$(grep -c "AF authenticated by the OSCORE context" "$L/o-refetch-1.out")$(wait_log "$L/af-oscore-refetch.log" "expired: OSCORE context with UE-SID" 25 && echo removed)" "^1removed$"
+    fresh_context
+    out="$("$uaclient" -profile oscore -connect "$af_ip:5687" -akid "$akid3" -kaf "$kaf8" 2>&1)"
+    expect O09 "after the expiry, policy refetch: a new POST /akma, with a second K_AF from the AAnF" \
+        "$(grep -c "AF authenticated by the OSCORE context" <<<"$out")$(grep -acF "K_AF for A-KID $akid3 and AF_ID $fqdn.0100000008 obtained" "$L/af-oscore-refetch.log")" "^12$"
+    kill "$pid" 2>/dev/null
+    pid="$(PSK_TYPE=oscore psk_variant oscore-reject "$af_ip:5688" "clockOffset: 3590s" "kafExpiry: reject")"
+    fresh_context
+    sleep 1
+    "$uaclient" -profile oscore -connect "$af_ip:5688" -akid "$akid3" -kaf "$kaf8" >"$L/o-reject-1.out" 2>&1
+    sleep 11
+    out="$("$uaclient" -profile oscore -connect "$af_ip:5688" -akid "$akid3" -kaf "$kaf8" 2>&1)"
+    expect O10 "after the expiry, policy reject: the first POST had a context, the second 4.03 KAF_EXPIRED" \
+        "$(grep -c "AF authenticated by the OSCORE context" "$L/o-reject-1.out")$(tr '\n' ' ' <<<"$out")" \
+        "^1.*4.03 KAF_EXPIRED"
+    kill "$pid" 2>/dev/null
+}
+
 group_B() { # after the new authentication
     local akid1 akid2
     akid1="$(state A_KID_1)"
@@ -449,7 +516,7 @@ nskip="$(grep -c '^SKIP' <<<"$all")"
     grep '^A_KID' "$L/remote/state" 2>/dev/null
     echo '```'
     echo
-    echo "## Free5GC host (R) and AF machine (S, N, T, D, B, C, L)"
+    echo "## Free5GC host (R) and AF machine (S, N, T, D, O, B, C, L)"
     echo
     echo "| | Check | Result |"
     echo "|---|---|---|"
