@@ -5,7 +5,7 @@
 
 Cada item registra a inconsistência, as fontes que a evidenciam, a decisão adotada pelo projeto e o grupo de trabalho responsável.
 
-**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio. 28 de outubro de 2026 — D-B: especificação do MVP-12 aprovada. Estes defeitos são a base das recomendações à 3GPP da V2 do repositório público (plano, MVP-13). Na implementação do MVP-12, D-B implementado (DV-12) e D-O e D-P acrescentados, de TS 29.503. No MVP-13: todos os itens conferidos nas versões mais recentes das normas (seção seguinte), e as lacunas que o projeto teve de decidir acrescentadas como sugestões, D-Q a D-Z.
+**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio. 28 de outubro de 2026 — D-B: especificação do MVP-12 aprovada. Estes defeitos são a base das recomendações à 3GPP da V2 do repositório público (plano, MVP-13). Na implementação do MVP-12, D-B implementado (DV-12) e D-O e D-P acrescentados, de TS 29.503. No MVP-13: todos os itens conferidos nas versões mais recentes das normas (seção seguinte), e as lacunas que o projeto teve de decidir acrescentadas como sugestões, D-Q a D-Z. 29 de outubro de 2026 — D-AA a D-AC, do CAPIF, achados na proposta do MVP-9, aprovada nessa data.
 
 ### Situação no projeto (22/10/2026)
 
@@ -35,6 +35,8 @@ Todos os itens estão no texto das normas; nenhum é defeito do projeto. A decis
 | D-X | o UDM responde ao `trigger-auth` depois do AMF (K4 do MVP-12) |
 | D-Y | DV-9: o NRF emite o *token* do AF externo |
 | D-Z | o AMF ignora o conteúdo fora de um registro (MVP-12) |
+| D-AA, D-AB | DV-13: `iss` e `client_id` com o identificador do *invoker*; `exp` como instante (MVP-9, ponto C9) |
+| D-AC | nada no MVP-9: o *token* do CCF usa o escopo do CAPIF; a autorização do GPSI é do MVP-10 |
 
 ### Conferência nas versões mais recentes (28/10/2026)
 
@@ -53,6 +55,8 @@ Pedido do responsável (MVP-13, ponto L9): antes de publicar as recomendações,
 | D-O | TS 29.503 V20.1.0 | presente: passo 2a de §5.3.2.16.2 e "manadatory" em várias notas |
 | D-P | `TS29503_Nudm_UECM.yaml` v1.5.0-alpha.2 | presente |
 | D-Q a D-Z | as versões citadas em cada item | presentes |
+| D-AA, D-AB | TS 29.222 V20.1.0 e o YAML da mesma versão; TS 33.122 V19.4.0 (sem versão nova) | presentes (conferido em 29/10/2026) |
+| D-AC | `TS29522_AKMA.yaml` v1.2.0-alpha.1 (TS 29.522 V20.0.0 e V20.1.0) | corrigido na V20.0.0: `scopes: {}` (conferido em 29/10/2026) |
 | TS 23.502 | V20.3.0 | presentes: §5.2.3.2 sem `AuthTrigger`; consumidores de `Nudm_EventExposure_Subscribe` só NEF e SMS-GMSC |
 
 ### Correspondência com as letras das questões em aberto
@@ -500,6 +504,61 @@ Acrescentadas em 28/10/2026 (MVP-13, ponto L7), a pedido do responsável ("erros
 **Proposta.** Limitar a regra ao procedimento de controle do modo de segurança iniciado durante o registro em que o `REGISTRATION REQUEST` foi enviado, e dizer que o AMF ignora o conteúdo fora de um procedimento em curso.
 
 **Decisão do projeto.** O AMF ignora o conteúdo durante a autenticação pedida pela rede (`free5gc/patches/amf/0001`); o UE do UERANSIM não muda.
+
+---
+
+## Defeitos do CAPIF
+
+Acrescentados em 29/10/2026, da leitura de TS 29.222, TS 33.122 e TS 29.522 para o MVP-9 (plano, seção 4). São contradições do texto, como D-A a D-P.
+
+## D-AA — `iss` do *token* do CAPIF
+
+| | |
+|---|---|
+| **Especificações** | TS 29.222 V19.8.0, tabela 8.5.4.2.8-1, e `TS29222_CAPIF_Security_API.yaml`; TS 33.122 V19.4.0, C.2.2 |
+| **Grupo responsável** | 3GPP CT3; SA3 para TS 33.122 |
+
+**Descrição.** TS 29.222 exige a *claim* `iss` no *token* do CCF: *"This attribute shall contain the API invoker Identifier as defined in Annex C.2.2 of 3GPP TS 33.122 [16] and in clause 4.1.1 of IETF RFC 7519 [24]."* As duas referências não sustentam isso. TS 33.122 C.2.2 não tem `iss` e põe o identificador do *invoker* em `client_id`, *"REQUIRED"*. A RFC 7519 §4.1.1 define `iss` como *"the principal that issued the JWT"*, que é o CCF.
+
+**Impacto.** Um CCF que siga TS 29.222 e um AEF que siga TS 33.122, ou o contrário, não concordam sobre onde está o *invoker*: o AEF procura `client_id` e não acha, ou lê em `iss` o emissor.
+
+**Proposta.** Alinhar as duas normas: o identificador do *invoker* em `client_id`, como em TS 33.122; e `iss`, se ficar, com o identificador do CCF, como na RFC 7519. Ajustar o YAML.
+
+**Decisão do projeto** (DV-13). As duas *claims*, `iss` e `client_id`, com o identificador do *invoker*.
+
+---
+
+## D-AB — `exp` do *token* do CAPIF como duração
+
+| | |
+|---|---|
+| **Especificações** | TS 29.222 V19.8.0, tabela 8.5.4.2.8-1, e `TS29222_CAPIF_Security_API.yaml`; TS 33.122 V19.4.0, C.2.2 e C.6 |
+| **Grupo responsável** | 3GPP CT3 |
+
+**Descrição.** TS 29.222 tipa a *claim* `exp` como `DurationSec`: *"This attribute shall contain the number of seconds after which the access_token is considered to be expired as defined in clause 4.1.4 of IETF RFC 7519 [24]."* A RFC 7519 §4.1.4, que a própria tabela cita, define `exp` como instante (*NumericDate*): *"the expiration time on or after which the JWT MUST NOT be accepted for processing"*. TS 33.122 C.6 também o trata como instante: *"If the current time is beyond the time specified by the "exp" parameter, the associated token shall no longer be considered valid"*. O `AccessTokenClaims` não tem `iat`, e uma duração sem o instante da emissão não diz quando o *token* vence.
+
+**Impacto.** Um CCF que ponha em `exp` a duração, por exemplo 3600, emite *tokens* que um AEF fiel à RFC 7519 julga vencidos desde 1970.
+
+**Proposta.** Tipar `exp` como instante (*NumericDate*, os segundos desde 1970-01-01 em UTC), com a descrição da RFC 7519. A duração continua em `expires_in` da resposta.
+
+**Decisão do projeto** (DV-13). `exp` como instante.
+
+---
+
+## D-AC — Escopo `nnef-akma:gpsi-access` no YAML da API AKMA do NEF
+
+| | |
+|---|---|
+| **Especificações** | TS 29.522 V19.7.0, §7.2, e `TS29522_AKMA.yaml` v1.1.0 (Anexo A) |
+| **Grupo responsável** | 3GPP CT3 |
+
+**Descrição.** §7.2: *"The NEF northbound APIs do not define any scopes for OAuth2 authorization in the present specification."* O YAML da API AKMA que vem com a V19.7.0 (v1.1.0, cuja `externalDocs` cita a V18.6.0) declara em `oAuth2ClientCredentials` o escopo `nnef-akma:gpsi-access` (*"Return GPSI in the AKMA Application Key information for the UE."*). Nenhuma cláusula do texto define esse escopo.
+
+**Impacto.** Quem gera o servidor ou o cliente pelo YAML pode exigir ou pedir um escopo que o texto diz não existir.
+
+**Situação.** Corrigido na V20.0.0: o `TS29522_AKMA.yaml` da Release 20 (v1.2.0-alpha.1) tem `scopes: {}`. O histórico dessa versão traz o CR 1861, *"Security in OpenAPI definitions"*. Fica no registro, com esta nota, e não entra na lista pública (ponto L9 do MVP-13).
+
+**Decisão do projeto.** Nada no MVP-9: o *token* do CCF usa o escopo do CAPIF. A autorização do GPSI é do MVP-10.
 
 ---
 

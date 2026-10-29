@@ -7,7 +7,7 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 
 | Nº | Assunto | Estado | MVP |
 |---|---|---|---|
-| DV-1 | SBI sem TLS (h2c) | **implementado** (MVP-1, 17/10/2026) | MVP-1 |
+| DV-1 | SBI sem TLS (h2c); CAPIF-3/4 sem TLS até o MVP-11 | **implementado** (MVP-1, 17/10/2026); estendido a CAPIF-3/4, **decidido** (29/10/2026) | MVP-1, MVP-9 |
 | DV-2 | Subscrição de `ROAMING_STATUS` desabilitada | **implementado** (MVP-1, 17/10/2026) — parcial: a etapa não existe; o campo só aceita `false` | MVP-1 |
 | DV-3 | Só SUPI do tipo IMSI | **implementado** (MVP-0, 16/10/2026) | MVP-0 |
 | DV-4 | Sem NFKC no lado UE | **implementado** (MVP-4, 18/10/2026) | MVP-4 |
@@ -19,6 +19,8 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-10 | Perfis TLS do Ua\* sem `TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384` e sem OCSP *stapling*, recomendados por TS 33.210 | **implementado** (MVP-8, 21/10/2026) | MVP-8 |
 | DV-11 | CoAP sobre DTLS sem a suíte obrigatória de RFC 7252, `TLS_PSK_WITH_AES_128_CCM_8`; vale TS 33.210 | **implementado** (MVP-8, 21/10/2026) | MVP-8 |
 | DV-12 | `trigger-auth` com POST, contra a precedência do YAML (TS 29.503 Anexo A.1), que declara `get` | **implementado** (MVP-12, 28/10/2026) | MVP-12 |
+| DV-13 | *Claims* do *token* do CCF: `iss` com o identificador do *invoker*, ao lado de `client_id`, e `exp` como instante | **decidido** (29/10/2026) | MVP-9 |
+| DV-14 | CAPIF parcial: só o caminho do AKMA | **decidido** (29/10/2026) | MVP-9 |
 
 **Consolidação (MVP-5, 18/10/2026).** Nenhum desvio novo surgiu no MVP-5. Estado e evidência de cada um no roteiro ponta a ponta (`docs/af-side/e2e.md`, execução `20261018-171510`):
 
@@ -46,6 +48,8 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 **Impacto.** O AF não é autenticado pelo transporte; um AF que conheça um A-KID pode apresentar o AF_ID de outro AF (ataque de falsificação de AF descrito por Akman et al., 2023 — `docs/literatura/analise-dos-artigos.md`). A associação AF_ID↔endereço reduz, mas não elimina, o risco. O suporte a TLS continua obrigatório para a NF (TS 33.501 §13.1.0).
 
 **Implementação (17/10/2026).** O AAnF serve h2c (`sbi.scheme: http`) em `192.168.16.130:8000` (8010 desde o MVP-6), alcançável da VM do AF. A política local está em `akma.authorizedAfs`: cada AF_ID tem a lista de endereços de origem autorizados, e o endereço é o da conexão, não o de `X-Forwarded-For` (`free5gc/aanf/internal/context/context.go`, `AfPolicy`). Testes: `TestRetrieveAfNotAuthorized` e, na VM, AF_ID autorizado pedido de outra máquina → 403 (`docs/free5gc-side/aanf.md` §9). O suporte a `https` existe na configuração (`sbi.tls`), mas não foi exercitado.
+
+**Extensão (29/10/2026, MVP-9).** Decisão do responsável no ponto C3 do MVP-9 (plano, seção 4): CAPIF-3/4, entre o NEF e o CCF, fica em `http` num endereço de *loopback* do CCF até o MVP-11, que traz o TLS mútuo com os certificados das NFs. `[3GPP]` TS 33.122 V19.4.0 §6.6: *"TLS shall be used to provide integrity protection, replay protection and confidentiality protection. The support of TLS is mandatory."* e *"Certificate based mutual authentication shall be performed between the CAPIF entities using TLS."*; NOTA: *"It is up to the domain administrator's policy to protect interfaces within the trusted domain."* Como as NFs deste desvio, o CCF reconhece o NEF pela interface interna. CAPIF-1e, entre o AF e o CCF, tem TLS desde o MVP-9.
 
 ---
 
@@ -187,7 +191,7 @@ O certificado de cliente exige mudar o servidor SBI comum do NEF do free5GC. O T
 
 - **Transporte.** A K_AF trafega em claro entre o NEF e o AF externo. Um atacante na rede entre os dois a lê.
 - **Autenticação do AF.** Ela se apoia no *token* e no endereço de origem, e não num certificado. O risco é o mesmo do DV-1, agora do lado do NEF: um AF que obtenha *token* para `3gpp-akma` e esteja num endereço autorizado pode apresentar o AF_ID de outro.
-- **Origem do *token*.** `[MVP]` O AF externo obtém o *token* no NRF do operador, o que um AF fora da rede não faria. Fora do laboratório, quem emite o *token* é o CAPIF ou o servidor de autorização do NEF (§12.4, §12.5). Sem CAPIF, TS 29.522 §6 deixa o servidor de autorização para a configuração local. O CAPIF está planejado para o MVP-9 (plano, seção 5) e fecha esta parte do desvio.
+- **Origem do *token*.** `[MVP]` O AF externo obtém o *token* no NRF do operador, o que um AF fora da rede não faria. Fora do laboratório, quem emite o *token* é o CAPIF ou o servidor de autorização do NEF (§12.4, §12.5). Sem CAPIF, TS 29.522 §6 deixa o servidor de autorização para a configuração local. O CAPIF do MVP-9, aprovado em 29/10/2026 (plano, seção 4), fecha esta parte do desvio quando for implementado. Com o CAPIF, o método 3 também pede TLS entre o AF e o NEF (TS 33.122 §6.5.2.3 passo 5), que fica com este desvio até o MVP-11.
 
 **Implementação (19/10/2026).** `free5gc/patches/nef/0001-akma-api.patch` e `free5gc/patches/config/0002-nef-akma.patch` (`docs/free5gc-side/nef.md` §10). O NEF serve `3gpp-akma` em `http` em 192.168.16.130:8000. O AF de fora da rede obtém o *token* no NRF pelo túnel SSH. Verificação: o NEF responde 401 sem *token* (E04, `docs/af-side/teste-nef.md`) e 403 a um AF_ID fora da política (E06).
 
@@ -254,4 +258,54 @@ O certificado de cliente exige mudar o servidor SBI comum do NEF do free5GC. O T
 **Impacto.** Um consumidor que siga o YAML ao pé da letra manda GET e recebe 405. Se a 3GPP corrigir o YAML para POST, o desvio se encerra sem mudança no código.
 
 **Implementação (28/10/2026).** `free5gc/patches/udm/0002-auth-trigger.patch` (rota POST, GET com 405); `free5gc/patches/openapi/0003-home-network-triggered-authentication.patch` (cliente); `free5gc/aanf/internal/sbi/consumer/udm_service.go`. Verificação: teste de unidade `TestAuthTriggerRequests` do UDM e o passo R6r do `e2e.sh` (`docs/af-side/e2e.md`).
+
+---
+
+## DV-13 — *Claims* do *token* do CCF: `iss` com o identificador do *invoker* e `exp` como instante
+
+**Norma.** Três textos em conflito (defeitos D-AA e D-AB):
+
+- `[3GPP]` TS 29.222 V19.8.0, tabela 8.5.4.2.8-1 (`AccessTokenClaims`), e `TS29222_CAPIF_Security_API.yaml`: `iss`, `scope` e `exp` obrigatórios.
+  - `iss`: *"This attribute shall contain the API invoker Identifier as defined in Annex C.2.2 of 3GPP TS 33.122 [16] and in clause 4.1.1 of IETF RFC 7519 [24]."*
+  - `exp`, do tipo `DurationSec`: *"This attribute shall contain the number of seconds after which the access_token is considered to be expired as defined in clause 4.1.4 of IETF RFC 7519 [24]."*
+- `[3GPP]` TS 33.122 V19.4.0, C.2.2: o *token* leva `exp` (*"The expiration time of the access token"*), `client_id` (*"The identifier of the API Invoker making the API request"*) e `scope`, todos *"REQUIRED"*; não há `iss`. C.6: *"If the current time is beyond the time specified by the "exp" parameter, the associated token shall no longer be considered valid"*.
+- RFC 7519: §4.1.1, *"The "iss" (issuer) claim identifies the principal that issued the JWT. The processing of this claim is generally application specific."*; §4.1.4, `exp` *"identifies the expiration time on or after which the JWT MUST NOT be accepted for processing"*, com valor *NumericDate*.
+
+`[DIVERGÊNCIA]` Os dois pontos estão iguais em TS 29.222 V20.1.0. TS 33.122 não tem versão mais nova.
+
+**O que o projeto faz.** O *token* do CCF leva:
+
+- `iss` e `client_id`, os dois com o identificador do *invoker*;
+- `exp` como instante (*NumericDate*), um inteiro que cabe no tipo `DurationSec` do YAML. A duração vai em `expires_in` da resposta (tabela 8.5.4.2.7-1).
+
+O NEF confere `exp` como instante, com tolerância de até 30 s (TS 33.122 C.2.2).
+
+**Por quê.** Decidido pelo responsável em 29/10/2026, com o ponto C9 do MVP-9 (plano, seção 4). Com as duas *claims*, TS 29.222 e TS 33.122 ficam atendidas, e a RFC 7519 deixa o tratamento de `iss` à aplicação. Um `exp` relativo só teria sentido com o instante da emissão (`iat`), que nenhuma das duas normas pede, e contrariaria a RFC 7519, que TS 29.222 cita, e TS 33.122 C.6.
+
+**Impacto.** Um AEF de outra implementação que espere `iss` com o identificador do CCF recusa o *token*. Um CCF de outra implementação que mande `exp` relativo tem os *tokens* recusados pelo NEF, como vencidos. O AF não é afetado: o *token* é opaco para ele, que usa `expires_in` (TS 33.122 C.5).
+
+---
+
+## DV-14 — CAPIF parcial: só o caminho do AKMA
+
+**Norma.**
+
+- `[3GPP]` TS 29.522 V19.7.0 §7.1: *"When CAPIF is used with an NEF that is used for external exposure, the NEF shall support the following as defined in 3GPP TS 29.222 [12]:"* o AEF e as APIs de CAPIF-2/2e e CAPIF-3/3e; o APF e as de CAPIF-4/4e; a função de gestão de API (*API management function*) e as de CAPIF-5/5e; pelo menos um dos métodos de segurança.
+- `[3GPP]` TS 23.222 V19.10.0 §6.3.3 e §6.3.4: as capacidades do CCF (entre outras, o *logging* e a auditoria das chamadas, o monitoramento, a tarifação, as políticas e a interconexão) e as do AEF (entre outras, a revogação, o *logging* no CCF e a ocultação da topologia).
+- `[3GPP]` TS 33.122 V19.4.0 §6.8, passos 7 a 10: na saída do *invoker*, o CCF manda ao AEF uma notificação de evento, e o AEF apaga os dados de segurança do *invoker*.
+
+**O que o projeto faz.** O CCF e o NEF implementam do CAPIF só o caminho do AKMA (plano, MVP-9, ponto C2):
+
+- CCF: `Onboard_API_Invoker`, só com a entrada automática (201), e `Offboard_API_Invoker`; `Discover_Service_API`; `Publish_Service_API`, `Unpublish_Service_API` e `Get_Service_API`; `Obtain_Security_Method`, `Obtain_Authorization` e `Obtain_API_Invoker_Info`;
+- NEF: o AEF (`check-authentication` e a verificação do *token*) e o APF (a publicação de `3gpp-akma`). O registro do provedor fica na configuração (ponto C6).
+
+Ficam de fora: a atualização da entrada e a entrada com aprovação; os eventos, inclusive o aviso ao AEF na saída do *invoker*; a revogação; o *logging* das chamadas; a auditoria; a política de acesso; o roteamento; o registro do provedor pela API; a descoberta aberta; a interconexão de CCF; o RNAA; a ocultação de topologia; a tarifação. Os métodos 1 e 2 de CAPIF-2e pedem TLS no NEF e ficam para o MVP-11 (DV-9).
+
+**Por quê.** Decidido pelo responsável em 29/10/2026, com o ponto C16 do MVP-9. O MVP-9 leva o *token* do AF externo ao caminho da norma (TS 29.522 §7.2); as outras funções não entram no caminho do AKMA.
+
+**Impacto.**
+
+- Sem a revogação e sem o aviso na saída, um *token* já emitido vale até `exp`, mesmo depois da saída do *invoker*. TS 33.122 C.6 usa `exp` como forma de revogação; a vida curta do *token* limita a janela, e a especificação do MVP-9 fixa por quanto tempo o NEF guarda os dados do *invoker*.
+- Sem *logging*, auditoria e tarifação no CCF, as chamadas ficam registradas só no log do NEF (categoria `AKMA`).
+- Um *invoker* de outra implementação que dependa de uma API de fora (os eventos, por exemplo) não funciona com este CCF.
 
