@@ -297,6 +297,12 @@ O teste com o UERANSIM em outra máquina (critério 6) está em `docs/af-side/te
 - **Execução `20261028-151849` (151/10).** As dez falhas, no R6r: o roteiro pedia, depois de 20 s, a K_AF do mesmo AF_ID, e o AF, que a tinha guardada, não consultou o AAnF; o `seed trigger-auth` repetia o prefixo da API no caminho. Corrigidos o roteiro e o `seed`.
 - **Execução `20261028-154345` (160/1).** O R6r.smc falhou: o UERANSIM pôs o último `Registration Request` no `Security Mode Complete`, e o AMF o tratou como um registro. Corrigido no AMF (`docs/free5gc-side/amf.md` §2).
 
+### 5.8 MVP-13, instalação limpa da V2, em 29/10/2026
+
+`161 passed, 0 failed, 0 skipped` na execução `20261029-124631`: 80 verificações na máquina do free5GC e 81 na do AF. A máquina do free5GC é o *snapshot* limpo do free5GC v4.2.3 e do UERANSIM `85a0fbf` (o da .132, que voltou como 192.168.16.133). O repositório veio de um `git bundle` do *commit* `03c0606` do repositório público, instalado só pelo `docs/install.md` público, partes 1 a 7, 9.1 e 11.1; o AF, nesta máquina, de um clone do mesmo *bundle*. Os endereços mudaram nos lugares da tabela 1.2 do guia, e por isso o relatório diz `03c0606-dirty`. O `OPENSSL_DTLS13` e o `LIBCOAP_CLIENT` foram recompilados pelos passos de `public/docs/testing.md` §5.1. O relatório ficou em `af/build/e2e/20261029-124631-clean-v2`, fora do controle de versão.
+
+- **Lacuna do guia.** A parte 8 e `testing.md` §5.1 pediam as partes 3 a 7 e a seção 9.1, sem a 11.1 (o *patch* do AMF), sem a qual o R6r falha, e sem a linha `kakmaRefresh: 0` no `aanfcfg.yaml` instalado, que o R6r troca numa cópia. Corrigido no guia público antes da execução.
+
 ## 6. Limitações
 
 - **Senha de `sudo`.** É pedida uma vez por execução; o roteiro não altera o `sudoers`.
