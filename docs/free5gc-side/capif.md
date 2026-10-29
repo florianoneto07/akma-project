@@ -457,3 +457,18 @@ Registrados no registro de defeitos em 29/10/2026, com os itens 4 e 5 do plano (
 - este documento, `nef.md`, `correcoes-free5gc.md` (F13) e o `README.md` deste lado; `docs/af-side/af.md` e `e2e.md`;
 - `docs/conformidade/desvios.md` (DV-15, e DV-1, DV-9, DV-13 e DV-14 com a implementação); o registro de defeitos (D-AD a D-AG) e a cópia em `~/akma`;
 - o plano, a matriz de rastreabilidade (revisão 10) e o tutorial (parte 11).
+
+## 15. Implementação
+
+Um componente de cada vez, cada um com os seus *commits*:
+
+| Componente | Estado | Onde |
+|---|---|---|
+| modelos e clientes do CAPIF (C4) | feito em 29/10/2026 | `free5gc/patches/openapi/0004-capif-models-and-clients.patch`; `openapi.md` |
+| CCF | a fazer | `free5gc/ccf/`, `free5gc/config/ccfcfg.yaml`, `free5gc/scripts/` |
+| NEF como APF e AEF | a fazer | `free5gc/patches/nef/0002`, `free5gc/patches/config/0003` |
+| AF como *API invoker* | a fazer | `af/af/internal/capif`, `af/config/afcfg-capif.yaml` |
+| partida, VM e `e2e.sh` | a fazer | `free5gc/patches/run/0002`, `af/scripts/` |
+| documentos | a fazer | seção 14 |
+
+**Achado na implementação.** `TS29222_CAPIF_Security_API.yaml`, `ServiceSecurity.securityInfo`: um *array* com `minimum: 1`, palavra de números, em vez de `minItems: 1`; a tabela 8.5.4.2.2-1 dá a cardinalidade 1..N. Igual no YAML da V20.1.0. Editorial; vai ao registro de defeitos com os documentos.
