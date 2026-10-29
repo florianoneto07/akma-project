@@ -5,7 +5,7 @@
 
 Cada item registra a inconsistência, as fontes que a evidenciam, a decisão adotada pelo projeto e o grupo de trabalho responsável.
 
-**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio. 28 de outubro de 2026 — D-B: especificação do MVP-12 aprovada. Estes defeitos são a base das recomendações à 3GPP da V2 do repositório público (plano, MVP-13). Na implementação do MVP-12, D-B implementado (DV-12) e D-O e D-P acrescentados, de TS 29.503. No MVP-13: todos os itens conferidos nas versões mais recentes das normas (seção seguinte), e as lacunas que o projeto teve de decidir acrescentadas como sugestões, D-Q a D-Z. 29 de outubro de 2026 — D-AA a D-AC, do CAPIF, achados na proposta do MVP-9, aprovada nessa data.
+**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio. 28 de outubro de 2026 — D-B: especificação do MVP-12 aprovada. Estes defeitos são a base das recomendações à 3GPP da V2 do repositório público (plano, MVP-13). Na implementação do MVP-12, D-B implementado (DV-12) e D-O e D-P acrescentados, de TS 29.503. No MVP-13: todos os itens conferidos nas versões mais recentes das normas (seção seguinte), e as lacunas que o projeto teve de decidir acrescentadas como sugestões, D-Q a D-Z. 29 de outubro de 2026 — D-AA a D-AC, do CAPIF, achados na proposta do MVP-9, aprovada nessa data. Na mesma data, D-AD a D-AG, da especificação do CAPIF (`docs/free5gc-side/capif.md`), aprovada.
 
 ### Situação no projeto (22/10/2026)
 
@@ -37,6 +37,9 @@ Todos os itens estão no texto das normas; nenhum é defeito do projeto. A decis
 | D-Z | o AMF ignora o conteúdo fora de um registro (MVP-12) |
 | D-AA, D-AB | DV-13: `iss` e `client_id` com o identificador do *invoker*; `exp` como instante (MVP-9, ponto C9) |
 | D-AC | nada no MVP-9: o *token* do CCF usa o escopo do CAPIF; a autorização do GPSI é do MVP-10 |
+| D-AD | nada: o método 1 do CAPIF fica fora do MVP-9 (DV-14) |
+| D-AE | DV-15: HTTP/2 por ALPN no CCF (ponto C29 de `capif.md`) |
+| D-AF, D-AG | PEM, `authenticationInfo`, `authorizationInfo` e `apiScheme` fixados em `capif.md` (pontos C18, C21 e C26) |
 
 ### Conferência nas versões mais recentes (28/10/2026)
 
@@ -57,6 +60,8 @@ Pedido do responsável (MVP-13, ponto L9): antes de publicar as recomendações,
 | D-Q a D-Z | as versões citadas em cada item | presentes |
 | D-AA, D-AB | TS 29.222 V20.1.0 e o YAML da mesma versão; TS 33.122 V19.4.0 (sem versão nova) | presentes (conferido em 29/10/2026) |
 | D-AC | `TS29522_AKMA.yaml` v1.2.0-alpha.1 (TS 29.522 V20.0.0 e V20.1.0) | corrigido na V20.0.0: `scopes: {}` (conferido em 29/10/2026) |
+| D-AD | TS 33.122 V19.4.0 (sem versão nova) | presente (conferido em 29/10/2026) |
+| D-AE, D-AF, D-AG | TS 29.222 V20.1.0 | presentes (conferido em 29/10/2026) |
 | TS 23.502 | V20.3.0 | presentes: §5.2.3.2 sem `AuthTrigger`; consumidores de `Nudm_EventExposure_Subscribe` só NEF e SMS-GMSC |
 
 ### Correspondência com as letras das questões em aberto
@@ -509,7 +514,7 @@ Acrescentadas em 28/10/2026 (MVP-13, ponto L7), a pedido do responsável ("erros
 
 ## Defeitos do CAPIF
 
-Acrescentados em 29/10/2026, da leitura de TS 29.222, TS 33.122 e TS 29.522 para o MVP-9 (plano, seção 4). São contradições do texto, como D-A a D-P.
+Acrescentados em 29/10/2026, da leitura de TS 29.222, TS 33.122 e TS 29.522 para o MVP-9: D-AA a D-AC com a proposta (plano, seção 4), D-AD a D-AG com a especificação (`docs/free5gc-side/capif.md`). D-AA a D-AE são falhas do texto, como D-A a D-P; D-AF e D-AG são sugestões, como D-Q a D-Z.
 
 ## D-AA — `iss` do *token* do CAPIF
 
@@ -559,6 +564,74 @@ Acrescentados em 29/10/2026, da leitura de TS 29.222, TS 33.122 e TS 29.522 para
 **Situação.** Corrigido na V20.0.0: o `TS29522_AKMA.yaml` da Release 20 (v1.2.0-alpha.1) tem `scopes: {}`. O histórico dessa versão traz o CR 1861, *"Security in OpenAPI definitions"*. Fica no registro, com esta nota, e não entra na lista pública (ponto L9 do MVP-13).
 
 **Decisão do projeto.** Nada no MVP-9: o *token* do CCF usa o escopo do CAPIF. A autorização do GPSI é do MVP-10.
+
+---
+
+## D-AD — Chave AEFPSK do método 1 só com o TLS 1.2
+
+| | |
+|---|---|
+| **Especificações** | TS 33.122 V19.4.0, Anexo A.1; TS 33.310 V19.5.0, Anexo E; TS 33.210 V19.3.0, §6.2 |
+| **Grupo responsável** | 3GPP SA3 |
+
+**Descrição.** O método 1 do CAPIF, TLS-PSK entre o *invoker* e o AEF, usa a chave AEFPSK. A.1 a deriva de *"P1 = CAPIF-1e TLS session's Session ID, generated as part of TLS full Handshake"*, com *"The input key shall be equal to CAPIF-1e TLS session's Master Secret."* O *Session ID* e o *Master Secret* são do TLS 1.2. O mesmo A.1 manda seguir o perfil TLS de TS 33.310 Anexo E, que remete a TS 33.210, e TS 33.210 §6.2 exige o TLS 1.3 além do 1.2. No TLS 1.3, o `legacy_session_id` só existe por compatibilidade (RFC 8446 §4.1.2), o segredo mestre fica dentro do *key schedule* (§7.1), e a forma que a RFC dá para tirar chaves de uma sessão é o *exporter* (§7.5).
+
+**Impacto.** Com CAPIF-1e em TLS 1.3, o *invoker* e o CCF não têm como derivar a mesma AEFPSK. O método 1 só funciona se os dois forçarem o TLS 1.2.
+
+**Proposta.** Definir a derivação para o TLS 1.3, por exemplo com o *exporter* da RFC 8446 §7.5 e um rótulo próprio, e dizer que entrada da KDF vale para cada versão.
+
+**Decisão do projeto.** Nada: o método 1 fica fora do MVP-9 (DV-14).
+
+---
+
+## D-AE — HTTP/2 pelo *upgrade* do HTTP nas APIs do CAPIF
+
+| | |
+|---|---|
+| **Especificação** | TS 29.222 V19.8.0, §7.3 (igual na V20.1.0) |
+| **Grupo responsável** | 3GPP CT3 |
+
+**Descrição.** §7.3: *"A functional entity desiring to use HTTP/2 shall use the HTTP upgrade mechanism to negotiate applicable HTTP version as described in IETF RFC 9113 [10]."* A RFC 9113 §3.1 diz do `h2c` no *Upgrade* do HTTP: *"This usage was never widely deployed and is deprecated by this document."* Sobre TLS, que o mesmo §7.3 exige, o HTTP/2 se negocia por ALPN, e o `h2c` *"MUST NOT be sent by a client or selected by a server"* (RFC 9113 §3.2).
+
+**Impacto.** Quem segue §7.3 implementa um mecanismo que a RFC citada deprecou e que não se aplica sobre TLS.
+
+**Proposta.** Trocar a frase por: o HTTP/2 sobre TLS se negocia por ALPN, como em RFC 9113 §3.2.
+
+**Decisão do projeto** (DV-15). ALPN.
+
+---
+
+## D-AF — Formato das cadeias de segurança do CAPIF (sugestão)
+
+| | |
+|---|---|
+| **Especificação** | TS 29.222 V19.8.0, tabelas 8.4.4.2.5-1 e 8.5.4.2.3-1 |
+| **Grupo responsável** | 3GPP CT3 |
+
+**Descrição.** `apiInvokerPublicKey` e `apiInvokerCertificate` (tabela 8.4.4.2.5-1), `authenticationInfo` e `authorizationInfo` (tabela 8.5.4.2.3-1) são cadeias sem formato. A norma não diz se a chave e o certificado vão em PEM, em DER com base64 ou como JWK, nem o que vai nas informações de autenticação e de autorização de cada método de segurança.
+
+**Impacto.** Um *invoker*, um CCF e um AEF de implementações diferentes só interoperam se combinarem os formatos.
+
+**Proposta.** Fixar a codificação das chaves e dos certificados (por exemplo, PEM, ou JWK para as chaves) e o conteúdo de `authenticationInfo` e `authorizationInfo` para cada método.
+
+**Decisão do projeto** (pontos C18 e C21 de `capif.md`). PEM; `authenticationInfo` com o certificado da CA do CCF; `authorizationInfo` com o texto JSON `{"akmaAfIds":[...]}`.
+
+---
+
+## D-AG — Esquema do `apiRoot` na descoberta (sugestão)
+
+| | |
+|---|---|
+| **Especificações** | TS 29.222 V19.8.0, tabela 8.2.4.2.3-1 e §5.2.2.2.2 NOTA; TS 29.501 V19.5.0, §4.4.1 |
+| **Grupo responsável** | 3GPP CT3 |
+
+**Descrição.** O *invoker* monta o `apiRoot` da API descoberta com `domainName` ou `interfaceDescriptions` (§5.2.2.2.2 NOTA). `InterfaceDescription` traz o endereço, a porta e o prefixo, mas não o esquema, e TS 29.501 §4.4.1 admite `http` e `https`.
+
+**Impacto.** A descoberta não diz ao *invoker* se a API é `https` ou `http`; ele tem de supor ou configurar.
+
+**Proposta.** Dizer que as APIs descobertas pelo CAPIF usam `https` (TS 33.501 §12.3; TS 33.122 §6.5), ou acrescentar o esquema a `InterfaceDescription`.
+
+**Decisão do projeto** (ponto C26 de `capif.md`). `apiScheme` na configuração do AF, `http` enquanto o NEF não tiver TLS (DV-9).
 
 ---
 

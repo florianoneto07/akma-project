@@ -1,6 +1,6 @@
 # CAPIF no free5GC — CCF, NEF como APF e AEF, AF como *API invoker*: especificação
 
-**MVP:** MVP-9 · **Data:** 29 de outubro de 2026 · **Estado:** proposta, a aprovar (pontos C17 a C30 da seção 13). O escopo foi aprovado no plano em 29/10/2026, com os pontos C1 a C16 (plano, seção 4).
+**MVP:** MVP-9 · **Data:** 29 de outubro de 2026 · **Estado:** **aprovada** pelo responsável em 29/10/2026, com os pontos C17 a C30 da seção 13 como propostos; o DV-15 e os defeitos D-AD a D-AG registrados na mesma data. O escopo foi aprovado no plano em 29/10/2026, com os pontos C1 a C16 (plano, seção 4).
 
 Este documento detalha o que o plano aprovou: o CAPIF Core Function (CCF), uma NF nova escrita pelo projeto; o NEF do free5GC como APF e AEF; o AF externo como *API invoker*; e os testes. Os pontos ainda abertos continuam a numeração do plano, de C17 em diante. Neste texto, "função de gestão de API" é a *API management function* do CAPIF, e não o AMF do 5GC.
 
@@ -420,11 +420,11 @@ As 161 verificações de hoje continuam, com o grupo do NEF do MVP-6 (C13).
 
 ## 12. Achados
 
-Vão ao registro de defeitos depois da aprovação, como os itens 4 e 5 do plano (MVP-9, "Achados nas normas"):
+Registrados no registro de defeitos em 29/10/2026, com os itens 4 e 5 do plano (MVP-9, "Achados nas normas"):
 
-1. `[DIVERGÊNCIA]` TS 29.222 §7.3 contra a RFC 9113 §3.1 e §3.2: o HTTP/2 pelo *upgrade* do HTTP (seção 1). Igual na V20.1.0. Proposta: D-AE.
-2. `[LACUNA]` TS 33.122 A.1: a AEFPSK do método 1 sai do *Session ID* e do *Master Secret* da sessão TLS de CAPIF-1e, que são do TLS 1.2. Conferido em 29/10/2026: TS 33.122 A.1 remete o perfil TLS a TS 33.310 Anexo E, que o remete a TS 33.210, e TS 33.210 §6.2 exige o TLS 1.3 além do 1.2. A.1 não diz como derivar a chave com o TLS 1.3. Proposta: D-AD.
-3. `[LACUNA]` O formato de `apiInvokerPublicKey`, `apiInvokerCertificate`, `authenticationInfo` e `authorizationInfo`, e o esquema do `apiRoot` em `InterfaceDescription` (seções 4.2, 5.9 e 7.2). Sugestões: D-AF e D-AG.
+1. `[DIVERGÊNCIA]` TS 29.222 §7.3 contra a RFC 9113 §3.1 e §3.2: o HTTP/2 pelo *upgrade* do HTTP (seção 1). Igual na V20.1.0. D-AE.
+2. `[LACUNA]` TS 33.122 A.1: a AEFPSK do método 1 sai do *Session ID* e do *Master Secret* da sessão TLS de CAPIF-1e, que são do TLS 1.2. Conferido em 29/10/2026: TS 33.122 A.1 remete o perfil TLS a TS 33.310 Anexo E, que o remete a TS 33.210, e TS 33.210 §6.2 exige o TLS 1.3 além do 1.2. A.1 não diz como derivar a chave com o TLS 1.3. D-AD.
+3. `[LACUNA]` O formato de `apiInvokerPublicKey`, `apiInvokerCertificate`, `authenticationInfo` e `authorizationInfo`, e o esquema do `apiRoot` em `InterfaceDescription` (seções 4.2, 5.9 e 7.2). Sugestões D-AF e D-AG.
 
 ## 13. Pontos para aprovação
 

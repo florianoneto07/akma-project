@@ -21,6 +21,7 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-12 | `trigger-auth` com POST, contra a precedência do YAML (TS 29.503 Anexo A.1), que declara `get` | **implementado** (MVP-12, 28/10/2026) | MVP-12 |
 | DV-13 | *Claims* do *token* do CCF: `iss` com o identificador do *invoker*, ao lado de `client_id`, e `exp` como instante | **decidido** (29/10/2026) | MVP-9 |
 | DV-14 | CAPIF parcial: só o caminho do AKMA | **decidido** (29/10/2026) | MVP-9 |
+| DV-15 | HTTP/2 por ALPN no CCF, contra o *upgrade* do HTTP de TS 29.222 §7.3 | **decidido** (29/10/2026) | MVP-9 |
 
 **Consolidação (MVP-5, 18/10/2026).** Nenhum desvio novo surgiu no MVP-5. Estado e evidência de cada um no roteiro ponta a ponta (`docs/af-side/e2e.md`, execução `20261018-171510`):
 
@@ -308,4 +309,21 @@ Ficam de fora: a atualização da entrada e a entrada com aprovação; os evento
 - Sem a revogação e sem o aviso na saída, um *token* já emitido vale até `exp`, mesmo depois da saída do *invoker*. TS 33.122 C.6 usa `exp` como forma de revogação; a vida curta do *token* limita a janela, e a especificação do MVP-9 fixa por quanto tempo o NEF guarda os dados do *invoker*.
 - Sem *logging*, auditoria e tarifação no CCF, as chamadas ficam registradas só no log do NEF (categoria `AKMA`).
 - Um *invoker* de outra implementação que dependa de uma API de fora (os eventos, por exemplo) não funciona com este CCF.
+
+---
+
+## DV-15 — HTTP/2 por ALPN no CCF, contra o *upgrade* do HTTP de TS 29.222 §7.3
+
+**Norma.** Dois textos em conflito (defeito D-AE):
+
+- `[3GPP]` TS 29.222 V19.8.0 §7.3: *"For CAPIF APIs, the support of HTTP/1.1 (IETF RFC 9112 [4], IETF RFC 9110 [5], and IETF RFC 9111 [8]) over TLS is mandatory and the support of HTTP/2 (IETF RFC 9113 [10]) over TLS is recommended. TLS shall be used as specified in 3GPP TS 33.122 [16]."* e *"A functional entity desiring to use HTTP/2 shall use the HTTP upgrade mechanism to negotiate applicable HTTP version as described in IETF RFC 9113 [10]."* Igual na V20.1.0.
+- RFC 9113 §3.1, sobre o `h2c` no *Upgrade* do HTTP: *"This usage was never widely deployed and is deprecated by this document."* §3.2: *"A client that makes a request to an "https" URI uses TLS [TLS13] with the ALPN extension [TLS-ALPN]."* e *"The "h2c" protocol identifier MUST NOT be sent by a client or selected by a server; the "h2c" protocol identifier describes a protocol that does not use TLS."*
+
+`[DIVERGÊNCIA]` A RFC que §7.3 cita para o mecanismo o deprecou e, sobre TLS, que o próprio §7.3 exige, não o admite.
+
+**O que o projeto faz.** O CCF serve CAPIF-1e com HTTP/1.1 e HTTP/2, negociados por ALPN (`h2` e `http/1.1`), e não faz o *upgrade* do HTTP. O servidor interno (CAPIF-3/4, sem TLS até o MVP-11, DV-1) serve só HTTP/1.1.
+
+**Por quê.** Decidido pelo responsável em 29/10/2026, com o ponto C29 da especificação do MVP-9 (`docs/free5gc-side/capif.md`). Sobre TLS, o HTTP/2 só se negocia por ALPN, como fazem o `crypto/tls` e o `net/http` do Go.
+
+**Impacto.** Um cliente que siga §7.3 ao pé da letra e mande `Upgrade: h2c` numa conexão TLS continua em HTTP/1.1, que §7.3 torna obrigatório: não fica sem serviço.
 
