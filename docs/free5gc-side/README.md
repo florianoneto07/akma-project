@@ -27,5 +27,6 @@ Base de código: free5GC v4.2.3 (`docs/baseline/ambiente-verificado.md`).
 | `correcoes-free5gc.md` — tudo o que o projeto propõe mudar no free5GC, com a cláusula e a forma da norma; base da lista pública de recomendações | MVP-6, MVP-7, MVP-12 | escrito (19/10/2026): F1 a F15; F16 a F20 em 28/10/2026 |
 | `renovacao-kakma.md` — renovação da K_AKMA pelo AAnF: `trigger-auth` no UDM, notificação e reautenticação no AMF | MVP-12 | aprovada e implementada (28/10/2026) |
 | `amf.md` — autenticação primária pedida pela rede doméstica (TS 33.501 §6.1.5) | MVP-12 | escrito (28/10/2026) |
+| `capif.md` — CAPIF: o CCF, o NEF como APF e AEF e o AF como *API invoker*: especificação | MVP-9 | proposta (29/10/2026), a aprovar |
 
 O que é comum aos dois lados — KDF, formatos de identificador, codificação, vetores — fica em `docs/shared/`.
