@@ -497,7 +497,7 @@ Um componente de cada vez, cada um com os seus *commits*:
 |---|---|---|
 | modelos e clientes do CAPIF (C4) | feito em 29/10/2026 | `free5gc/patches/openapi/0004-capif-models-and-clients.patch`; `openapi.md` |
 | CCF | feito em 30/10/2026 (seção 15.1) | `free5gc/ccf/`, `free5gc/config/ccfcfg.yaml`, `free5gc/scripts/build-ccf.sh` e `make-capif-certs.sh` |
-| NEF como APF e AEF | a fazer | `free5gc/patches/nef/0002`, `free5gc/patches/config/0003` |
+| NEF como APF e AEF | feito em 30/10/2026 (seção 15.2) | `free5gc/patches/nef/0002-capif.patch`, `free5gc/patches/config/0003-nef-capif.patch` |
 | AF como *API invoker* | a fazer | `af/af/internal/capif`, `af/config/afcfg-capif.yaml` |
 | partida, VM e `e2e.sh` | a fazer | `free5gc/patches/run/0002`, `af/scripts/` |
 | documentos | a fazer | seção 14 |
@@ -544,3 +544,59 @@ Um componente de cada vez, cada um com os seus *commits*:
 
 1. `TS29222_CAPIF_Security_API.yaml`, `ServiceSecurity.securityInfo`: um *array* com `minimum: 1`, palavra de números, em vez de `minItems: 1`; a tabela 8.5.4.2.2-1 dá a cardinalidade 1..N. Igual no YAML da V20.1.0. Editorial.
 2. `[LACUNA]` TS 33.122 Anexo C pede o JWS da RFC 7515 e não remete ao perfil de TS 33.210 §6.3.3, que se declara aplicável a toda função 3GPP com JWS (§6.3.1). Sugestão: citar o perfil no Anexo C, como §6.1 e §6.3.1.1 citam o perfil TLS e os de certificado.
+
+### 15.2 O NEF (30/10/2026)
+
+São dois *patches*: `free5gc/patches/nef/0002-capif.patch`, aplicado depois do `0001`, e `free5gc/patches/config/0003-nef-capif.patch`, depois do `0002`. Foram feitos na cópia do NEF v1.2.5 em `free5gc/build/src`, sem nenhuma VM.
+
+| Parte | Onde |
+|---|---|
+| a configuração `capif` (seção 6.1) | `pkg/factory/config.go` |
+| a chave do *token* e o `kid`, os dados dos *invokers* e o `apiId` publicado | `internal/context/capif.go` |
+| o cliente do CCF em CAPIF-3/4: publicação, retirada e `Obtain_API_Invoker_Info` | `internal/sbi/consumer/ccf_service.go` |
+| a publicação com nova tentativa, o `check-authentication`, a conferência do *token* e o perfil do *invoker* | `internal/sbi/processor/capif.go` e `akma.go` |
+| a rota de `aef-security` e o *middleware* do grupo `3gpp-akma` | `internal/sbi/api_capif.go` e `server.go` |
+| a publicação na partida e a retirada no encerramento | `pkg/service/init.go` |
+| a categoria de log `CAPIF` | `internal/logger/logger.go` |
+
+**Detalhes que a especificação não fixava.**
+
+- **Que *token* é (seção 6.4, passo 1).** Um *token* é do CCF quando é `ES256`, a assinatura confere com a chave do CCF e o `kid`, se houver, é o dessa chave. Um *token* com `crit` não é tratado como do CCF (RFC 7515 §4.1.11).
+  - Com `allowNrfTokens: true`, os outros pedidos vão ao *middleware* do NRF.
+  - Com `allowNrfTokens: false`, recebem `401`. Sem *token*, com `WWW-Authenticate: Bearer`; com um *token* que não é do CCF, com `Bearer error="invalid_token"`.
+- **Dados do *invoker* (seção 5.9).** O NEF usa só o item do seu `aefId` com `selSecurityMethod` `OAUTH` (TS 33.122 §6.5.2.3). Os AF_ID passam à forma de transporte. Um AF_ID inválido é ignorado, com aviso no log.
+- **Ordem da conferência do AF_ID (seção 6.4).** Primeiro o perfil do *invoker*, depois a política de endereço. O `detail` do `403` diz qual das duas recusou: `AF_ID not authorized for the API invoker` ou `AF not authorized by local policy`.
+- **`check-authentication` (seção 6.3).** As causas seguem TS 29.500 tab. 5.2.7.2-1, por TS 29.222 §7.7, como no CCF:
+  - sem `apiInvokerId` ou sem `supportedFeatures`: `400` com `MANDATORY_IE_MISSING`;
+  - `supportedFeatures` que não é hexadecimal: `400` com `MANDATORY_IE_INCORRECT`.
+
+  O grupo `aef-security` não passa pelo *middleware* do NRF, porque TS 29.222 §6.2.2.2 não pede autorização nessa operação.
+- **Publicação (seção 6.2).** O aviso no log sai só na primeira falha; as seguintes vão para o nível *debug*. Ao encerrar, o NEF espera acabar a tentativa em curso e retira a publicação. O CCF tem até 2 s para responder.
+- **`go.mod`.** `github.com/golang-jwt/jwt/v5`, que já era dependência indireta, passa a direta.
+
+**Verificação (30/10/2026).**
+
+- `go test -race ./...` na cópia do NEF passou sem falhas. Os testes novos estão em quatro pacotes:
+  - `context`: a impressão digital da chave do RFC 7517 A.1, a chave do *token* e a vida dos dados do *invoker*;
+  - `factory`: a seção `capif`;
+  - `sbi`: as rotas e o *middleware*;
+  - `processor`: os casos da seção 10.1, além do `check-authentication` e da publicação com nova tentativa e retirada.
+
+  Os casos da seção 10.1 cobertos em `processor`:
+  - *token* válido;
+  - *token* de outra chave;
+  - `none`, `HS256` e `RS512`;
+  - *token* vencido, e *token* dentro da tolerância;
+  - sem `exp`;
+  - `iss` diferente de `client_id`;
+  - escopo de outro AEF, e de outra API;
+  - *invoker* que saiu (`404` do CCF);
+  - CCF fora do ar (`503`);
+  - AF_ID fora do perfil, e fora da política de endereço;
+  - `allowNrfTokens` `true` e `false`.
+
+  Os testes do MVP-6 e os do free5GC continuam passando.
+- Interoperação com o CCF real: o binário do CCF rodou nesta máquina e emitiu um *token*. O *token* e a resposta do CCF a `Obtain_API_Invoker_Info` passaram na conferência do NEF, com o mesmo `kid` e os 11 AF_ID do perfil `af1-external`. O teste foi temporário e não está no *patch*.
+- Os *patches* reproduzem a cópia: `src-orig` com `nef/0001` e `0002` dá a cópia do NEF, e `src-orig/config` com `config/0001` a `0003` dá a configuração. O NEF lê e valida o `nefcfg.yaml` resultante.
+
+**Na VM** (próximo componente). Com o `nef/0001` já aplicado, `patch-nf.sh nef apply` recusa o conjunto novo. Antes de aplicar, é preciso reverter com uma cópia do diretório antigo de *patches*, como no MVP-12. O mesmo vale para `config`.

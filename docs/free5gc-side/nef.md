@@ -250,6 +250,8 @@ Respostas do responsável em 19/10/2026:
 |---|---|
 | `free5gc/patches/nef/0001-akma-api.patch` | seções 3 e 6. Arquivos novos: `internal/context/akma.go`, `internal/sbi/api_akma.go`, `internal/sbi/consumer/aanf_service.go`, `internal/sbi/processor/akma.go` e `akma_test.go`. Alterados: `go.mod`, `go.sum`, `nef_context.go`, `logger.go`, `consumer.go`, `server.go`, `config.go` |
 | `free5gc/patches/config/0002-nef-akma.patch` | `nefcfg.yaml`: endereço 192.168.16.130, `3gpp-akma`, `akma.authorizedAfs` com `af1` e a entrada de teste `af3` (aceita pelo NEF e não pelo AAnF, para o negativo E07) |
+| `free5gc/patches/nef/0002-capif.patch` | MVP-9: o NEF como APF e AEF do CAPIF, aplicado depois do `0001` (`capif.md` §6 e §15.2) |
+| `free5gc/patches/config/0003-nef-capif.patch` | MVP-9: a seção `capif` do `nefcfg.yaml` (`capif.md` §6.1) |
 | `free5gc/aanf/` | `akma.authorizedNefs` e porta 8010 (seção 4) |
 | `af/af/internal/nef`, `af/af/internal/nrf` | cliente da API do NEF e registro do AF no NRF (seção 5) |
 
