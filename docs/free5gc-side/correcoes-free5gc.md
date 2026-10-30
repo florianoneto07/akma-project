@@ -1,6 +1,6 @@
 # Correções do free5GC para o AKMA
 
-**Criado em:** 19 de outubro de 2026 · **Atualizado em:** 29 de outubro de 2026 (F13: MVP-9 aprovado); 28 de outubro de 2026 (F16 a F20, MVP-12; conferência no free5GC v4.3.0, MVP-13) · **Base:** free5GC v4.2.3 (NRF v1.4.5, UDM, AUSF e AMF v1.4.5, NEF v1.2.5, `openapi` v1.2.4)
+**Criado em:** 19 de outubro de 2026 · **Atualizado em:** 30 de outubro de 2026 (F13: o CCF feito); 29 de outubro de 2026 (F13: MVP-9 aprovado); 28 de outubro de 2026 (F16 a F20, MVP-12; conferência no free5GC v4.3.0, MVP-13) · **Base:** free5GC v4.2.3 (NRF v1.4.5, UDM, AUSF e AMF v1.4.5, NEF v1.2.5, `openapi` v1.2.4)
 
 Registro de tudo o que o projeto encontrou no free5GC e que precisa mudar para o AKMA funcionar conforme a norma. Pedido do responsável em 19/10/2026: este registro vai para o repositório público (MVP-7, plano seção 5). A regra de cada entrada:
 
@@ -26,7 +26,7 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
 | F10 | UDM | `id-translation-result` só traduz GPSI → SUPI | aberto (plano, seção 5) |
 | F11 | NEF | sem a API `3gpp-akma` | corrigido, *patch* `nef/0001` (MVP-6) |
 | F12 | NEF | 401 do *middleware* OAuth2 sem `ProblemDetails` nem `WWW-Authenticate` | aberto; mantido no MVP-6 por decisão do responsável |
-| F13 | NEF | APIs do AF sem CAPIF e sem TLS mútuo | DV-9; CAPIF aprovado (MVP-9, 29/10/2026); TLS no MVP-11 |
+| F13 | NEF | APIs do AF sem CAPIF e sem TLS mútuo | DV-9; CAPIF aprovado (MVP-9, 29/10/2026), o CCF feito em 30/10/2026; TLS no MVP-11 |
 | F14 | NEF | pede o *token* de `nnrf-nfm` para o tipo errado e não se descadastra | aberto |
 | F15 | NRF | `complexQuery` sem `routing-indicator` para `AANF` | aberto |
 | F16 | `openapi` | sem os modelos da autenticação disparada pela rede doméstica | corrigido, *patch* `openapi/0003` (MVP-12) |
@@ -188,6 +188,7 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
 - **No projeto.**
   - MVP-6: DV-9, com `http`, *token* do NRF e política local AF_ID ↔ endereço de origem no NEF. O NRF como servidor de autorização cabe no *"based on local configuration"* de TS 29.522 §6 (`nef.md` §2.1).
   - MVP-9, aprovado em 29/10/2026 com os pontos C1 a C16 do plano (pedido do responsável em 19/10/2026; MVP-8 até a renumeração de 20/10/2026): um CAPIF Core Function para o free5GC, implementável com os serviços de TS 29.222. O NEF atua como APF, publicando `3gpp-akma` com `Publish_Service_API` (§5.3), e como AEF, conferindo o *token* como manda TS 29.522 §7.2. O AF atua como *API invoker*: entra no CCF (`CAPIF_API_Invoker_Management_API`), descobre a API (`Discover_Service_API`, §5.2) e obtém o *token* em `{apiRoot}/capif-security/v1/securities/{securityId}/token` (§5.6.2.3, TS 33.122 §6.5.2.3). O TLS entre o NEF e o AF, a outra metade deste item, fica para o MVP-11.
+  - 30/10/2026: o CCF feito, uma NF nova em `free5gc/ccf/` (`capif.md` §15.1). O NEF e o AF vêm em seguida.
 
 ## F14 — NEF pede o *token* de `nnrf-nfm` para o tipo errado
 

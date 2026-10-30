@@ -65,18 +65,31 @@ As duas portas 8020 ficam em endereços diferentes. O servidor externo só serve
 
 `[LACUNA]` TS 29.222 não fixa a forma de nenhum deles: são cadeias.
 
-### 4.2 Chaves e certificados (C18)
+### 4.2 Chaves e certificados (C18, revisto em 30/10/2026)
 
 Feitos por `free5gc/scripts/make-capif-certs.sh`, com o OpenSSL, na pasta `cert/` do free5GC, ao lado de `nrf.pem` e `aanf.pem`. Só para teste: as chaves privadas não são cifradas.
 
+`[3GPP]` TS 33.122 §6.3.1.1, em CAPIF-1e: *"Certificate based authentication shall follow the profiles given in 3GPP TS 33.310 [2], subclauses 6.1.3a and 6.1.4a."* As duas seções somam as regras comuns de TS 33.310 §6.1.1.
+
 | Arquivos | O quê | Quem usa |
 |---|---|---|
-| `ccf-ca.pem`, `ccf-ca.key` | CA do CCF, ECDSA P-256 | o CCF assina com ela o próprio certificado e os dos *invokers* (TS 33.122 §6.1 passo 4); o AF a recebe na informação de entrada |
-| `ccf.pem`, `ccf.key` | certificado de servidor do CCF, com `subjectAltName` `IP:192.168.16.130` | CAPIF-1e |
-| `ccf-token.key`, `ccf-token.pub.pem` | RSA de 2048 bits, para o `RS512` do *token* (C9) | o CCF assina; o NEF confere com a chave pública |
-| `ccf-credential.key` | RSA de 2048 bits, para a credencial de entrada (C19) | só o CCF |
+| `ccf-ca.pem`, `ccf-ca.key` | CA do CCF, ECDSA P-384, assinatura com SHA-384. Perfil de TS 33.310 §6.1.4a: `basicConstraints` crítico, com `CA:TRUE` e `pathlen:0`; `keyUsage` crítico, com `keyCertSign` e `cRLSign` | o CCF assina com ela o próprio certificado e os dos *invokers* (TS 33.122 §6.1 passo 4); o AF a recebe na informação de entrada |
+| `ccf.pem`, `ccf.key` | certificado de servidor do CCF, ECDSA P-256, com `subjectAltName` `IP:192.168.16.130`. Perfil de TS 33.310 §6.1.3a: `keyUsage` crítico, com `digitalSignature`; `extendedKeyUsage` `serverAuth`, não crítico | CAPIF-1e |
+| `ccf-token.key`, `ccf-token.pub.pem` | ECDSA P-256, para o `ES256` do *token* (C9) | o CCF assina; o NEF confere com a chave pública |
+| `ccf-credential.key` | ECDSA P-256, para o `ES256` da credencial de entrada (C19) | só o CCF |
 
-O par de chaves do *invoker* (ECDSA P-256) é gerado pelo AF, e só a chave pública vai ao CCF. O certificado que o CCF emite na entrada tem CN igual ao identificador do *invoker* (TS 29.222 tab. 8.4.4.2.5-1), `extendedKeyUsage` `clientAuth` e validade configurável, um ano por padrão.
+Os nomes seguem TS 33.310 §6.1.1: `O=AKMA test, CN=<nome>`, em `UTF8String` (*"Organization and CN shall be in UTF8 format"*). O CN do servidor é `ccf`.
+
+O par de chaves do *invoker* é gerado pelo AF (ECDSA P-256), e só a chave pública vai ao CCF. O CCF aceita ECDSA P-256 ou P-384, ou RSA de 2048 a 4096 bits com expoente público de pelo menos 65537. `[3GPP]` TS 33.310 §6.1.1: *"A public key length of at least 384-bit shall be supported"*, *"RSA public exponent shall be no less than 65537"* e *"The security level of the public key used to sign the certificate shall be at least the same as the public keys in the certificate"*. Por esta última regra, a CA é P-384. `[INTERPRETAÇÃO]` O RSA de 4096 bits fica abaixo dos 192 bits do P-384 (NIST SP 800-57 Parte 1, tab. 2); TS 33.310 não compara os níveis.
+
+O certificado que o CCF emite na entrada segue TS 33.310 §6.1.3a:
+- nome `O=<o da CA>, CN=<identificador do invoker>` (TS 29.222 tab. 8.4.4.2.5-1);
+- `keyUsage` crítico, com `digitalSignature` (e `keyEncipherment`, para chave RSA);
+- `extendedKeyUsage` `clientAuth`, não crítico;
+- nenhuma outra extensão crítica (§6.1.1), e por isso sem `basicConstraints`;
+- validade configurável, um ano por padrão.
+
+`[MVP]` Os certificados não têm o ponto de distribuição de CRL que TS 33.310 §6.1.3a torna obrigatório, e não há CRL nem OCSP: DV-16.
 
 `[LACUNA]` `apiInvokerPublicKey` e `apiInvokerCertificate` são cadeias sem formato (tab. 8.4.4.2.5-1). O projeto usa PEM: `PUBLIC KEY` (*SubjectPublicKeyInfo*) e `CERTIFICATE`.
 
@@ -105,12 +118,12 @@ configuration:
     port: 8020
   ca: # signs the certificates of the API invokers (TS 33.122 cl. 6.1 step 4)
     certificate: cert/ccf-ca.pem
-    key: cert/ccf-ca.key
+    key: cert/ccf-ca.key # ECDSA P-384 (TS 33.310 cl. 6.1.1)
     invokerCertLifetime: 8760h
   token: # access tokens (TS 29.222 cl. 5.6.2.3.2; TS 33.122 Annex C)
-    key: cert/ccf-token.key # RSA, signed with RS512
+    key: cert/ccf-token.key # ECDSA P-256, signed with ES256 (TS 33.210 cl. 6.3.3.1)
     lifetime: 10m
-  credentialKey: cert/ccf-credential.key # onboarding credentials (TS 33.122 cl. 6.1)
+  credentialKey: cert/ccf-credential.key # onboarding credentials (TS 33.122 cl. 6.1), ECDSA P-256, ES256
   providers: # API provider domain functions, fixed by configuration
     - name: nef
       apfId: nef-apf
@@ -145,11 +158,11 @@ logger:
 
 | Atributo de `APIInvokerEnrolmentDetails` | P | No MVP-9 |
 |---|---|---|
-| `onboardingInformation.apiInvokerPublicKey` | M | PEM; ECDSA P-256 ou RSA de 2048 bits ou mais |
+| `onboardingInformation.apiInvokerPublicKey` | M | PEM; ECDSA P-256 ou P-384, ou RSA de 2048 a 4096 bits com expoente de pelo menos 65537 (seção 4.2) |
 | `notificationDestination` | M | guardado; o CCF não manda notificações (DV-14) |
 | `apiList` | O | ignorado; a resposta lista as APIs do perfil (C20) |
 | `apiInvokerInformation` | O | só para o log |
-| `supportedFeatures` | C | o CCF não tem nenhuma *feature* da tab. 8.4.6-1 e responde `"0"` |
+| `supportedFeatures` | C | obrigatório no pedido: *"This attribute shall be provided in the HTTP POST request"* (tab. 8.4.4.2.2-1); sem ele, `400`. O CCF não tem nenhuma *feature* da tab. 8.4.6-1 e responde `"0"` |
 | `apiInvokerId` | — | *"shall not be present"* no pedido: com ele, `400` |
 | os demais | O | ignorados (são de *features* que o CCF não tem) |
 
@@ -168,7 +181,8 @@ A mesma credencial serve a mais de uma entrada enquanto vale; cada entrada cria 
 
 - sem certificado de cliente, com certificado que não é da CA do CCF ou de outro *invoker* (CN diferente de `{onboardingId}`): `403`;
 - `{onboardingId}` desconhecido: `404`;
-- senão, o CCF apaga o perfil, o contexto de segurança e o segredo (TS 33.122 §6.8 passo 3) e responde `204`. Os *tokens* já emitidos valem até `exp` (DV-14).
+- senão, o CCF apaga o perfil, o contexto de segurança e o segredo (TS 33.122 §6.8 passo 3) e responde `204`. Os *tokens* já emitidos valem até `exp` (DV-14);
+- depois do `204`, o CCF encerra a sessão TLS (TS 33.122 §6.8 passo 6: *"The CAPIF core function shall tear down the TLS session with the API invoker"*): com `Connection: close` no HTTP/1.1, e com `GOAWAY` no HTTP/2.
 
 ### 5.4 Publicação (`Publish_Service_API`, `Unpublish_Service_API`, `Get_Service_API`)
 
@@ -181,7 +195,7 @@ No servidor interno:
 Regras:
 
 - `{apfId}` fora da configuração: `403`;
-- no POST: `apiName` presente; `apiId` ausente; `aefProfiles` com pelo menos um perfil; cada `aefId` do mesmo provedor do `{apfId}`; cada perfil com pelo menos uma versão e com `securityMethods` no perfil ou em cada interface (NOTA 4 da tab. 8.2.4.2.4-1). Senão, `400` com `invalidParams`;
+- no POST: `apiName` presente; `apiId` ausente; `supportedFeatures` presente (NOTA 1 da tab. 8.2.4.2.2-1); `aefProfiles` com pelo menos um perfil; cada `aefId` do mesmo provedor do `{apfId}`; cada perfil com pelo menos uma versão e com `securityMethods` no perfil ou em cada interface (NOTA 4 da tab. 8.2.4.2.4-1). Senão, `400` com `invalidParams`;
 - a mesma API (`apiName` e `aefId`) publicada de novo pelo mesmo APF substitui a anterior e recebe um `apiId` novo, porque o NEF publica a cada partida (C24);
 - respostas: POST `201`, com `Location` e o `apiId` no corpo; GET `200`; DELETE `204`; `{serviceApiId}` desconhecido, `404`;
 - o CCF não avisa os *invokers* da publicação (§5.3.2.2.2 passo 2d; DV-14).
@@ -219,7 +233,11 @@ Os erros vão no corpo `AccessTokenErr`, sem `ProblemDetails` (tab. 8.5.2.3.4.4.
 
 ### 5.8 Forma do *token* (C9; DV-13)
 
-Cabeçalho JWS `{"alg":"RS512","typ":"JWT"}`, serialização compacta (RFC 7515 §7.1). *Claims*:
+Cabeçalho JWS `{"alg":"ES256","kid":"<kid>","typ":"JWT"}`, serialização compacta (RFC 7515 §7.1). O `kid` é a impressão digital da chave do *token* (RFC 7638).
+
+`[3GPP]` TS 33.210 §6.3.3.1, o perfil JWS: *"All entities and functions that support JWS according to RFC 7515 [46] shall follow the following restrictions and extensions"*. Entre elas: *"The "alg" header parameter value ES256 (ECDSA using P-256 and SHA-256) shall be supported"*; *"The "kid" header parameter shall be supported"*; *"If the "kid" header parameter is used, the end point shall check that the indicated "alg" matches the one specified by the parameters"*. `[INTERPRETAÇÃO]` TS 33.122 Anexo C só cita a RFC 7515, e o perfil vale para o CCF pela aplicação geral de TS 33.210 §6.3.1. O `x5t#S256`, que §6.3.3.4 recomenda (*should*) no *token*, não é usado: DV-16.
+
+*Claims*:
 
 | *Claim* | Valor | Norma |
 |---|---|---|
@@ -242,14 +260,19 @@ Nenhuma outra *claim*. Nenhum log do CCF, do NEF ou do AF mostra o *token*.
 
 ### 5.10 Credencial de entrada (C19)
 
-`ccf credential --config ccfcfg.yaml --profile af1-external --validity 24h` escreve a credencial na saída: um JWT `RS512` assinado com `ccf-credential.key`, com as *claims* `iss` (o `ccfName`), `sub` (o perfil), `aud` (`api-invoker-management`), `iat` e `exp`. Na entrada, o CCF confere a assinatura, `aud`, `exp` (com até 30 s de tolerância) e se `sub` é um perfil da configuração.
+`ccf credential --config ccfcfg.yaml --profile af1-external --validity 24h` escreve a credencial na saída: um JWT `ES256`, com `kid` (seção 5.8), assinado com `ccf-credential.key`. As *claims* são `iss` (o `ccfName`), `sub` (o perfil), `aud` (`api-invoker-management`), `iat` e `exp`. Na entrada, o CCF confere:
+- a assinatura e o `kid`;
+- `iss`;
+- `aud`;
+- `exp`, com até 30 s de tolerância;
+- se `sub` é um perfil da configuração.
 
 `[3GPP]` TS 33.122 §6.1: *"When the OAuth 2.0 token based mechanism is used as the onboarding credential, the access token shall be encoded as JSON web token as specified in IETF RFC 7519 [6], shall include the JSON web signature as specified in IETF RFC 7515 [7], and shall be validated per OAuth 2.0 [4], IETF RFC 7519 [6] and IETF RFC 7515 [7]."* NOTA 1: como o *invoker* recebe a informação de entrada fica fora da norma. No laboratório, o `e2e.sh` a copia para a máquina do AF.
 
 ### 5.11 Erros, *features* e versões do HTTP
 
-- Todos os erros, menos os da seção 5.7, levam `ProblemDetails` em `application/problem+json`, com `status` e `detail`. `cause` só quando a norma define uma causa para o caso; nenhum caso do MVP-9 tem (`API_INVOKER_NOT_ALLOWED` é de `CAPIF_Ext1`).
-- Códigos da tab. 5.2.6-1 de TS 29.122 que se aplicam: `400`, `401`, `403`, `404`, `413` (corpo acima de 64 KiB), `415`, `500` e `503`.
+- Todos os erros, menos os da seção 5.7, levam `ProblemDetails` em `application/problem+json`, com `status` e `detail`. `cause` só quando a norma define uma causa para o caso: as causas de TS 29.500 tab. 5.2.7.2-1 valem para o CAPIF, por TS 29.222 §7.7 e TS 29.122 §5.2.6 (*"The protocol and application errors in clause 5.2.7.2 of 3GPP TS 29.500 [44] are applicable for the above status codes for the APIs"*). O CCF usa estas: `INVALID_MSG_FORMAT`, `MANDATORY_IE_MISSING`, `MANDATORY_IE_INCORRECT`, `OPTIONAL_IE_INCORRECT`, `INVALID_QUERY_PARAM`, `MANDATORY_QUERY_PARAM_MISSING`, `INVALID_API`, `RESOURCE_URI_STRUCTURE_NOT_FOUND`, `INCORRECT_LENGTH`, `MAX_JSON_SIZE_EXCEEDED` e `SYSTEM_FAILURE`. Os `401`, os `403` e os `404` de recurso desconhecido não levam causa. `API_INVOKER_NOT_ALLOWED` é de `CAPIF_Ext1`. (Corrigido na implementação, seção 15.1.)
+- Códigos da tab. 5.2.6-1 de TS 29.122 que se aplicam: `400`, `401`, `403`, `404`, `411` (`Content-Length` inválido ou diferente do corpo), `413` (corpo acima de 64 KiB), `415`, `500` e `503`. Pela NOTA 1 da tabela, também `405`, com o cabeçalho `Allow` (RFC 9110 §15.5.6).
 - `supportedFeatures` `"0"` em todas as respostas que o pedem: o CCF não tem nenhuma das *features* das tabelas 8.1.6-1, 8.2.6-1, 8.4.6-1 e 8.5.6-1.
 - CAPIF-1e com HTTP/1.1 e HTTP/2 negociados por ALPN (RFC 9113 §3.2; C29). O servidor interno, com HTTP/1.1.
 
@@ -304,8 +327,8 @@ Se o CCF não responde, o NEF tenta de novo a cada 5 s, com um aviso no log só 
 
 Antes do *middleware* do MVP-6, no grupo `3gpp-akma`:
 
-1. **Que *token* é.** `Authorization: Bearer <jwt>` com assinatura que confere com a chave pública do CCF: modo CAPIF, passos 2 a 4. Qualquer outro pedido, com `allowNrfTokens: true`: o modo do MVP-6, sem mudança, com o *middleware* do NRF (C13). Com `allowNrfTokens: false`: `401`.
-2. **Forma.** `alg` `RS512`; `exp` presente e não vencido, com até 30 s de tolerância (TS 33.122 C.2.2); `iss` e `client_id` presentes e iguais. Senão, `401` `invalid_token`.
+1. **Que *token* é.** `Authorization: Bearer <jwt>` com assinatura que confere com a chave pública do CCF: modo CAPIF, passos 2 a 4. Um `kid` presente tem de ser o da chave (seção 5.8). Qualquer outro pedido, com `allowNrfTokens: true`: o modo do MVP-6, sem mudança, com o *middleware* do NRF (C13). Com `allowNrfTokens: false`: `401`.
+2. **Forma.** `alg` `ES256` (TS 33.210 §6.3.3.1); `exp` presente e não vencido, com até 30 s de tolerância (TS 33.122 C.2.2); `iss` e `client_id` presentes e iguais. Senão, `401` `invalid_token`.
 3. **Escopo.** `scope` começa com `3gpp#` e tem um item com o `aefId` do NEF e `3gpp-akma` entre as APIs desse item (TS 29.522 §7.2). Senão, `403` `insufficient_scope`.
 4. **Dados do *invoker*.** Da memória ou do CCF (seção 5.9; TS 23.222 §8.16.3 passo 2a). O CCF responde `404`: `401` `invalid_token`, porque o *invoker* saiu ou o CCF reiniciou. O CCF fora do ar: `503`.
 
@@ -417,6 +440,7 @@ As 161 verificações de hoje continuam, com o grupo do NEF do MVP-6 (C13).
 - Um CCF, um provedor (o NEF), um AEF.
 - Sem TLS em CAPIF-3, o CCF não sabe qual AEF pede os dados do *invoker* (seção 5.9).
 - Os AF_ID de um AF externo ficam em três configurações: no perfil do CCF, na política do NEF e na lista do AAnF.
+- Sem revogação de certificados em CAPIF-1e: sem CRL, sem OCSP e sem o ponto de distribuição de CRL nos certificados (DV-16).
 
 ## 12. Achados
 
@@ -445,6 +469,13 @@ Registrados no registro de defeitos em 29/10/2026, com os itens 4 e 5 do plano (
 | C29 | HTTP/2 em CAPIF-1e | HTTP/1.1 e HTTP/2 negociados por ALPN, como manda a RFC 9113 §3.2, e não pelo *upgrade* do HTTP de TS 29.222 §7.3. Registrar como DV-15, escolha entre textos | `[DIVERGÊNCIA]` TS 29.222 §7.3 contra a RFC 9113 §3.1 (*"deprecated by this document"*) e §3.2. Alternativa: só HTTP/1.1, que §7.3 torna obrigatório e que dispensa a escolha |
 | C30 | Defeitos e sugestões novos | registrar D-AD (TS 33.122 A.1 com o TLS 1.3) e D-AE (TS 29.222 §7.3 contra a RFC 9113), e as sugestões D-AF (formatos das cadeias de segurança) e D-AG (esquema do `apiRoot`) | seção 12 |
 
+**Revisão de 30/10/2026.** Na implementação do CCF, o responsável decidiu três pontos em que esta especificação não seguia TS 33.310 e TS 33.210:
+- o C18 foi revisto: CA em ECDSA P-384; chaves do *invoker* em P-256, P-384 ou RSA de 2048 a 4096 bits;
+- o C19 e o C9 do plano foram revistos: `ES256` com `kid`;
+- foi criado o DV-16.
+
+As seções 4.2, 5.8 e 5.10 já trazem a revisão; os motivos estão na seção 15.1.
+
 ## 14. Arquivos previstos
 
 - `free5gc/ccf/` (NF nova) e `free5gc/config/ccfcfg.yaml`;
@@ -455,7 +486,7 @@ Registrados no registro de defeitos em 29/10/2026, com os itens 4 e 5 do plano (
 - `af/af/internal/capif` (novo), `af/af/internal/config` e `af/config/afcfg-capif.yaml` (novo);
 - `af/scripts/e2e.sh`, `af/scripts/e2e-remote.sh` e `af/scripts/negative/capif_api.py` (novo);
 - este documento, `nef.md`, `correcoes-free5gc.md` (F13) e o `README.md` deste lado; `docs/af-side/af.md` e `e2e.md`;
-- `docs/conformidade/desvios.md` (DV-15, e DV-1, DV-9, DV-13 e DV-14 com a implementação); o registro de defeitos (D-AD a D-AG) e a cópia em `~/akma`;
+- `docs/conformidade/desvios.md` (DV-15 e DV-16, e DV-1, DV-9, DV-13 e DV-14 com a implementação); o registro de defeitos (D-AD a D-AG) e a cópia em `~/akma`;
 - o plano, a matriz de rastreabilidade (revisão 10) e o tutorial (parte 11).
 
 ## 15. Implementação
@@ -465,10 +496,51 @@ Um componente de cada vez, cada um com os seus *commits*:
 | Componente | Estado | Onde |
 |---|---|---|
 | modelos e clientes do CAPIF (C4) | feito em 29/10/2026 | `free5gc/patches/openapi/0004-capif-models-and-clients.patch`; `openapi.md` |
-| CCF | a fazer | `free5gc/ccf/`, `free5gc/config/ccfcfg.yaml`, `free5gc/scripts/` |
+| CCF | feito em 30/10/2026 (seção 15.1) | `free5gc/ccf/`, `free5gc/config/ccfcfg.yaml`, `free5gc/scripts/build-ccf.sh` e `make-capif-certs.sh` |
 | NEF como APF e AEF | a fazer | `free5gc/patches/nef/0002`, `free5gc/patches/config/0003` |
 | AF como *API invoker* | a fazer | `af/af/internal/capif`, `af/config/afcfg-capif.yaml` |
 | partida, VM e `e2e.sh` | a fazer | `free5gc/patches/run/0002`, `af/scripts/` |
 | documentos | a fazer | seção 14 |
 
-**Achado na implementação.** `TS29222_CAPIF_Security_API.yaml`, `ServiceSecurity.securityInfo`: um *array* com `minimum: 1`, palavra de números, em vez de `minItems: 1`; a tabela 8.5.4.2.2-1 dá a cardinalidade 1..N. Igual no YAML da V20.1.0. Editorial; vai ao registro de defeitos com os documentos.
+### 15.1 O CCF (30/10/2026)
+
+**Decisões do responsável (30/10/2026).** Três pontos achados na implementação, em que a especificação aprovada não seguia TS 33.310 e TS 33.210:
+
+1. **Chaves (C18 revisto).** TS 33.310 §6.1.1 pede suporte a chaves ECDSA de pelo menos 384 bits. Pede também que a chave que assina um certificado tenha pelo menos o nível de segurança da chave certificada. Com a CA em P-256 e só chaves P-256 aceitas, o CCF não atendia à primeira regra; se aceitasse P-384, quebraria a segunda. Decisão: a CA passa a P-384, e as chaves do *invoker* podem ser P-256, P-384 ou RSA de 2048 a 4096 bits com expoente de pelo menos 65537 (seção 4.2). O AF continua com P-256.
+2. **JWS (C9 e C19 revistos).** TS 33.210 §6.3.3.1 pede `ES256` e `kid` a toda função que suporte JWS; o C9 e o C19 tinham só `RS512`. Decisão: o *token* e a credencial passam a `ES256`, com `kid` (seções 5.8 e 5.10), e o NEF vai conferir `ES256` (seção 6.4).
+3. **Revogação: DV-16.** O ponto de distribuição de CRL é obrigatório nos certificados de entidade TLS (TS 33.310 §6.1.3a); TS 33.310 §6.1.1 pede suporte a CRL; o OCSP e o OCSP *stapling* são recomendações. O `x5t#S256` também fica de fora. Decisão: registrar o desvio, como o DV-10 fez com o OCSP no Ua\*.
+
+**Ajustes à norma, sem decisão.** A especificação não tratava destes pontos:
+
+- a CA com `pathlen:0` (TS 33.310 §6.1.4a);
+- os certificados de entidade sem `basicConstraints`. §6.1.3a não pede essa extensão, e §6.1.1 manda marcar como não crítica toda extensão que a norma não exige. O Go e o OpenSSL a punham crítica;
+- os nomes com `O`, em `UTF8String` (§6.1.1);
+- o expoente RSA de pelo menos 65537 (§6.1.1);
+- a sessão TLS encerrada depois da saída do *invoker* (TS 33.122 §6.8 passo 6; seção 5.3).
+
+**Correções do texto desta especificação.**
+
+- Seção 5.11: as causas de TS 29.500 tab. 5.2.7.2-1 valem para o CAPIF (TS 29.222 §7.7; TS 29.122 §5.2.6), e o CCF as usa. O texto aprovado dizia que nenhum caso tinha causa. Os códigos `405`, com `Allow`, e `411` também se aplicam.
+- `supportedFeatures` é obrigatório no POST da entrada (tab. 8.4.4.2.2-1) e no da publicação (NOTA 1 da tab. 8.2.4.2.2-1). Sem ele, a resposta é `400` com `MANDATORY_IE_MISSING`; um valor que não é hexadecimal recebe `400` com `MANDATORY_IE_INCORRECT`.
+- A credencial: o CCF confere também `iss`, que tem de ser o `ccfName`.
+- TLS em CAPIF-1e: o TLS não sabe que operação vem na sessão. Por isso o CCF pede o certificado de cliente em toda sessão, sem exigi-lo. Na entrada, o AF ainda não tem certificado e não manda nenhum, e só o servidor se autentica (TS 33.122 §6.1 passo 2). As outras operações recusam o pedido sem o certificado do *invoker*.
+
+**Outros comportamentos.**
+
+- A configuração é lida em modo estrito: um atributo desconhecido impede a partida. Também impedem a partida um endereço `0.0.0.0`, um identificador com os delimitadores do `scope` (`#`, `:`, `,`, `;` ou espaço), um nome repetido e um AF_ID inválido.
+- Na partida, o CCF confere que a chave da CA é a do certificado da CA e que o certificado tem `O`.
+- O CCF não grava o registro de chaves TLS que as NFs do free5GC gravam. Com ele, as sessões de CAPIF-1e poderiam ser lidas, com os segredos e os *tokens* (seção 9).
+
+**Verificação (30/10/2026).**
+
+- `go test -race ./...` no módulo `free5gc/ccf`, sem falhas:
+  - `jws`: a impressão digital da chave do RFC 7517 A.1 confere com a calculada à parte, em Python; e as recusas de outra chave, de outro `kid`, de `crit`, de `RS512`, de `HS256` e de `none`;
+  - `credential`, `context` (as chaves e o nome em DER) e `factory`;
+  - `sbi`: as operações das seções 5.2 a 5.10, com as recusas; o perfil dos certificados emitidos; as chaves aceitas e recusadas do *invoker*; o fim da sessão TLS em HTTP/1.1 e em HTTP/2; as rotas; o TLS.
+- O teste do fim da sessão falha sem o `Connection: close`: conferido com a linha retirada.
+- Teste local nesta máquina, sem nenhuma VM: o binário de `build-ccf.sh`, com os certificados de `make-capif-certs.sh` para 127.0.0.1, e um cliente em Python. O teste cobriu a publicação, a entrada com chave P-384, o `openssl verify` do certificado emitido, a descoberta com e sem certificado, o método de segurança, o *token* `ES256` com `kid`, o segredo errado, os dados do *invoker*, a recusa de uma chave P-521 e a saída com `Connection: close`. Nenhum *token*, credencial ou chave privada apareceu nos logs.
+
+**Achados na implementação.** Vão ao registro de defeitos com os documentos:
+
+1. `TS29222_CAPIF_Security_API.yaml`, `ServiceSecurity.securityInfo`: um *array* com `minimum: 1`, palavra de números, em vez de `minItems: 1`; a tabela 8.5.4.2.2-1 dá a cardinalidade 1..N. Igual no YAML da V20.1.0. Editorial.
+2. `[LACUNA]` TS 33.122 Anexo C pede o JWS da RFC 7515 e não remete ao perfil de TS 33.210 §6.3.3, que se declara aplicável a toda função 3GPP com JWS (§6.3.1). Sugestão: citar o perfil no Anexo C, como §6.1 e §6.3.1.1 citam o perfil TLS e os de certificado.

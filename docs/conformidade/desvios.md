@@ -22,6 +22,7 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-13 | *Claims* do *token* do CCF: `iss` com o identificador do *invoker*, ao lado de `client_id`, e `exp` como instante | **decidido** (29/10/2026) | MVP-9 |
 | DV-14 | CAPIF parcial: só o caminho do AKMA | **decidido** (29/10/2026) | MVP-9 |
 | DV-15 | HTTP/2 por ALPN no CCF, contra o *upgrade* do HTTP de TS 29.222 §7.3 | **decidido** (29/10/2026) | MVP-9 |
+| DV-16 | CAPIF-1e sem revogação de certificados (sem ponto de distribuição de CRL, CRL nem OCSP) e *token* do CCF sem `x5t#S256` | **decidido** (30/10/2026); implementado no CCF | MVP-9 |
 
 **Consolidação (MVP-5, 18/10/2026).** Nenhum desvio novo surgiu no MVP-5. Estado e evidência de cada um no roteiro ponta a ponta (`docs/af-side/e2e.md`, execução `20261018-171510`):
 
@@ -327,3 +328,53 @@ Ficam de fora: a atualização da entrada e a entrada com aprovação; os evento
 
 **Impacto.** Um cliente que siga §7.3 ao pé da letra e mande `Upgrade: h2c` numa conexão TLS continua em HTTP/1.1, que §7.3 torna obrigatório: não fica sem serviço.
 
+---
+
+## DV-16 — CAPIF-1e sem revogação de certificados, e *token* do CCF sem `x5t#S256`
+
+**Norma.**
+
+- `[3GPP]` TS 33.122 V19.4.0 §6.3.1.1, em CAPIF-1e: *"Certificate based authentication shall follow the profiles given in 3GPP TS 33.310 [2], subclauses 6.1.3a and 6.1.4a. The structure of the PKI used for the certificate is out of scope of the present document."*
+- `[3GPP]` TS 33.310 V19.5.0:
+  - §6.1.3a, no certificado de entidade TLS: *"Mandatory non-critical Distribution points: CRL distribution point."*;
+  - §6.1.1, em todo certificado: *"CRLs as specified in subclause 6.1a shall be supported for certificate revocation verification."* e *"OCSP as specified in subclause 6.1b should be supported for certificate revocation verification."*
+- `[3GPP]` TS 33.210 V19.3.0, o perfil TLS de CAPIF-1e (TS 33.122 §6.1 e §6.3.1.1, por TS 33.310 Anexo E): o OCSP *stapling* *"should be supported"*, no TLS 1.3 (§6.2.2) e no TLS 1.2 (§6.2.3). São as frases do DV-10.
+- `[3GPP]` TS 33.210 V19.3.0 §6.3.3.4, no JWS do *token* de acesso: *"The "x5t#S256" header parameter should be supported."*
+
+**O que o projeto faz.** `[MVP]`
+
+- Os certificados do CCF e os dos *invokers* não têm o ponto de distribuição de CRL. O CCF não publica CRL, não responde OCSP e não confere revogação.
+- O CCF não grampeia resposta OCSP ao seu certificado em CAPIF-1e.
+- O *token* do CCF não leva `x5t#S256`. A chave que o assina não tem certificado: o NEF a recebe por configuração (`ccf-token.pub.pem`), e o *token* leva `kid`, a impressão digital da chave (TS 33.210 §6.3.3.1; RFC 7638).
+
+O resto dos perfis é seguido: TS 33.310 §6.1.1, §6.1.3a e §6.1.4a; TS 33.210 §6.2 e §6.3.3.1. A conferência está em `docs/free5gc-side/capif.md` §4.2, §5.8 e §15.1.
+
+**Por quê.** Decidido pelo responsável em 30/10/2026, na implementação do CCF:
+
+- TS 33.122 §6.3.1.1 deixa a estrutura da PKI fora da norma, e o laboratório não tem serviço de revogação. Uma CRL pediria mais uma porta HTTP no CCF, o endereço dela nos certificados e a consulta em cada ponta. O OCSP fica de fora pelo mesmo motivo do DV-10.
+- O efeito da revogação já existe em CAPIF-1e. O CCF confere o identificador do *invoker*, que é o CN do certificado, em toda operação. Depois da saída (TS 33.122 §6.8 passo 3), o CCF não conhece mais esse identificador e recusa o pedido: `403` ou `404`, ou `invalid_client` no *token*. O NEF pede os dados do *invoker* ao CCF e, depois da saída, recebe `404`.
+- O `x5t#S256` é uma recomendação (*should*). Com uma única chave de *token*, configurada no NEF, o `kid` basta para identificá-la.
+
+**Impacto.**
+
+- O certificado de um *invoker* que saiu continua válido até a data de fim, um ano por padrão, mas o CCF não o aceita mais em nenhuma operação.
+- No MVP-11, quando o NEF conferir o certificado do *invoker* em CAPIF-2e (TS 33.122 §6.5.2.2), a revogação passa a importar também no NEF. O ponto volta lá, com os certificados da SBI: TS 33.310 §6.1.3c também exige o ponto de distribuição de CRL.
+- Um cliente que exija o ponto de distribuição de CRL ou o OCSP *stapling* recusa o certificado do CCF. O cliente do Go e o módulo `ssl` do Python não exigem nenhum dos dois.
+- Um AEF de outra implementação que só ache a chave do *token* por `x5t#S256` não consegue conferir o *token*. Ele pode usar o `kid`, que TS 33.210 §6.3.3.1 manda suportar.
+
+**Implementação (30/10/2026).**
+
+- `free5gc/scripts/make-capif-certs.sh`: certificados sem `crlDistributionPoints`;
+- `free5gc/ccf/internal/context/context.go`: `Onboard`, o certificado do *invoker*;
+- `free5gc/ccf/internal/sbi/server.go`: `TLSConfig`, sem `OCSPStaple`;
+- `free5gc/ccf/internal/jws/jws.go`: `kid`, sem `x5t#S256`.
+
+Testes, em `free5gc/ccf/internal/sbi/capif_test.go`: `checkInvokerCertificate`, para certificados sem ponto de distribuição de CRL e sem OCSP; `TestCapifFlow`, para o cabeçalho do *token* só com `alg`, `kid` e `typ`; `TestCapifTLS`, para a sessão sem resposta OCSP.
+
+**Como fechar.**
+
+- Uma CRL assinada pela CA do CCF, servida por HTTP num endereço posto nos certificados (`crlDistributionPoints`), com o certificado do *invoker* revogado na saída.
+- O OCSP *stapling*, com um respondedor.
+- O `x5t#S256`, com um certificado para a chave do *token*.
+
+Rever no MVP-11.
