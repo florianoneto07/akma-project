@@ -81,6 +81,12 @@ type Configuration struct {
 	// token of the NEF API. Without CAPIF, TS 29.522 cl. 6 leaves the token
 	// issuer to local configuration. Required with nefUri.
 	NrfURI string `yaml:"nrfUri,omitempty"`
+	// Capif makes the AF an API invoker of CAPIF: outside the operator
+	// network, it discovers the NEF at the CAPIF core function and requests
+	// K_AF through it with an access token of the CAPIF core function
+	// (TS 29.522 cl. 7.2; TS 33.535 cl. 6.3). Exactly one of aanfUri, nefUri
+	// and capif is set.
+	Capif *Capif `yaml:"capif,omitempty"`
 	// NfInstanceID identifies the AF at the NRF; a random UUID when absent.
 	NfInstanceID string `yaml:"nfInstanceId,omitempty"`
 	// Anonymous requests anonymous user access: the K_AF comes without the
@@ -89,6 +95,31 @@ type Configuration struct {
 	// ClockOffset shifts the clock of the AF, a Go duration ("2h", "-2h").
 	// Test only: it simulates an AF whose clock disagrees with the AAnF's.
 	ClockOffset string `yaml:"clockOffset,omitempty"`
+}
+
+// Capif configures the AF as API invoker of CAPIF (TS 23.222; TS 29.222).
+type Capif struct {
+	// CcfURI is the apiRoot of the CAPIF core function on CAPIF-1e, over
+	// HTTPS (TS 33.122 cl. 6.3.1.1).
+	CcfURI string `yaml:"ccfUri"`
+	// CcfCA, Credential, State: files. A relative path is relative to the
+	// configuration file. CcfCA and Credential are the onboarding enrolment
+	// information (TS 33.122 cl. 6.1 step 1): the CA certificate of the CAPIF
+	// core function and the onboarding credential. State is written by the
+	// AF: its API invoker ID, certificate, private key and onboarding secret.
+	CcfCA      string `yaml:"ccfCa"`
+	Credential string `yaml:"credential"`
+	State      string `yaml:"state"`
+	// NotificationDestination is the URI the AF gives at onboarding and in
+	// the security method (mandatory, TS 29.222 tables 8.4.4.2.2-1 and
+	// 8.5.4.2.2-1).
+	NotificationDestination string `yaml:"notificationDestination"`
+	// APIScheme is the scheme of the apiRoot of the discovered APIs,
+	// "http" or "https" (TS 29.501 cl. 4.4.1); https when absent.
+	APIScheme string `yaml:"apiScheme,omitempty"`
+	// OffboardOnExit makes the AF offboard from the CAPIF core function
+	// when it stops (TS 33.122 cl. 6.8).
+	OffboardOnExit bool `yaml:"offboardOnExit,omitempty"`
 }
 
 // Profile is one Ua* server of the AF.
@@ -129,6 +160,7 @@ type Settings struct {
 	AanfURI       string
 	NefURI        string
 	NrfURI        string
+	Capif         *Capif
 	NfInstanceID  string
 	Anonymous     bool
 	ClockOffset   time.Duration
@@ -150,6 +182,13 @@ func Load(path string) (*Settings, error) {
 		return nil, err
 	}
 	dir := filepath.Dir(path)
+	if c := s.Capif; c != nil {
+		for _, f := range []*string{&c.CcfCA, &c.Credential, &c.State} {
+			if !filepath.IsAbs(*f) {
+				*f = filepath.Join(dir, *f)
+			}
+		}
+	}
 	for i, p := range s.Profiles {
 		if p.Certificate != "" && !filepath.IsAbs(p.Certificate) {
 			s.Profiles[i].Certificate = filepath.Join(dir, p.Certificate)
@@ -187,6 +226,10 @@ func (c Config) Settings() (*Settings, error) {
 	switch {
 	case cf.AanfURI != "" && cf.NefURI != "":
 		errs = append(errs, errors.New("aanfUri and nefUri: set only one of them"))
+	case cf.Capif != nil && (cf.AanfURI != "" || cf.NefURI != "" || cf.NrfURI != ""):
+		errs = append(errs, errors.New("capif: aanfUri, nefUri and nrfUri are not used with it"))
+	case cf.Capif != nil:
+		errs = append(errs, checkCapif(cf.Capif)...)
 	case cf.NefURI != "":
 		if !isAPIRoot(cf.NefURI) {
 			errs = append(errs, fmt.Errorf("nefUri: %q is not an http(s) apiRoot", cf.NefURI))
@@ -209,6 +252,14 @@ func (c Config) Settings() (*Settings, error) {
 		NonceLifetime: DefaultNonceLifetime, KafExpiry: cf.KafExpiry, AanfURI: strings.TrimRight(cf.AanfURI, "/"),
 		NefURI: strings.TrimRight(cf.NefURI, "/"), NrfURI: strings.TrimRight(cf.NrfURI, "/"),
 		NfInstanceID: nfID, Anonymous: cf.Anonymous, Logger: c.Logger,
+	}
+	if cf.Capif != nil {
+		capif := *cf.Capif
+		capif.CcfURI = strings.TrimRight(capif.CcfURI, "/")
+		if capif.APIScheme == "" {
+			capif.APIScheme = "https"
+		}
+		s.Capif = &capif
 	}
 	if s.Path == "" {
 		s.Path = DefaultPath
@@ -307,6 +358,29 @@ func transport(profile string) string {
 		return "udp/"
 	}
 	return "tcp/"
+}
+
+// checkCapif validates the capif section.
+func checkCapif(c *Capif) []error {
+	var errs []error
+	if u, err := url.Parse(c.CcfURI); err != nil || u.Scheme != "https" || u.Host == "" {
+		errs = append(errs, fmt.Errorf("capif.ccfUri: %q is not an https apiRoot (CAPIF-1e is over TLS)", c.CcfURI))
+	}
+	for name, f := range map[string]string{"ccfCa": c.CcfCA, "credential": c.Credential, "state": c.State} {
+		if f == "" {
+			errs = append(errs, fmt.Errorf("capif.%s: a file is required", name))
+		}
+	}
+	if u, err := url.Parse(c.NotificationDestination); err != nil || !u.IsAbs() || u.Host == "" {
+		errs = append(errs, fmt.Errorf("capif.notificationDestination: %q is not an absolute URI",
+			c.NotificationDestination))
+	}
+	switch c.APIScheme {
+	case "", "http", "https":
+	default:
+		errs = append(errs, fmt.Errorf("capif.apiScheme: %q is neither http nor https", c.APIScheme))
+	}
+	return errs
 }
 
 func isAPIRoot(s string) bool {

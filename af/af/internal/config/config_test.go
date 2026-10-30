@@ -199,3 +199,61 @@ func TestTCPAndUDPOnOnePort(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func capifBase() Config {
+	c := base()
+	c.Configuration.AanfURI = ""
+	c.Configuration.Capif = &Capif{
+		CcfURI:                  "https://192.168.16.130:8020/",
+		CcfCA:                   "ccf-ca.pem",
+		Credential:              "af1-external.jwt",
+		State:                   "af1-external.json",
+		NotificationDestination: "https://192.168.16.129/capif/notify",
+	}
+	return c
+}
+
+// The AF as API invoker of CAPIF.
+func TestCapif(t *testing.T) {
+	s, err := capifBase().Settings()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Capif == nil || s.Capif.CcfURI != "https://192.168.16.130:8020" || s.Capif.APIScheme != "https" ||
+		s.AanfURI != "" || s.NefURI != "" {
+		t.Fatalf("settings %+v %+v", s, s.Capif)
+	}
+	for name, mutate := range map[string]func(*Configuration){
+		"ccfUri over http":        func(c *Configuration) { c.Capif.CcfURI = "http://192.168.16.130:8020" },
+		"no ccfCa":                func(c *Configuration) { c.Capif.CcfCA = "" },
+		"no credential":           func(c *Configuration) { c.Capif.Credential = "" },
+		"no state":                func(c *Configuration) { c.Capif.State = "" },
+		"notificationDestination": func(c *Configuration) { c.Capif.NotificationDestination = "/capif/notify" },
+		"apiScheme":               func(c *Configuration) { c.Capif.APIScheme = "ftp" },
+		"capif and aanfUri":       func(c *Configuration) { c.AanfURI = "http://192.168.16.130:8010" },
+		"capif and nefUri":        func(c *Configuration) { c.NefURI = "http://192.168.16.130:8000" },
+		"capif and nrfUri":        func(c *Configuration) { c.NrfURI = "http://127.0.0.10:8000" },
+	} {
+		c := capifBase()
+		mutate(&c.Configuration)
+		if _, err := c.Settings(); err == nil {
+			t.Fatalf("%s: accepted", name)
+		}
+	}
+}
+
+// The configuration of the AF as API invoker; its files are relative to it.
+func TestSampleCapifConfig(t *testing.T) {
+	s, err := Load("../../../config/afcfg-capif.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := s.Capif
+	if c == nil || len(s.Profiles) != 6 || s.NefURI != "" || s.NrfURI != "" || s.AanfURI != "" ||
+		c.CcfURI != "https://192.168.16.130:8020" || c.APIScheme != "http" || c.OffboardOnExit ||
+		c.CcfCA != filepath.Join("..", "..", "..", "build", "capif", "ccf-ca.pem") ||
+		c.Credential != filepath.Join("..", "..", "..", "build", "capif", "af1-external.jwt") ||
+		c.State != filepath.Join("..", "..", "..", "build", "capif", "af1-external.json") {
+		t.Fatalf("settings %+v %+v", s, c)
+	}
+}

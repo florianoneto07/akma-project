@@ -20,6 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/florianoneto07/akma-free5gc/af/af/internal/aanf"
+	"github.com/florianoneto07/akma-free5gc/af/af/internal/capif"
 	"github.com/florianoneto07/akma-free5gc/af/af/internal/config"
 	"github.com/florianoneto07/akma-free5gc/af/af/internal/logger"
 	"github.com/florianoneto07/akma-free5gc/af/af/internal/nef"
@@ -68,10 +69,21 @@ func run(cfgPath, logPath string) error {
 	defer stop()
 
 	var keys server.KeyProvider
-	if s.NefURI == "" {
+	switch {
+	case s.Capif != nil:
+		// The AF as API invoker of CAPIF (TS 29.522 cl. 7.2).
+		inv, err := capif.Start(ctx, *s.Capif, "AKMA AF "+s.FQDN)
+		if err != nil {
+			return fmt.Errorf("CAPIF: %w", err)
+		}
+		defer inv.Close(context.Background())
+		logger.MainLog.Infof("AF outside the operator network: K_AF through the NEF at %s, "+
+			"discovered at the CCF %s as API invoker %s", inv.APIRoot(), s.Capif.CcfURI, inv.ID())
+		keys = nef.New(inv.APIRoot(), s.Anonymous, inv)
+	case s.NefURI == "":
 		logger.MainLog.Infof("AF inside the operator network: K_AF from the AAnF at %s", s.AanfURI)
 		keys = aanf.New(s.AanfURI, s.Anonymous)
-	} else {
+	default:
 		host, _, _ := net.SplitHostPort(s.Profiles[0].Listen)
 		reg, err := nrf.Register(ctx, s.NrfURI, s.NfInstanceID, host)
 		if err != nil {
