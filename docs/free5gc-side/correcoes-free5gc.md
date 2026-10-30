@@ -188,7 +188,7 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
 - **No projeto.**
   - MVP-6: DV-9, com `http`, *token* do NRF e política local AF_ID ↔ endereço de origem no NEF. O NRF como servidor de autorização cabe no *"based on local configuration"* de TS 29.522 §6 (`nef.md` §2.1).
   - MVP-9, aprovado em 29/10/2026 com os pontos C1 a C16 do plano (pedido do responsável em 19/10/2026; MVP-8 até a renumeração de 20/10/2026): um CAPIF Core Function para o free5GC, implementável com os serviços de TS 29.222. O NEF atua como APF, publicando `3gpp-akma` com `Publish_Service_API` (§5.3), e como AEF, conferindo o *token* como manda TS 29.522 §7.2. O AF atua como *API invoker*: entra no CCF (`CAPIF_API_Invoker_Management_API`), descobre a API (`Discover_Service_API`, §5.2) e obtém o *token* em `{apiRoot}/capif-security/v1/securities/{securityId}/token` (§5.6.2.3, TS 33.122 §6.5.2.3). O TLS entre o NEF e o AF, a outra metade deste item, fica para o MVP-11.
-  - 30/10/2026: o CCF feito, uma NF nova em `free5gc/ccf/` (`capif.md` §15.1). Na mesma data, o NEF, com o *patch* `nef/0002-capif.patch` e a configuração em `config/0003-nef-capif.patch` (§15.2). O AF vem em seguida.
+  - 30/10/2026: o CCF feito, uma NF nova em `free5gc/ccf/` (`capif.md` §15.1). Na mesma data, o NEF, com o *patch* `nef/0002-capif.patch` e a configuração em `config/0003-nef-capif.patch` (§15.2). O AF, do lado do AF, também (§15.3); faltam a VM e o `e2e.sh`.
 
 ## F14 — NEF pede o *token* de `nnrf-nfm` para o tipo errado
 

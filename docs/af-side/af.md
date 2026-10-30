@@ -1,6 +1,6 @@
 # AF de teste
 
-**MVP:** MVP-3; perfis TLS, DTLS e OSCORE no MVP-8 · **Data:** 18 de outubro de 2026; perfis de 21 a 22/10/2026 · **Verificado** contra o AAnF da VM do free5GC em 18/10/2026 (`teste-af.md`) e, com os perfis TLS, no `e2e.sh` (`e2e.md`)
+**MVP:** MVP-3; perfis TLS, DTLS e OSCORE no MVP-8; modo CAPIF no MVP-9 · **Data:** 18 de outubro de 2026; perfis de 21 a 22/10/2026; CAPIF em 30/10/2026 · **Verificado** contra o AAnF da VM do free5GC em 18/10/2026 (`teste-af.md`) e, com os perfis TLS, no `e2e.sh` (`e2e.md`)
 
 ## 1. O que o AF faz
 
@@ -55,10 +55,12 @@ Módulo Go `af/` (`github.com/florianoneto07/akma-free5gc/af`). Depende de `shar
 | `af/akmatls/` | identificadores Ua\* de TS 33.220 H.3, identidade PSK, perfil TLS do K.2 com *tickets* de 24 horas |
 | `af/wolftls/` (GPLv3) | ligação cgo ao wolfSSL: TLS e DTLS 1.2 e 1.3 com PSK, *tickets* presos à expiração da chave; no DTLS, um *socket* UDP separado por endereço de origem e *cookies* presos ao endereço |
 | `af/coap/` | CoAP (RFC 7252): mensagem, opções, troca confirmável com resposta no ACK e retransmissão |
-| `af/af/internal/logger/` | log no formato do free5GC, NF `AF`, categorias `Main`, `CFG`, `UA` e `Consumer` |
+| `af/af/internal/capif/` | o AF como *API invoker* do CAPIF: entrada no CCF, estado, descoberta, método de segurança, `check-authentication` e *token* (`docs/free5gc-side/capif.md` §7) |
+| `af/af/internal/logger/` | log no formato do free5GC, NF `AF`, categorias `Main`, `CFG`, `UA`, `Consumer` e `CAPIF` |
 | `af/af/cmd/af/` | o programa `af` (`-c` configuração, `-l` arquivo de log) |
 | `af/ue/uaclient/` | cliente Ua\* (biblioteca e comando `uaclient`) |
 | `af/config/afcfg.yaml` | configuração do laboratório |
+| `af/config/afcfg-capif.yaml` | o AF fora da rede do operador como *API invoker* do CAPIF (MVP-9) |
 | `af/scripts/build-wolfssl.sh` (GPLv3) | baixa o wolfSSL 5.9.4, confere o SHA-256, compila a biblioteca estática e confere as macros |
 | `af/scripts/make-test-ca.sh` | CA de teste e certificado do AF em `af/build/cert` |
 | `af/scripts/build-af.sh` | compila `af/build/bin/af` e `af/build/bin/uaclient`, com o wolfSSL quando a biblioteca existe |
@@ -90,6 +92,19 @@ Cada AF_ID dos perfis precisa estar em `akma.authorizedAfs` do `aanfcfg.yaml`, c
 
 No modo externo, o AF se registra no NRF na partida e se descadastra ao encerrar. A resposta do NEF nunca traz o SUPI (§6.3 passo 5).
 
+**AF como *API invoker* do CAPIF (MVP-9).** Com a seção `capif` no lugar de `nefUri` e `nrfUri`, o AF descobre o NEF no CCF e pede a K_AF com o *token* do CCF (TS 29.522 §7.2; `docs/free5gc-side/capif.md` §7 e §15.3). `aanfUri`, `nefUri`, `nrfUri` e `capif` não se combinam.
+
+| Campo de `capif` | Uso |
+|---|---|
+| `ccfUri` | CAPIF-1e, `https://192.168.16.130:8020`; só HTTPS |
+| `ccfCa`, `credential` | a informação de entrada (TS 33.122 §6.1 passo 1): a CA do CCF e a credencial de entrada, feitas na máquina do free5GC e copiadas para `af/build/capif/` |
+| `state` | arquivo `0600` que o AF escreve: identificador do *invoker*, certificado, chave privada e segredo de entrada |
+| `notificationDestination` | obrigatório no CCF; o AF não o serve, porque o CCF não manda notificações |
+| `apiScheme` | esquema do `apiRoot` descoberto, `http` enquanto o NEF não tem TLS; `https` quando ausente |
+| `offboardOnExit` | `true` faz o AF sair do CCF ao encerrar e apagar o estado |
+
+Na partida, o AF entra no CCF (ou usa o estado), descobre `3gpp-akma`, obtém o método `OAUTH` e pede o `check-authentication` ao NEF; só então serve o Ua\*. O *token* é pedido no primeiro pedido de K_AF, fica só na memória e é renovado 30 s antes do fim. Quando o NEF recusa o *token*, o AF pede outro e repete o pedido uma vez (TS 33.122 C.4.1).
+
 `[MVP]` A opção `clockOffset` (duração Go, como `2h` ou `-2h`) desloca o relógio do AF. É só de teste: simula um AF cujo relógio discorda do relógio do AAnF (MVP-5, `e2e.md` §4). Com ela, o AF registra um `warn` na partida.
 
 ## 4. Log
@@ -111,6 +126,8 @@ Mesmo formato das NFs do free5GC (MVP-3a), na categoria `UA` para o Ua\* e `Cons
 | `warn` | `Digest response from <endereço> does not match the K_AF of A-KID <A-KID>: authentication failed` (RFC 7616 §3.4: registrar falhas de *login*) |
 | `warn` | `Request from <endereço> for host "<Host>", not <FQDN>`; `Realm … is not …`; `Nonce count … already used …: possible replay` |
 | `error` | `K_AF for A-KID <A-KID> not obtained: <motivo>` |
+| `info` | no modo CAPIF, na categoria `CAPIF`: `Onboarded at the CCF as API invoker <id>`; `3gpp-akma discovered at <apiRoot>, AEF <aefId>`; `Security method OAUTH at AEF <aefId>`; `The NEF has the authentication data of API invoker <id>`; `Access token obtained, expires in <n> s`; `Offboarded from the CCF` |
+| `warn` | `The CCF no longer knows API invoker <id>: onboarding again` |
 | `debug` | o SUPI recebido do AAnF |
 
 A K_AF fica em `kdf.Key`, que se imprime como `[256-bit key]`; nem ela nem a senha do Digest aparecem em log.

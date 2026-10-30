@@ -498,7 +498,7 @@ Um componente de cada vez, cada um com os seus *commits*:
 | modelos e clientes do CAPIF (C4) | feito em 29/10/2026 | `free5gc/patches/openapi/0004-capif-models-and-clients.patch`; `openapi.md` |
 | CCF | feito em 30/10/2026 (seção 15.1) | `free5gc/ccf/`, `free5gc/config/ccfcfg.yaml`, `free5gc/scripts/build-ccf.sh` e `make-capif-certs.sh` |
 | NEF como APF e AEF | feito em 30/10/2026 (seção 15.2) | `free5gc/patches/nef/0002-capif.patch`, `free5gc/patches/config/0003-nef-capif.patch` |
-| AF como *API invoker* | a fazer | `af/af/internal/capif`, `af/config/afcfg-capif.yaml` |
+| AF como *API invoker* | feito em 30/10/2026 (seção 15.3) | `af/af/internal/capif`, `af/config/afcfg-capif.yaml` |
 | partida, VM e `e2e.sh` | a fazer | `free5gc/patches/run/0002`, `af/scripts/` |
 | documentos | a fazer | seção 14 |
 
@@ -600,3 +600,28 @@ São dois *patches*: `free5gc/patches/nef/0002-capif.patch`, aplicado depois do 
 - Os *patches* reproduzem a cópia: `src-orig` com `nef/0001` e `0002` dá a cópia do NEF, e `src-orig/config` com `config/0001` a `0003` dá a configuração. O NEF lê e valida o `nefcfg.yaml` resultante.
 
 **Na VM** (próximo componente). Com o `nef/0001` já aplicado, `patch-nf.sh nef apply` recusa o conjunto novo. Antes de aplicar, é preciso reverter com uma cópia do diretório antigo de *patches*, como no MVP-12. O mesmo vale para `config`.
+
+### 15.3 O AF (30/10/2026)
+
+Código em `af/af/internal/capif` (novo), `af/af/internal/config`, `af/af/internal/nef`, `af/af/internal/logger` e `af/af/cmd/af`; configuração em `af/config/afcfg-capif.yaml`. Nenhuma VM foi tocada. Os detalhes que a especificação não fixava:
+
+- **Modos.** `aanfUri`, `nefUri`, `nrfUri` e `capif` não se combinam. `ccfUri` só aceita HTTPS. Sem `apiScheme`, vale `https`.
+- **Estado.** É um JSON `0600`, escrito por arquivo temporário e renomeação, com `ccfUri`, o identificador, o certificado, a chave privada PKCS #8 e o segredo. Um estado de outro `ccfUri` é posto de lado, e o AF faz nova entrada.
+- **Entrada.** O AF confere o certificado emitido: a CA do CCF, `clientAuth`, a própria chave e o CN igual ao identificador.
+- **`apiRoot`.** Sai da primeira interface com `OAUTH`, em que os métodos da interface valem antes dos do perfil (tab. 8.2.4.2.3-1). Usa `ipv4Addr`, `ipv6Addr` ou `fqdn`, mais `port` e `apiPrefix`, ou o `domainName` quando o perfil não tem interface.
+- **TLS de CAPIF-1e.** TLS 1.3, ou 1.2 só com ECDHE e AEAD (TS 33.210 §6.2), e HTTP/2 por ALPN.
+- **Token recusado pelo NEF.** Com um `401`, o AF descarta o *token*, pede outro ao CCF e repete o pedido uma vez. `[3GPP]` TS 33.122 C.4.1: *"the API Invoker shall return to the CAPIF Core Function"*. Isso só vale no modo CAPIF; o modo do NRF não muda.
+- **Saída.** Um `404` na saída conta como saída feita, e o estado é apagado.
+
+**Verificação (30/10/2026).**
+
+- `go test -race ./...` no módulo `af`, sem falhas. Os testes novos usam um CCF falso, com CA própria, e um NEF falso, e cobrem:
+  - a entrada e o estado;
+  - o `apiRoot`;
+  - a falta de `OAUTH` e a credencial errada;
+  - o *token*: guardado, renovado 30 s antes do fim e renovado depois da recusa;
+  - o CCF reiniciado, na partida e no pedido de *token*;
+  - a saída;
+  - a seção `capif` e o `afcfg-capif.yaml`;
+  - nenhum segredo no log.
+- Teste local, sem VM: o binário do CCF, um NEF falso em Go que confere o *token* `ES256` com a chave real do CCF e recusa o primeiro pedido, o binário do AF com `digest-http` e o `uaclient` com o vetor `testbed-ue`. O teste passou por entrada, descoberta, método, `check-authentication` e dois *tokens* (o primeiro recusado). As duas sessões Ua\* foram estabelecidas. Na parada, o AF saiu do CCF e apagou o estado. Nenhum segredo apareceu no log do AF.
