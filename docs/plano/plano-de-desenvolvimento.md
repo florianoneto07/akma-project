@@ -1171,6 +1171,14 @@ O detalhe (configuração, mensagens, erros, logs e testes) vai para uma especif
 
 **Estado (02/11/2026, aprovado):** **aprovado** pelo responsável, com os pontos T1 a T17: o T4 revisto, com os dois modos e o padrão por nome; o T14 na opção (b), só o modo CAPIF para o AF de fora, o que encerra o DV-9 inteiro; os demais como propostos. Registrados na mesma data, em `desvios.md`: o DV-17 (o modo por IP do T4) e as notas do MVP-11 no DV-1, no DV-9 e no DV-16. Próximo passo: a especificação `docs/free5gc-side/tls-sbi.md`, a aprovar antes do código; ela também revê o DV-16, com o T7 e o T14. Nada implementado; nenhuma VM alterada.
 
+**Estado (02/11/2026, especificação):** **especificação escrita, a aprovar**: `docs/free5gc-side/tls-sbi.md`, com os pontos T18 a T39. As cláusulas foram conferidas nas versões mais recentes da 3GPP (TS 33.501 V20.3.0, TS 33.210 V20.0.0, TS 29.510 V20.1.0, TS 29.500 V20.0.0, TS 23.003 V20.1.0; TS 33.310 e TS 33.122 sem versão nova). Pedem a decisão do responsável, entre outros:
+
+- o T18, que corrige o T9: TS 29.510 §5.4.2.2.1 manda `400` `invalid_client`, e não 403;
+- o T19, que leva à fase (a) o transporte de CAPIF-2e e a troca do grupo do NEF do MVP-6;
+- o T27, `[DIVERGÊNCIA]`: TS 33.310 §6.1a pede suporte ao LDAPv3 para a CRL.
+
+Os achados 1 a 5 foram confirmados nas fontes e registrados como F21 a F25 em `correcoes-free5gc.md`; o achado novo do `iss` vazio vai a F26 com o T30. Nada implementado; nenhuma VM alterada.
+
 **Objetivo.** Proteger com TLS mútuo todas as interfaces SBI do laboratório e a interface entre o NEF e o AF, com certificados no perfil de TS 33.310, e usar as identidades dos certificados na autenticação e na autorização. Fecha o DV-1, com a extensão a CAPIF-3/4, e o DV-9 inteiro, inclusive CAPIF-2e (T14); corrige F4 e F5 de `correcoes-free5gc.md`. Ordem decidida pelo responsável em 29/10/2026: logo depois do MVP-9, antes do GPSI (seção 5). O detalhe vai para uma especificação, `docs/free5gc-side/tls-sbi.md`, aprovada antes do código, como a `capif.md` no MVP-9.
 
 **Situação normativa.**
