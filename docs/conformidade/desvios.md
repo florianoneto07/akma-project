@@ -7,7 +7,7 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 
 | Nº | Assunto | Estado | MVP |
 |---|---|---|---|
-| DV-1 | SBI sem TLS (h2c); CAPIF-3/4 sem TLS até o MVP-11 | **implementado** (MVP-1, 17/10/2026); estendido a CAPIF-3/4, **decidido** (29/10/2026) | MVP-1, MVP-9 |
+| DV-1 | SBI sem TLS (h2c); CAPIF-3/4 sem TLS até o MVP-11 | **implementado** (MVP-1, 17/10/2026); estendido a CAPIF-3/4, **implementado** (MVP-9, 02/11/2026) | MVP-1, MVP-9 |
 | DV-2 | Subscrição de `ROAMING_STATUS` desabilitada | **implementado** (MVP-1, 17/10/2026) — parcial: a etapa não existe; o campo só aceita `false` | MVP-1 |
 | DV-3 | Só SUPI do tipo IMSI | **implementado** (MVP-0, 16/10/2026) | MVP-0 |
 | DV-4 | Sem NFKC no lado UE | **implementado** (MVP-4, 18/10/2026) | MVP-4 |
@@ -15,14 +15,14 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-6 | `realm` do Digest conforme TS 33.535 | **implementado** (MVP-3, 18/10/2026) | MVP-3 |
 | DV-7 | Nunca emitir 204 em `retrieve-applicationkey` | **implementado** (MVP-1, 17/10/2026) | MVP-1 |
 | DV-8 | `aud` vazio tolerado no token OAuth2 | **encerrado** em 17/10/2026 (MVP-1b: NRF corrigido, AAnF estrito) | MVP-1 |
-| DV-9 | NEF–AF externo sem TLS nem certificado de cliente | **implementado** (MVP-6, 19/10/2026) | MVP-6 |
+| DV-9 | NEF–AF externo sem TLS nem certificado de cliente | **implementado** (MVP-6, 19/10/2026); vale também para CAPIF-2e (MVP-9, 02/11/2026) | MVP-6, MVP-9 |
 | DV-10 | Perfis TLS do Ua\* sem `TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384` e sem OCSP *stapling*, recomendados por TS 33.210 | **implementado** (MVP-8, 21/10/2026) | MVP-8 |
 | DV-11 | CoAP sobre DTLS sem a suíte obrigatória de RFC 7252, `TLS_PSK_WITH_AES_128_CCM_8`; vale TS 33.210 | **implementado** (MVP-8, 21/10/2026) | MVP-8 |
 | DV-12 | `trigger-auth` com POST, contra a precedência do YAML (TS 29.503 Anexo A.1), que declara `get` | **implementado** (MVP-12, 28/10/2026) | MVP-12 |
-| DV-13 | *Claims* do *token* do CCF: `iss` com o identificador do *invoker*, ao lado de `client_id`, e `exp` como instante | **decidido** (29/10/2026) | MVP-9 |
-| DV-14 | CAPIF parcial: só o caminho do AKMA | **decidido** (29/10/2026) | MVP-9 |
-| DV-15 | HTTP/2 por ALPN no CCF, contra o *upgrade* do HTTP de TS 29.222 §7.3 | **decidido** (29/10/2026) | MVP-9 |
-| DV-16 | CAPIF-1e sem revogação de certificados (sem ponto de distribuição de CRL, CRL nem OCSP) e *token* do CCF sem `x5t#S256` | **decidido** (30/10/2026); implementado no CCF | MVP-9 |
+| DV-13 | *Claims* do *token* do CCF: `iss` com o identificador do *invoker*, ao lado de `client_id`, e `exp` como instante | **implementado** (MVP-9, 02/11/2026) | MVP-9 |
+| DV-14 | CAPIF parcial: só o caminho do AKMA | **implementado** (MVP-9, 02/11/2026) | MVP-9 |
+| DV-15 | HTTP/2 por ALPN no CCF, contra o *upgrade* do HTTP de TS 29.222 §7.3 | **implementado** (MVP-9, 02/11/2026) | MVP-9 |
+| DV-16 | CAPIF-1e sem revogação de certificados (sem ponto de distribuição de CRL, CRL nem OCSP) e *token* do CCF sem `x5t#S256` | **implementado** (MVP-9, 02/11/2026) | MVP-9 |
 
 **Consolidação (MVP-5, 18/10/2026).** Nenhum desvio novo surgiu no MVP-5. Estado e evidência de cada um no roteiro ponta a ponta (`docs/af-side/e2e.md`, execução `20261018-171510`):
 
@@ -52,6 +52,8 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 **Implementação (17/10/2026).** O AAnF serve h2c (`sbi.scheme: http`) em `192.168.16.130:8000` (8010 desde o MVP-6), alcançável da VM do AF. A política local está em `akma.authorizedAfs`: cada AF_ID tem a lista de endereços de origem autorizados, e o endereço é o da conexão, não o de `X-Forwarded-For` (`free5gc/aanf/internal/context/context.go`, `AfPolicy`). Testes: `TestRetrieveAfNotAuthorized` e, na VM, AF_ID autorizado pedido de outra máquina → 403 (`docs/free5gc-side/aanf.md` §9). O suporte a `https` existe na configuração (`sbi.tls`), mas não foi exercitado.
 
 **Extensão (29/10/2026, MVP-9).** Decisão do responsável no ponto C3 do MVP-9 (plano, seção 4): CAPIF-3/4, entre o NEF e o CCF, fica em `http` num endereço de *loopback* do CCF até o MVP-11, que traz o TLS mútuo com os certificados das NFs. `[3GPP]` TS 33.122 V19.4.0 §6.6: *"TLS shall be used to provide integrity protection, replay protection and confidentiality protection. The support of TLS is mandatory."* e *"Certificate based mutual authentication shall be performed between the CAPIF entities using TLS."*; NOTA: *"It is up to the domain administrator's policy to protect interfaces within the trusted domain."* Como as NFs deste desvio, o CCF reconhece o NEF pela interface interna. CAPIF-1e, entre o AF e o CCF, tem TLS desde o MVP-9.
+
+**Implementação da extensão (02/11/2026).** O NEF fala com o servidor interno do CCF em `http://127.0.0.1:8020` (`free5gc/patches/config/0003`). Nesse endereço, o CCF serve só a publicação e os dados do *invoker* (`docs/free5gc-side/capif.md` §3). Evidência: [R1.nef-published] e [CP04] na execução `20261102-093804` (`docs/af-side/e2e.md` §5.9). No [CP04], o `check-authentication` faz o NEF pedir ao CCF os dados do *invoker*.
 
 ---
 
@@ -197,6 +199,8 @@ O certificado de cliente exige mudar o servidor SBI comum do NEF do free5GC. O T
 
 **Implementação (19/10/2026).** `free5gc/patches/nef/0001-akma-api.patch` e `free5gc/patches/config/0002-nef-akma.patch` (`docs/free5gc-side/nef.md` §10). O NEF serve `3gpp-akma` em `http` em 192.168.16.130:8000. O AF de fora da rede obtém o *token* no NRF pelo túnel SSH. Verificação: o NEF responde 401 sem *token* (E04, `docs/af-side/teste-nef.md`) e 403 a um AF_ID fora da política (E06).
 
+**CAPIF (02/11/2026, MVP-9).** O AF externo também pode obter o *token* do CCF, que é o caminho da norma (TS 29.522 §7.2), e o NEF aceita os dois modos (`allowNrfTokens: true`). CAPIF-2e, entre o AF e o NEF, continua em `http` até o MVP-11, com a mesma política de endereço. O `check-authentication` também passa por essa política. Evidência: [CP04], [CP06], [CP16], [CP17] e [R2c] na execução `20261102-093804` (`docs/af-side/e2e.md` §5.9).
+
 ---
 
 ## DV-10 — Perfis TLS do Ua\* sem `D0 02` e sem OCSP *stapling*
@@ -286,6 +290,8 @@ O NEF confere `exp` como instante, com tolerância de até 30 s (TS 33.122 C.2.2
 
 **Impacto.** Um AEF de outra implementação que espere `iss` com o identificador do CCF recusa o *token*. Um CCF de outra implementação que mande `exp` relativo tem os *tokens* recusados pelo NEF, como vencidos. O AF não é afetado: o *token* é opaco para ele, que usa `expires_in` (TS 33.122 C.5).
 
+**Implementação (02/11/2026).** O CCF emite o *token* com `iss` e `client_id` iguais ao identificador do *invoker* e `exp` como instante (`free5gc/ccf/internal/context/context.go`, `IssueToken`). O NEF confere os dois e `exp`, com 30 s de tolerância (`free5gc/patches/nef/0002`). Evidência: [CP05] e [CP06] na execução `20261102-093804` (`docs/af-side/e2e.md` §5.9); `TestCapifFlow` no CCF e `TestCapifAccessToken` no NEF.
+
 ---
 
 ## DV-14 — CAPIF parcial: só o caminho do AKMA
@@ -311,6 +317,8 @@ Ficam de fora: a atualização da entrada e a entrada com aprovação; os evento
 - Sem *logging*, auditoria e tarifação no CCF, as chamadas ficam registradas só no log do NEF (categoria `AKMA`).
 - Um *invoker* de outra implementação que dependa de uma API de fora (os eventos, por exemplo) não funciona com este CCF.
 
+**Implementação (02/11/2026).** O CCF serve só as operações listadas acima (`free5gc/ccf/`). O NEF faz só a publicação, o `check-authentication` e a conferência do *token* (`free5gc/patches/nef/0002`). Evidência: o grupo CP e o R2c da execução `20261102-093804` (`docs/af-side/e2e.md` §5.9).
+
 ---
 
 ## DV-15 — HTTP/2 por ALPN no CCF, contra o *upgrade* do HTTP de TS 29.222 §7.3
@@ -327,6 +335,8 @@ Ficam de fora: a atualização da entrada e a entrada com aprovação; os evento
 **Por quê.** Decidido pelo responsável em 29/10/2026, com o ponto C29 da especificação do MVP-9 (`docs/free5gc-side/capif.md`). Sobre TLS, o HTTP/2 só se negocia por ALPN, como fazem o `crypto/tls` e o `net/http` do Go.
 
 **Impacto.** Um cliente que siga §7.3 ao pé da letra e mande `Upgrade: h2c` numa conexão TLS continua em HTTP/1.1, que §7.3 torna obrigatório: não fica sem serviço.
+
+**Implementação (02/11/2026).** `free5gc/ccf/internal/sbi/server.go` (`TLSConfig`, com `h2` e `http/1.1` no ALPN). Evidência: `TestCapifTLS` no CCF, com HTTP/2 por ALPN e HTTP/1.1 no TLS 1.2. Na execução `20261102-093804` (`docs/af-side/e2e.md` §5.9), usaram o CCF o AF, cujo cliente Go oferece `h2` no ALPN, e o `capif_api.py`, em HTTP/1.1.
 
 ---
 
@@ -370,6 +380,8 @@ O resto dos perfis é seguido: TS 33.310 §6.1.1, §6.1.3a e §6.1.4a; TS 33.210
 - `free5gc/ccf/internal/jws/jws.go`: `kid`, sem `x5t#S256`.
 
 Testes, em `free5gc/ccf/internal/sbi/capif_test.go`: `checkInvokerCertificate`, para certificados sem ponto de distribuição de CRL e sem OCSP; `TestCapifFlow`, para o cabeçalho do *token* só com `alg`, `kid` e `typ`; `TestCapifTLS`, para a sessão sem resposta OCSP.
+
+No laboratório, na execução `20261102-093804` (`docs/af-side/e2e.md` §5.9), o AF e o `capif_api.py` usaram o CCF sem CRL e sem OCSP.
 
 **Como fechar.**
 

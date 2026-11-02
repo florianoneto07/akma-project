@@ -499,8 +499,8 @@ Um componente de cada vez, cada um com os seus *commits*:
 | CCF | feito em 30/10/2026 (seção 15.1) | `free5gc/ccf/`, `free5gc/config/ccfcfg.yaml`, `free5gc/scripts/build-ccf.sh` e `make-capif-certs.sh` |
 | NEF como APF e AEF | feito em 30/10/2026 (seção 15.2) | `free5gc/patches/nef/0002-capif.patch`, `free5gc/patches/config/0003-nef-capif.patch` |
 | AF como *API invoker* | feito em 30/10/2026 (seção 15.3) | `af/af/internal/capif`, `af/config/afcfg-capif.yaml` |
-| partida, VM e `e2e.sh` | a fazer | `free5gc/patches/run/0002`, `af/scripts/` |
-| documentos | a fazer | seção 14 |
+| partida, VM e `e2e.sh` | feito em 02/11/2026 (seção 15.4) | `free5gc/patches/run/0002-ccf-option.patch`, `af/scripts/` |
+| documentos | feito em 02/11/2026 | seção 14 |
 
 ### 15.1 O CCF (30/10/2026)
 
@@ -599,7 +599,7 @@ São dois *patches*: `free5gc/patches/nef/0002-capif.patch`, aplicado depois do 
 - Interoperação com o CCF real: o binário do CCF rodou nesta máquina e emitiu um *token*. O *token* e a resposta do CCF a `Obtain_API_Invoker_Info` passaram na conferência do NEF, com o mesmo `kid` e os 11 AF_ID do perfil `af1-external`. O teste foi temporário e não está no *patch*.
 - Os *patches* reproduzem a cópia: `src-orig` com `nef/0001` e `0002` dá a cópia do NEF, e `src-orig/config` com `config/0001` a `0003` dá a configuração. O NEF lê e valida o `nefcfg.yaml` resultante.
 
-**Na VM** (próximo componente). Com o `nef/0001` já aplicado, `patch-nf.sh nef apply` recusa o conjunto novo. Antes de aplicar, é preciso reverter com uma cópia do diretório antigo de *patches*, como no MVP-12. O mesmo vale para `config`.
+**Na VM** (próximo componente). Com o `nef/0001` já aplicado, `patch-nf.sh nef apply` recusa o conjunto novo. Antes de aplicar, é preciso reverter com uma cópia do diretório antigo de *patches*, como no MVP-12. O mesmo vale para `config`. Feito em 02/11/2026 (seção 15.4).
 
 ### 15.3 O AF (30/10/2026)
 
@@ -625,3 +625,17 @@ Código em `af/af/internal/capif` (novo), `af/af/internal/config`, `af/af/intern
   - a seção `capif` e o `afcfg-capif.yaml`;
   - nenhum segredo no log.
 - Teste local, sem VM: o binário do CCF, um NEF falso em Go que confere o *token* `ES256` com a chave real do CCF e recusa o primeiro pedido, o binário do AF com `digest-http` e o `uaclient` com o vetor `testbed-ue`. O teste passou por entrada, descoberta, método, `check-authentication` e dois *tokens* (o primeiro recusado). As duas sessões Ua\* foram estabelecidas. Na parada, o AF saiu do CCF e apagou o estado. Nenhum segredo apareceu no log do AF.
+
+### 15.4 Partida, VM e `e2e.sh` (02/11/2026)
+
+- **`run/0002-ccf-option.patch`.** Com `-ccf`, o `run.sh` põe o CCF logo antes do NEF (C27). O `force_kill.sh` também para o CCF.
+- **`e2e.sh` e `e2e-remote.sh`.**
+  - O R1 sobe o free5GC com `-aanf -ccf`, confere o CCF e a publicação do NEF e emite a credencial de entrada.
+  - No ponto A, a máquina do AF copia a CA do CCF e a credencial, sobe o AF do modo CAPIF na 8086 (CP00) e roda o `af/scripts/negative/capif_api.py` (CP01 a CP18).
+  - O R2c faz o Ua\* do UE com esse AF.
+  - O grupo B confere a saída do AF (CP19). O CP20 confere os logs dos dois lados.
+- **Resultado.** `185 passed, 0 failed, 3 skipped` na execução `20261102-093804` (`docs/af-side/e2e.md` §5.9). As três puladas (D03, O04, O05) dependem de ferramentas de conferência que não estavam compiladas e não tocam no CAPIF.
+- **Dois *scripts* corrigidos na implantação na máquina do free5GC.**
+  - `patch-nf.sh` agora confere uma série de *patches* em ordem, numa cópia dos arquivos. Os *patches* novos dependem dos anteriores, e a conferência de cada um sozinho os recusava.
+  - `make-capif-certs.sh` faz a CA com uma configuração própria. O OpenSSL 1.1.1 da máquina acrescentava o `basicConstraints` do `-addext` ao da seção `v3_ca`, e o Go recusa uma extensão repetida (RFC 5280 §4.2).
+- **Tutorial.** A parte 11 e o passo das chaves do CCF na seção 9.1. O NEF com o `nef/0002` lê a chave pública dos *tokens* na partida, por causa da seção `capif` que o `config/0003` põe no `nefcfg.yaml`.

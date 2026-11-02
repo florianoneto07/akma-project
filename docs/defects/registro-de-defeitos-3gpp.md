@@ -5,7 +5,7 @@
 
 Cada item registra a inconsistência, as fontes que a evidenciam, a decisão adotada pelo projeto e o grupo de trabalho responsável.
 
-**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio. 28 de outubro de 2026 — D-B: especificação do MVP-12 aprovada. Estes defeitos são a base das recomendações à 3GPP da V2 do repositório público (plano, MVP-13). Na implementação do MVP-12, D-B implementado (DV-12) e D-O e D-P acrescentados, de TS 29.503. No MVP-13: todos os itens conferidos nas versões mais recentes das normas (seção seguinte), e as lacunas que o projeto teve de decidir acrescentadas como sugestões, D-Q a D-Z. 29 de outubro de 2026 — D-AA a D-AC, do CAPIF, achados na proposta do MVP-9, aprovada nessa data. Na mesma data, D-AD a D-AG, da especificação do CAPIF (`docs/free5gc-side/capif.md`), aprovada.
+**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio. 28 de outubro de 2026 — D-B: especificação do MVP-12 aprovada. Estes defeitos são a base das recomendações à 3GPP da V2 do repositório público (plano, MVP-13). Na implementação do MVP-12, D-B implementado (DV-12) e D-O e D-P acrescentados, de TS 29.503. No MVP-13: todos os itens conferidos nas versões mais recentes das normas (seção seguinte), e as lacunas que o projeto teve de decidir acrescentadas como sugestões, D-Q a D-Z. 29 de outubro de 2026 — D-AA a D-AC, do CAPIF, achados na proposta do MVP-9, aprovada nessa data. Na mesma data, D-AD a D-AG, da especificação do CAPIF (`docs/free5gc-side/capif.md`), aprovada. 2 de novembro de 2026 — D-AH e D-AI, achados na implementação do MVP-9.
 
 ### Situação no projeto (22/10/2026)
 
@@ -40,6 +40,8 @@ Todos os itens estão no texto das normas; nenhum é defeito do projeto. A decis
 | D-AD | nada: o método 1 do CAPIF fica fora do MVP-9 (DV-14) |
 | D-AE | DV-15: HTTP/2 por ALPN no CCF (ponto C29 de `capif.md`) |
 | D-AF, D-AG | PEM, `authenticationInfo`, `authorizationInfo` e `apiScheme` fixados em `capif.md` (pontos C18, C21 e C26) |
+| D-AH | o CCF recusa `securityInfo` vazio, pela tabela 8.5.4.2.2-1 (`capif.md` §5.6) |
+| D-AI | `ES256` com `kid` no *token* e na credencial de entrada (C9 e C19 revistos em 30/10/2026, `capif.md` §15.1) |
 
 ### Conferência nas versões mais recentes (28/10/2026)
 
@@ -514,7 +516,7 @@ Acrescentadas em 28/10/2026 (MVP-13, ponto L7), a pedido do responsável ("erros
 
 ## Defeitos do CAPIF
 
-Acrescentados em 29/10/2026, da leitura de TS 29.222, TS 33.122 e TS 29.522 para o MVP-9: D-AA a D-AC com a proposta (plano, seção 4), D-AD a D-AG com a especificação (`docs/free5gc-side/capif.md`). D-AA a D-AE são falhas do texto, como D-A a D-P; D-AF e D-AG são sugestões, como D-Q a D-Z.
+Acrescentados em 29/10/2026, da leitura de TS 29.222, TS 33.122 e TS 29.522 para o MVP-9: D-AA a D-AC com a proposta (plano, seção 4), D-AD a D-AG com a especificação (`docs/free5gc-side/capif.md`). D-AH e D-AI em 02/11/2026, achados na implementação (`capif.md` §15.1). D-AA a D-AE e D-AH são falhas do texto, como D-A a D-P; D-AF, D-AG e D-AI são sugestões, como D-Q a D-Z.
 
 ## D-AA — `iss` do *token* do CAPIF
 
@@ -632,6 +634,40 @@ Acrescentados em 29/10/2026, da leitura de TS 29.222, TS 33.122 e TS 29.522 para
 **Proposta.** Dizer que as APIs descobertas pelo CAPIF usam `https` (TS 33.501 §12.3; TS 33.122 §6.5), ou acrescentar o esquema a `InterfaceDescription`.
 
 **Decisão do projeto** (ponto C26 de `capif.md`). `apiScheme` na configuração do AF, `http` enquanto o NEF não tiver TLS (DV-9).
+
+---
+
+## D-AH — `minimum` em vez de `minItems` em `securityInfo` (editorial)
+
+| | |
+|---|---|
+| **Especificação** | TS 29.222 V19.8.0, `TS29222_CAPIF_Security_API.yaml` (`ServiceSecurity`) e tabela 8.5.4.2.2-1 |
+| **Grupo responsável** | 3GPP CT3 |
+
+**Descrição.** No YAML, `ServiceSecurity.securityInfo` é um *array* com `minimum: 1`. `minimum` é uma palavra-chave de números. A tabela 8.5.4.2.2-1 dá a cardinalidade 1..N, que no OpenAPI se escreve `minItems: 1`. O YAML da V20.1.0 tem o mesmo texto.
+
+**Impacto.** Um validador de OpenAPI ignora `minimum` num *array* e aceita um `securityInfo` vazio, que a tabela não admite.
+
+**Proposta.** Trocar `minimum: 1` por `minItems: 1`.
+
+**Decisão do projeto.** O CCF segue a tabela e recusa `securityInfo` vazio com `400` `MANDATORY_IE_MISSING` (`capif.md` §5.6).
+
+---
+
+## D-AI — *Token* do CAPIF sem o perfil JWS de TS 33.210 (sugestão)
+
+| | |
+|---|---|
+| **Especificações** | TS 33.122 V19.4.0, Anexo C.1; TS 33.210 V19.3.0, §6.3.1 e §6.3.3 |
+| **Grupo responsável** | 3GPP SA3 |
+
+**Descrição.** TS 33.122 C.1 pede que o *token* seja *"protected by the JSON signature profile as specified in IETF RFC 7515"* e não remete ao perfil JWS de TS 33.210 §6.3.3. Esse perfil vale para *"All entities and functions that support JWS"* e pede `ES256` e o parâmetro `kid`. Para o TLS e os certificados de CAPIF-1e, TS 33.122 §6.1 e §6.3.1.1 remetem aos perfis da 3GPP; para o JWS, não há remissão.
+
+**Impacto.** Um CCF que use só, por exemplo, `RS512` segue TS 33.122 ao pé da letra, mas não interopera com um AEF que aceite só o perfil de TS 33.210.
+
+**Proposta.** Citar TS 33.210 §6.3.3 no Anexo C de TS 33.122.
+
+**Decisão do projeto** (C9 e C19 revistos em 30/10/2026; `capif.md` §15.1). `ES256` com `kid` no *token* e na credencial de entrada.
 
 ---
 

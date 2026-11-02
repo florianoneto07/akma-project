@@ -1,6 +1,6 @@
 # Tutorial — AKMA sobre o free5GC
 
-Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-12. O MVP-5 foi o primeiro MVP funcional. Em 19/10/2026 ele foi seguido do início numa VM com o free5GC v4.2.3 recém-instalado, e o roteiro da parte 8 terminou com 63 verificações e nenhuma falha (critério 4 do MVP-5).
+Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-9 (CAPIF), que veio depois do MVP-12. O MVP-5 foi o primeiro MVP funcional. Em 19/10/2026 ele foi seguido do início numa VM com o free5GC v4.2.3 recém-instalado, e o roteiro da parte 8 terminou com 63 verificações e nenhuma falha (critério 4 do MVP-5).
 
 | Parte | Conteúdo | Disponível |
 |---|---|---|
@@ -14,6 +14,7 @@ Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia of
 | 8 | Executar o fluxo de ponta a ponta | sim |
 | 9 | AF fora da rede do operador, acesso anônimo e UERANSIM em outra máquina | sim |
 | 10 | Renovar a K_AKMA: o AAnF pede uma nova autenticação | sim |
+| 11 | CAPIF: o AF obtém o *token* do CCF | sim |
 
 ---
 
@@ -753,6 +754,14 @@ O NEF do free5GC não tem a API de AKMA. Com o free5GC parado, na máquina do fr
 
 O *patch* acrescenta ao NEF a operação `POST /3gpp-akma/v1/retrieve` (TS 29.522 §5.14) e recompila o NEF; o binário original fica em `bin/nef.orig`.
 
+O segundo *patch* da série traz o NEF do CAPIF (parte 11). Com a seção `capif` do `nefcfg.yaml`, que o *patch* de configuração da parte 4 acrescenta, o NEF lê na partida a chave pública dos *tokens* do CCF. Faça já as chaves do CCF, com o endereço da máquina do free5GC:
+
+```bash
+~/akma-free5gc/free5gc/scripts/make-capif-certs.sh ~/free5gc/cert 192.168.16.130
+```
+
+Sem o CCF no ar, o NEF tenta publicar a API a cada 5 s, com um aviso na primeira falha, e continua aceitando os *tokens* do NRF (`allowNrfTokens: true`).
+
 A configuração do NEF muda pelo *patch* de configuração da parte 4 (`free5gc/patches/config/0002-nef-akma.patch`). Se você aplicou a configuração antes desta versão do tutorial, desfaça-a com a cópia antiga dos *patches* (`patch-nf.sh config revert`), atualize o repositório e aplique de novo. No `~/free5gc/config/nefcfg.yaml`, confira:
 
 - `sbi.registerIPv4` e `sbi.bindingIPv4`: o endereço da máquina do free5GC, que o AF externo alcança. A porta continua a 8000;
@@ -966,3 +975,108 @@ A saída é `accepted (204)`. Um segundo pedido para o mesmo SUPI em menos de 60
 
 Para desfazer: `kakmaRefresh: 0` desliga a renovação. `patch-nf.sh amf revert` tira o *patch* do AMF. Para deixar o UDM só com o `0001` da parte 4, `patch-nf.sh udm revert` seguido de `patch-nf.sh udm apply ~/udm-0001`.
 
+## 11. CAPIF: o AF obtém o *token* do CCF
+
+Na parte 9, o AF fora da rede do operador obtém o *token* da API `3gpp-akma` no NRF. TS 29.522 §6 admite isso por configuração local quando o CAPIF não é usado. Com o CAPIF, o *token* vem do CAPIF Core Function (CCF): o NEF publica a API no CCF e confere o *token*, e o AF é o *API invoker* (TS 29.522 §7.2; TS 33.122 §6.5.2.3).
+
+O free5GC não tem CCF. Esta parte instala o CCF do projeto (`free5gc/ccf/`) e põe o AF no papel de *API invoker*. A especificação é `docs/free5gc-side/capif.md`.
+
+### 11.1 Instalar o CCF
+
+Na máquina do AF, compile o CCF. O binário é estático:
+
+```bash
+free5gc/scripts/build-ccf.sh
+```
+
+```bash
+scp free5gc/build/bin/ccf usuario@maquina-do-free5gc:free5gc/bin/ccf
+```
+
+Na máquina do free5GC, copie a configuração:
+
+```bash
+cp ~/akma-free5gc/free5gc/config/ccfcfg.yaml ~/free5gc/config/
+```
+
+As chaves e os certificados vêm de `make-capif-certs.sh` (seção 9.1), com o endereço que o AF alcança. Se o endereço da máquina não for 192.168.16.130, troque-o também em `capif1e.bindingIPv4` do `ccfcfg.yaml`. O perfil `af1-external` lista as APIs e os AF_ID que o AF pode usar (`capif.md` §5.1).
+
+### 11.2 Atualizar o `openapi`, a configuração e o `run.sh`
+
+Com o free5GC parado, prepare de novo as duas cópias do `openapi` (seção 10.1). Agora o *script* aplica os *patches* até o `0004`, que traz os clientes do CAPIF.
+
+Se você seguiu as partes 4 e 9 com esta versão do repositório, o NEF, a configuração e o `run.sh` já têm os *patches* do CAPIF: `patch-nf.sh nef status`, `config status` e `run status` dizem `patches applied`.
+
+Se as seguiu com uma versão anterior, o `apply` recusa as mudanças locais. Nesse caso, antes de atualizar o repositório, guarde uma cópia dos *patches* aplicados:
+
+```bash
+mkdir -p ~/old-patches && cp -a ~/akma-free5gc/free5gc/patches/{nef,config,run} ~/old-patches/
+```
+
+Desfaça os três com essa cópia, atualize o repositório e aplique de novo:
+
+```bash
+for t in run config nef; do ~/akma-free5gc/free5gc/scripts/patch-nf.sh $t revert ~/old-patches/$t; done
+```
+
+```bash
+for t in run config nef; do ~/akma-free5gc/free5gc/scripts/patch-nf.sh $t apply; done
+```
+
+O `run.sh` ganha a opção `-ccf`, que põe o CCF logo antes do NEF.
+
+### 11.3 Subir o free5GC e emitir a credencial
+
+```bash
+./run.sh -aanf -ccf
+```
+
+Na tela devem aparecer:
+- do CCF, `Start CAPIF-1e server (https, listen on 192.168.16.130:8020)`;
+- do NEF, `3gpp-akma published at the CCF as <apiId>`.
+
+O AF precisa da informação de entrada (TS 33.122 §6.1 passo 1): a CA do CCF e uma credencial de entrada. Na máquina do free5GC, emita a credencial do perfil `af1-external`:
+
+```bash
+cd ~/free5gc && ./bin/ccf credential -c config/ccfcfg.yaml --profile af1-external --validity 24h > ~/af1-external.jwt
+```
+
+Na máquina do AF, copie os dois arquivos para `af/build/capif/`, de onde `af/config/afcfg-capif.yaml` os lê:
+
+```bash
+mkdir -p af/build/capif && scp usuario@maquina-do-free5gc:free5gc/cert/ccf-ca.pem usuario@maquina-do-free5gc:af1-external.jwt af/build/capif/
+```
+
+### 11.4 Rodar o AF como *API invoker*
+
+```bash
+af/build/bin/af -c af/config/afcfg-capif.yaml
+```
+
+O AF entra no CCF, descobre o NEF, obtém o método `OAUTH` e pede o `check-authentication` ao NEF:
+
+```
+[INFO][AF][CAPIF] Onboarded at the CCF as API invoker 6cdc32e3-…
+[INFO][AF][CAPIF] 3gpp-akma discovered at http://192.168.16.130:8000, AEF nef-aef
+[INFO][AF][CAPIF] Security method OAUTH at AEF nef-aef
+[INFO][AF][CAPIF] The NEF has the authentication data of API invoker 6cdc32e3-…
+```
+
+O AF guarda o estado em `af/build/capif/af1-external.json`, com permissão `0600`, e o usa na próxima partida. No primeiro pedido de K_AF de um UE (parte 7), o AF pede o *token* ao CCF, e o NEF o aceita:
+
+```
+[INFO][AF][CAPIF] Access token obtained, expires in 600 s
+[INFO][NEF][CAPIF] Access token of API invoker 6cdc32e3-… accepted for AF_ID af1.akma.example.FF00000001
+```
+
+O `e2e.sh` (parte 8) faz tudo isso sozinho: sobe o CCF, emite a credencial, roda o AF do modo CAPIF na 8086, o segundo *invoker* `af/scripts/negative/capif_api.py` e o Ua\* do UE com esse AF (R2c; `docs/af-side/e2e.md` §4.2).
+
+### 11.5 Limitações
+
+- O CAPIF é parcial: só o caminho do AKMA (DV-14).
+- CAPIF-3/4 e CAPIF-2e ficam sem TLS até o MVP-11 (DV-1 e DV-9).
+- Os certificados não têm revogação, nem CRL nem OCSP, e o *token* não leva `x5t#S256` (DV-16).
+- O CCF guarda tudo na memória. Depois de reiniciá-lo, o NEF publica de novo, e o AF entra de novo quando o CCF não o conhece mais.
+- Um *token* já emitido vale até `exp` (10 min), mesmo depois da saída do *invoker*.
+
+Para desfazer: `./run.sh -aanf`, sem `-ccf`, deixa o CCF parado, e o AF volta à parte 9 com `af/config/afcfg-external.yaml`. Com `allowNrfTokens: true`, o NEF aceita os dois modos.

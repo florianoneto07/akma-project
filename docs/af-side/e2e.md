@@ -19,7 +19,7 @@ As duas máquinas se sincronizam por arquivos-marcadores em três pontos (A, B, 
 | Grupo | Onde | O que verifica |
 |---|---|---|
 | S | AF, antes da execução | autoteste do ME (`nr-akma-selftest`) com os vetores do MVP-0 |
-| R1 | free5GC | NAT do N6, *namespace* do UE, `linkIp` do gNB, assinatura AKMA; free5GC com `-aanf`, gNB e UE no ar |
+| R1 | free5GC | NAT do N6, *namespace* do UE, `linkIp` do gNB, assinatura AKMA; free5GC com `-aanf` e, no MVP-9, `-ccf`, gNB e UE no ar. MVP-9: o CCF no ar, `3gpp-akma` publicado pelo NEF no CCF e a credencial de entrada do AF emitida |
 | R2 | free5GC | registro; A-KID do UE = do AUSF = do AAnF; Ua\* do UE pelo plano de usuário, 3 requisições |
 | N (ponto A) | AF | testes negativos da API do AAnF, do `register-anchorkey`, do RID e do AF (seção 4); acesso anônimo direto ao AAnF (N01c, MVP-6) |
 | E (ponto A) | AF | MVP-6: túnel até o NRF; três AF extras (externo na 8083, externo anônimo na 8084, interno anônimo na 8085) e, no MVP-8, um externo com PSK TLS 1.3 na 8456; API do NEF (seção 4.1) |
@@ -30,15 +30,17 @@ As duas máquinas se sincronizam por arquivos-marcadores em três pontos (A, B, 
 | D (ponto A) | AF | MVP-8, fase (c): o que o AF viu do R2d; DTLS 1.3 com o `openssl s_client` do OpenSSL 4.1 no papel do UE, mandando o GET em CoAP (com `OPENSSL_DTLS13`; sem ela, pulada); A-KID desconhecido e K_AF de outro AF_ID recusados |
 | O (ponto A) | AF | MVP-8, fase (d): o que o AF viu do R2o (quatro contextos, uma consulta ao AAnF, seis pedidos atendidos, duas renovações); o `coap-client` da libcoap no papel do UE, com o pedido e o contexto calculados por `af/scripts/oscore-check.py` (com `LIBCOAP_CLIENT`; sem ela, puladas); OSC-INP com outro algoritmo, A-KID desconhecido e K_AF de outro AF_ID recusados; vencimento da K_AF com `refetch` e `reject`, nos AF de relógio adiantado |
 | T (ponto A) | AF | MVP-8, fase (b): o que o AF viu do R2t (AF_ID de cada *cipher suite*; retomadas); PSK TLS 1.3 com o `openssl s_client` no papel do UE; recusas (K_AF de outro AF_ID, A-KID desconhecido, `psk_ke`, certificado de outro FQDN, AF_ID fora da política do AAnF); expiração da K_AF numa sessão TLS, com as políticas `refetch` e `reject` |
+| CP (ponto A) | AF | MVP-9: o AF como *API invoker* do CAPIF na 8086, com a CA do CCF e a credencial copiadas da máquina do free5GC (CP00), e o segundo *invoker*, `capif_api.py` (seção 4.2) |
 | R2n | free5GC | MVP-6: Ua\* do UE com os três AF extras; o AAnF entrega via NEF; o NEF repassa a K_AF e não registra o SUPI. MVP-8: Ua\* por PSK TLS 1.3 com um quarto AF extra, externo, na porta 8456 |
+| R2c | free5GC | MVP-9: Ua\* do UE com o AF do modo CAPIF; o NEF aceita o *token* do CCF para o AF_ID `af1.akma.example.FF00000001` |
 | R3 | free5GC | nova autenticação: A-KID novo, contexto substituído, Ua\* com o novo; Ua\* com o A-KID e a K_AF anteriores, ainda aceitos pelo AF até `expiry` |
-| B (ponto B) | AF | os AF extras se descadastram do NRF (E12); o AAnF recusa o A-KID anterior e aceita o novo |
+| B (ponto B) | AF | os AF extras se descadastram do NRF (E12); o AF do modo CAPIF sai do CCF (CP19); o AAnF recusa o A-KID anterior e aceita o novo |
 | R4 | free5GC | AAnF parado durante uma autenticação (D9) |
 | R5 | free5GC | assinante sem assinatura AKMA; depois restaurada |
 | R6 | free5GC | `remove-context`, e de novo (404) |
 | R6r | free5GC | MVP-12: renovação da K_AKMA pelo AAnF (TS 33.535 §6.4.4). O AAnF sobe com `kakmaRefresh: 20s` (cópia da configuração); K_AF de uma K_AKMA nova não pede renovação; depois de 20 s, K_AF para outro AF_ID, que o AF não tem guardada: o AAnF pede o `trigger-auth`, o UDM notifica o AMF, o AMF autentica o UE registrado e faz o NAS SMC, o UE deriva um A-KID novo, igual ao do AUSF e ao do AAnF, e a sessão PDU continua. Depois, o `seed trigger-auth`: 403 dentro de 60 s, 405 com GET, 400 sem `supi`, 404 para SUPI desconhecido. A configuração instalada volta no fim |
 | C (ponto C) | AF | `retrieve` depois do `remove-context` |
-| R7, L1 | os dois | nenhuma cadeia de 64 hexadecimais nos logs do free5GC, do UE, do gNB e do AF |
+| R7, L1 | os dois | nenhuma cadeia de 64 hexadecimais nos logs do free5GC, do UE, do gNB e do AF; no MVP-9, nenhum *token*, credencial, segredo de entrada ou chave privada nos logs do free5GC e do AF do modo CAPIF (CP20) |
 
 ## 2. Pré-requisitos
 
@@ -47,6 +49,7 @@ Na máquina do free5GC, as partes 3 a 7 e 10 do tutorial, isto é:
 - o repositório em `~/akma-free5gc`;
 - os *patches* do NRF, do UDM (os dois), do AUSF, do AMF (parte 10, MVP-12), da configuração e do `run.sh`;
 - o AAnF implantado (`bin/aanf`, `config/aanfcfg.yaml` com a linha `kakmaRefresh`, que o R6r troca numa cópia) e o `seed` em `~/akma-tools/`;
+- o CCF e os *patches* do NEF da parte 11 (MVP-9): `bin/ccf`, `config/ccfcfg.yaml` e os certificados de `make-capif-certs.sh` em `cert/`; `nef/0001` e `0002`, `config/0001` a `0003` e `run/0001` e `0002`;
 - o UERANSIM com os *patches*, o `linkIp: 10.100.0.1` do gNB e o `uaclient` em `~/akma-free5gc/af/build/bin/`.
 
 Na máquina do AF: `af/scripts/build-wolfssl.sh`, `af/scripts/make-test-ca.sh`, `af/scripts/build-af.sh` e `free5gc/scripts/build-aanf.sh`; o `openssl` (o grupo T o usa como UE independente); opcionalmente, um OpenSSL 4.1 compilado à parte para o D03 e a libcoap para O04 e O05 (seção 3); acesso SSH por chave à máquina do free5GC; e o `af/config/afcfg.yaml` com o `aanfUri` do AAnF da máquina do free5GC.
@@ -192,6 +195,27 @@ Os testes da API do AAnF (N01 a N16) estão em `af/scripts/negative/aanf_api.py`
 | E12 | os AF externos se descadastram do NRF ao encerrar | 2 descadastros |
 | N01c | acesso anônimo direto ao AAnF (`anonInd`) | 200 sem `supi` |
 
+### 4.2 CAPIF (MVP-9)
+
+`af/scripts/negative/capif_api.py` é um segundo *invoker*, independente do código Go do projeto. Ele faz requisições HTTP/1.1 cruas sobre TLS, com o módulo `ssl` do Python, e usa o OpenSSL da linha de comando para o par de chaves. Os casos e o esperado estão em `docs/free5gc-side/capif.md` §10.2.
+
+| Verificação | Caso | Esperado |
+|---|---|---|
+| CP00 | o AF do modo CAPIF sobe | entrada, descoberta, `OAUTH` e `check-authentication` no log do AF |
+| CP01 | entrada do `capif_api.py` | `201` e `Location`; o certificado tem CN igual ao identificador e é da CA do CCF (`openssl verify`) |
+| CP02 | descoberta | `apiRoot` `http://192.168.16.130:8000`, `aefId` `nef-aef`, `[OAUTH]` |
+| CP03, CP04 | método de segurança; `check-authentication` no NEF | `201` com `OAUTH`; `200` |
+| CP05 | *token* | `Bearer` e `no-store`; `iss` = `client_id` = identificador; `scope`; `exp` = agora + `expires_in` |
+| CP06, CP07 | K_AF via NEF com o *token* do CCF, normal e anônima | a K_AF do AAnF, sem `supi` (e sem `gpsi`) |
+| CP08 | entrada sem credencial; com credencial adulterada | `401` com `WWW-Authenticate: Bearer` |
+| CP09, CP10 | descoberta sem certificado; com o `api-invoker-id` do AF em Go | `403` |
+| CP11 a CP13 | segredo errado; escopo fora do perfil; `grant_type=password` | `400` `invalid_client`, `invalid_scope`, `unsupported_grant_type` |
+| CP14, CP15 | NEF sem *token*; com o *token* adulterado | `401` |
+| CP16, CP17 | AF_ID `af3`, fora do perfil; AF_ID `af4`, fora da política do NEF | `403` sem `cause` |
+| CP18 | saída; *token* pedido depois | `204`; `400` `invalid_client` |
+| CP19 | saída do AF do modo CAPIF no fim (grupo B) | linha no log do AF |
+| CP20 | logs do free5GC (CCF e NEF) e do AF | nenhum *token*, credencial, segredo de entrada ou chave privada |
+
 ## 5. Resultado em 18/10/2026
 
 `63 passed, 0 failed`: 30 verificações na máquina do free5GC e 33 na do AF. Os cinco A-KID da execução, um por autenticação primária:
@@ -302,6 +326,16 @@ O teste com o UERANSIM em outra máquina (critério 6) está em `docs/af-side/te
 `161 passed, 0 failed, 0 skipped` na execução `20261029-124631`: 80 verificações na máquina do free5GC e 81 na do AF. A máquina do free5GC é o *snapshot* limpo do free5GC v4.2.3 e do UERANSIM `85a0fbf` (o da .132, que voltou como 192.168.16.133). O repositório veio de um `git bundle` do *commit* `03c0606` do repositório público, instalado só pelo `docs/install.md` público, partes 1 a 7, 9.1 e 11.1; o AF, nesta máquina, de um clone do mesmo *bundle*. Os endereços mudaram nos lugares da tabela 1.2 do guia, e por isso o relatório diz `03c0606-dirty`. O `OPENSSL_DTLS13` e o `LIBCOAP_CLIENT` foram recompilados pelos passos de `public/docs/testing.md` §5.1. O relatório ficou em `af/build/e2e/20261029-124631-clean-v2`, fora do controle de versão.
 
 - **Lacuna do guia.** A parte 8 e `testing.md` §5.1 pediam as partes 3 a 7 e a seção 9.1, sem a 11.1 (o *patch* do AMF), sem a qual o R6r falha, e sem a linha `kakmaRefresh: 0` no `aanfcfg.yaml` instalado, que o R6r troca numa cópia. Corrigido no guia público antes da execução.
+
+### 5.9 MVP-9, em 02/11/2026
+
+`185 passed, 0 failed, 3 skipped` na execução `20261102-093804`: 86 verificações na máquina do free5GC e 99 na do AF. As três puladas são D03, O04 e O05: o `OPENSSL_DTLS13` e o `LIBCOAP_CLIENT` da seção 3 não estavam compilados nesta máquina. Nada no MVP-9 depende delas.
+
+- **Verificações novas.** São 27: R1.ccf, R1.nef-published e R1.credential; R2c.ua-capif e R2c.nef-capif; CP00 a CP19; CP20.af e CP20.free5gc.
+- **Antes da execução, na máquina do free5GC.** Os conjuntos anteriores de *patches* do NEF, da configuração e do `run.sh` foram guardados em `~/akma-mvp9-old-patches` e revertidos. O repositório foi sincronizado. As duas cópias do `openapi` foram refeitas com o `0004`. Foram instalados o CCF (`bin/ccf`, `config/ccfcfg.yaml` e os certificados) e os conjuntos novos: `nef/0001` e `0002`, `config/0001` a `0003` e `run/0001` e `0002`. O `bin/nef.orig` continua lá.
+- **Dois *scripts* corrigidos na implantação.**
+  - `patch-nf.sh` conferia cada *patch* sozinho, contra a árvore original. Os *patches* novos dependem dos anteriores e eram recusados. Agora a série é conferida em ordem, numa cópia dos arquivos que ela toca.
+  - `make-capif-certs.sh`: com o OpenSSL 1.1.1 da máquina do free5GC, o `-addext` *acrescentava* o `basicConstraints` ao da seção `v3_ca`, e o certificado da CA saía com a extensão duas vezes, o que o Go recusa. Agora a CA é feita com uma configuração própria.
 
 ## 6. Limitações
 

@@ -1,7 +1,7 @@
 # Matriz de rastreabilidade
 
-**Revisão:** 9 (MVP-12: renovação da K_AKMA pelo AAnF). Revisão 8 (MVP-8, fase (d)): perfil OSCORE do Ua\*. Revisão 7 (MVP-8, fase (c)): perfis DTLS do Ua\*. Revisão 6 (MVP-8, fases (a) e (b)): serviço de chaves do ME e perfis TLS do Ua\*. Revisão 5 (MVP-6): K_AF via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina. Revisão 4 (MVP-5): etapas mínimas do fluxo ligadas a evidências do roteiro ponta a ponta
-**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 a 3.7 e 4 em 18 de outubro de 2026; revisão 5 em 19 de outubro de 2026; revisões 6 e 7 em 21 de outubro de 2026; revisão 8 em 22 de outubro de 2026
+**Revisão:** 10 (MVP-9: CAPIF, o AF como *API invoker*). Revisão 9 (MVP-12): renovação da K_AKMA pelo AAnF. Revisão 8 (MVP-8, fase (d)): perfil OSCORE do Ua\*. Revisão 7 (MVP-8, fase (c)): perfis DTLS do Ua\*. Revisão 6 (MVP-8, fases (a) e (b)): serviço de chaves do ME e perfis TLS do Ua\*. Revisão 5 (MVP-6): K_AF via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina. Revisão 4 (MVP-5): etapas mínimas do fluxo ligadas a evidências do roteiro ponta a ponta
+**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 a 3.7 e 4 em 18 de outubro de 2026; revisão 5 em 19 de outubro de 2026; revisões 6 e 7 em 21 de outubro de 2026; revisão 8 em 22 de outubro de 2026; revisão 9 em 28 de outubro de 2026; revisão 10 em 2 de novembro de 2026
 
 *Nota (16/10/2026):* os caminhos da coluna "Implementação" seguem a estrutura anterior ao plano. A estrutura aprovada (plano §3) é: `akma/` → `shared/akma/`; `NFs/aanf/` → `free5gc/aanf/`; `patches/` → `free5gc/patches/`; `af/` → `af/af/`; `ue/` → `af/ue/`. Os caminhos serão atualizados linha a linha à medida que cada MVP os criar. Os desvios citados como DV-n estão em `docs/conformidade/desvios.md`.
 
@@ -134,6 +134,27 @@ Evidências: verificações R6r da execução `20261028-162316` de `af/scripts/e
 | NAS SMC com o novo K_AMF e volta a `Registered` | 33.501 6.1.3.2, 6.9.4.2 | `amf/0001` (`sm.go`, `build.go`, `HandleSecurityModeComplete`) | [R6r.smc], [R6r.pdu]; `TestSecurityModeCommandOfReauth`, `TestSecurityModeCompleteOfReauth` | **Verificado** (K7) |
 | Nova K_AKMA no AAnF e no UE; A-KID igual nos três | 33.535 6.4.1, 6.1 NOTA 1a | AUSF (`ausf/0001`); UERANSIM (`0001`) | [R6r.ue], [R6r.new-akid], [R6r.akid-aanf], [R6r.ua-new] | **Verificado** |
 | Troca das chaves AS | 33.501 6.9.4.4 (*may*) | — | — | Não feita (K7; o UERANSIM não tem segurança AS) |
+
+## CAPIF do MVP-9 e evidências (revisão 10)
+
+Evidências: o grupo CP, o R1 e o R2c da execução `20261102-093804` de `af/scripts/e2e.sh`, com 185 verificações, nenhuma falha e 3 puladas fora do MVP-9 (`docs/af-side/e2e.md` §5.9), e os testes Go do CCF, do NEF e do AF. Especificação: `docs/free5gc-side/capif.md`; implementação: §15.
+
+| Etapa | Cláusula | Implementação | Evidência | Estado |
+|---|---|---|---|---|
+| NEF publica `3gpp-akma` no CCF, como APF | 29.222 5.3.2.2; 29.522 7.1 | `nef/0002` (`RunCapifPublication`); `free5gc/ccf` (`api_publish.go`) | [R1.nef-published]; `TestCapifPublication` (NEF), `TestCapifFlow` (CCF) | **Verificado** |
+| Entrada do AF no CCF, com a credencial de entrada; certificado do *invoker* | 33.122 6.1; 29.222 5.5.2.2 | `free5gc/ccf` (`api_invoker_management.go`); `af/af/internal/capif` (`onboard`) | [CP00], [CP01], [CP08]; `TestCapifOnboardingRefused`, `TestStart` | **Verificado** — C19, D-AI |
+| Descoberta da API do AKMA e montagem do `apiRoot` | 29.222 5.2.2.2 e NOTA; 33.122 6.3.1.1 | `free5gc/ccf` (`api_discover.go`); `af/af/internal/capif` (`chooseAEF`) | [CP02], [CP09], [CP10]; `TestChooseAEF` | **Verificado** — D-AG |
+| Método de segurança `OAUTH` | 29.222 5.6.2.2; 33.122 6.3.1.2 | `free5gc/ccf` (`api_security.go`) | [CP03] | **Verificado** — DV-14 |
+| `check-authentication` no AEF | 29.222 6.2.2.2; 33.122 6.5.2.3 passo 5 | `nef/0002` (`CheckAuthentication`) | [CP00], [CP04]; `TestCapifCheckAuthentication` | **Verificado** — DV-9 |
+| *Token* do CCF: `ES256` com `kid`; `iss`, `client_id`, `scope`, `exp` | 29.222 5.6.2.3; 33.122 C.2.2; 33.210 6.3.3.1 | `free5gc/ccf` (`IssueToken`, `internal/jws`) | [CP05], [CP11] a [CP13] | **Verificado** — DV-13, D-AI |
+| NEF confere o *token* e os dados do *invoker* no CCF | 29.522 7.2; 33.122 6.5.2.3 passo 7, C.6; 23.222 8.16.3 | `nef/0002` (`capifAuthorize`, `capifInvoker`) | [CP06], [CP14], [CP15], [R2c.nef-capif]; `TestCapifAccessToken` | **Verificado** |
+| AF_ID no perfil do *invoker* e na política de endereço | 33.535 6.3 passo 2; 29.522 7.2 | `nef/0002`; `authorizationInfo` do CCF | [CP16], [CP17]; `TestCapifRetrieve` | **Verificado** — C11, DV-9 |
+| K_AF via NEF com o *token* do CCF, sem SUPI; acesso anônimo | 33.535 6.3 passos 3 a 5, 6.2.2 | `nef/0001` e `0002` | [CP06], [CP07], [R2c.ua-capif] | **Verificado** |
+| Renovação do *token*; *token* novo quando o AEF o recusa | 33.122 C.4.1, C.5 | `af/af/internal/capif` (`accessToken`, `Invalidate`); `af/af/internal/nef` | `TestToken`, `TestRefusedToken`; teste local com o CCF (`capif.md` §15.3) | **Verificado** |
+| Saída do *invoker*; fim da sessão TLS | 33.122 6.8 passos 3, 5 e 6; 29.222 5.5.2.3 | `free5gc/ccf` (`HTTPOffboard`); `af/af/internal/capif` (`Close`) | [CP18], [CP19]; `TestCapifOffboardingTearsDownTLS` | **Verificado** |
+| TLS de CAPIF-1e; perfis de certificado | 33.122 6.1, 6.3.1.1; 33.210 6.2; 33.310 6.1.1, 6.1.3a, 6.1.4a | `free5gc/ccf` (`server.go`, `Onboard`); `make-capif-certs.sh` | [CP01] (`openssl verify`); `TestCapifTLS`, `checkInvokerCertificate` | **Verificado** — DV-15, DV-16 |
+| Nenhum *token*, credencial, segredo ou chave privada nos logs | 33.122 C.5 (o *token* é opaco ao *invoker*); plano D16 | CCF, NEF e AF | [CP20.free5gc], [CP20.af] | **Verificado** |
+| TLS em CAPIF-3/4 e em CAPIF-2e | 33.122 6.6, 6.5; 33.501 12.2 a 12.4 | — | — | Pendente — DV-1, DV-9 (MVP-11) |
 
 ## Derivação criptográfica
 
