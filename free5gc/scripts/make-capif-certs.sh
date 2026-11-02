@@ -41,12 +41,20 @@ is_ec_key() {
     [ -f "$1" ] && openssl pkey -in "$1" -noout -text 2>/dev/null | grep -q "ASN1 OID: $2"
 }
 
+# The CA certificate gets only the extensions of this configuration: with the
+# default configuration, OpenSSL 1.1.1 would add these to the ones of its
+# v3_ca section, and a certificate with an extension twice is invalid
+# (RFC 5280 cl. 4.2).
+ca_config() {
+    printf '%s\n' '[req]' 'distinguished_name = dn' 'x509_extensions = ca' 'string_mask = utf8only' '[dn]' \
+        '[ca]' 'basicConstraints = critical,CA:TRUE,pathlen:0' 'keyUsage = critical,keyCertSign,cRLSign' \
+        'subjectKeyIdentifier = hash'
+}
+
 if [ ! -f "$dir/ccf-ca.pem" ] || ! is_ec_key "$dir/ccf-ca.key" secp384r1; then
     openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-384 -out "$dir/ccf-ca.key"
-    openssl req -x509 -new -key "$dir/ccf-ca.key" -sha384 -days 1825 -utf8 \
-        -subj "/O=$org/CN=CAPIF core function test CA" \
-        -addext "basicConstraints=critical,CA:TRUE,pathlen:0" -addext "keyUsage=critical,keyCertSign,cRLSign" \
-        -out "$dir/ccf-ca.pem"
+    openssl req -x509 -new -key "$dir/ccf-ca.key" -sha384 -days 1825 -utf8 -config <(ca_config) \
+        -subj "/O=$org/CN=CAPIF core function test CA" -out "$dir/ccf-ca.pem"
     echo "made the CA of the CCF $dir/ccf-ca.pem"
 fi
 
