@@ -6,7 +6,9 @@
 #   --keep  leave free5GC, the gNB and the UE running at the end
 #
 # Steps:
-#   R1  free5GC (run.sh -aanf), gNB, UE in its namespace, subscriber provisioned
+#   R1  free5GC (run.sh -aanf -ccf), gNB, UE in its namespace, subscriber
+#       provisioned; the onboarding credential of the CAPIF core function
+#       (CCF) issued for the AF machine
 #   R2  registration; A-KID of the UE = AUSF = AAnF; Ua* from the UE
 #   R2k AKMA key service of the ME: K_AF only to the application of the AF_ID
 #   R2t Ua* from the UE over the TLS profiles: K.2 in TLS 1.3 and 1.2, PSK
@@ -16,6 +18,10 @@
 #   R2o Ua* from the UE over OSCORE: POST /akma, requests protected with the
 #       context, renewal (RFC 8613 Appendix B.2), a new POST per request
 #       -> sync A (checks from the AF machine)
+#   R2n Ua* from the UE to the AFs outside the operator network (NEF) and
+#       with anonymous access, started in group A
+#   R2c Ua* from the UE to the AF outside the operator network as API
+#       invoker of CAPIF (TS 29.522 cl. 7.2), started in group A
 #   R3  new authentication: new A-KID; Ua* with it; Ua* with the previous
 #       A-KID and K_AF, still valid at the AF until expiry
 #       -> sync B
@@ -27,7 +33,8 @@
 #       kakmaRefresh 20s, asks the UDM for a new primary authentication on a
 #       K_AF request; the AMF re-authenticates the registered UE; new A-KID
 #       -> sync C
-#   R7  no key in the logs; logs copied; stop
+#   R7  no key, access token, credential or private key in the logs; logs
+#       copied; stop
 #
 # Results: PASS/FAIL lines in <run>/remote-results.txt; A-KIDs in <run>/state.
 set -uo pipefail
@@ -47,6 +54,9 @@ ca="${CA:-$repo/af/build/cert/ca.pem}" # the test CA of the certificate of the A
 # Where the AAnF listens: sbi.bindingIPv4 and sbi.port of its configuration
 aanf="$(sed -n 's/^ *bindingIPv4: *\([0-9.]*\).*/\1/p' "$f5/config/aanfcfg.yaml" | head -1):$(
     sed -n 's/^ *port: *\([0-9]*\).*/\1/p' "$f5/config/aanfcfg.yaml" | head -1)"
+# Where the CCF listens for the API invokers: capif1e of its configuration
+ccf="$(sed -n '/^  capif1e:/,/^  [a-z]/s/^ *bindingIPv4: *\([0-9.]*\).*/\1/p' "$f5/config/ccfcfg.yaml" | head -1):$(
+    sed -n '/^  capif1e:/,/^  [a-z]/s/^ *port: *\([0-9]*\).*/\1/p' "$f5/config/ccfcfg.yaml" | head -1)"
 
 mkdir -p "$run"
 results="$run/remote-results.txt"
@@ -154,7 +164,7 @@ check R1.subscriber "AKMA subscription of $supi provisioned (akmaAllowed, routin
 # free5GC in a process group of its own, which the stop at the end signals;
 # in the same terminal, for the sudo of run.sh.
 set -m
-./run.sh -aanf >"$run/run.out" 2>&1 </dev/null &
+./run.sh -aanf -ccf >"$run/run.out" 2>&1 </dev/null &
 runpid=$!
 set +m
 wait_for "$run/run.out" "log path:" 20
@@ -162,6 +172,16 @@ f5log="$f5/$(sed -n 's/^log path: \.\///p' "$run/run.out" | head -1)free5gc.log"
 setstate FREE5GC_LOG "$f5log"
 check R1.free5gc "free5GC up with the AAnF registered at the NRF" \
     wait_for "$f5log" "msg=\"Start SBI server (listen on $aanf)\" CAT=\"SBI\" NF=\"AANF\"" 90
+check R1.ccf "CCF up, CAPIF-1e over HTTPS on $ccf" \
+    wait_for "$f5log" "msg=\"Start CAPIF-1e server (https, listen on $ccf)\" CAT=\"SBI\" NF=\"CCF\"" 30
+check R1.nef-published "the NEF published 3gpp-akma at the CCF (TS 29.222 cl. 5.3.2.2)" \
+    wait_for "$f5log" "3gpp-akma published at the CCF as" 30
+# The enrolment information of the AF machine (TS 33.122 cl. 6.1 step 1): the
+# CA of the CCF and an onboarding credential valid for the run.
+cp "$f5/cert/ccf-ca.pem" "$run/ccf-ca.pem"
+"$f5/bin/ccf" credential -c "$f5/config/ccfcfg.yaml" --profile af1-external --validity 2h \
+    >"$run/af1-external.jwt" 2>"$run/ccf-credential.out"
+check R1.credential "onboarding credential of the profile af1-external issued" test -s "$run/af1-external.jwt"
 
 "$uer/build/nr-gnb" -c "$uer/config/free5gc-gnb.yaml" >"$run/gnb.log" 2>&1 </dev/null &
 check R1.gnb "gNB NG Setup" wait_for "$run/gnb.log" "NG Setup procedure is successful" 30
@@ -305,6 +325,16 @@ check R2n.nef-psk-relayed "the NEF relays the K_AF of the AF_ID of the PSK profi
     grep -aqF "K_AF for A-KID $akid1 relayed to AF_ID $fqdn.0100000007" "$f5log"
 check R2n.nef-no-supi "no SUPI in the AKMA lines of the NEF (cl. 6.3 step 5)" \
     bash -c '! grep -a "CAT=\"AKMA\" NF=\"NEF\"" "$1" | grep -q "imsi-"' _ "$f5log"
+
+# ---------------------------------------------------------------- R2c
+# The AF machine has started, in group A, an AF outside the operator network
+# as API invoker of CAPIF (8086).
+step "R2c AF outside the operator network as API invoker of CAPIF"
+ua -connect "$af_ip:8086" -n 1 >"$run/ua-capif.out" 2>&1
+check R2c.ua-capif "Ua* with the AF as API invoker, K_AF through the NEF with the token of the CCF (TS 29.522 cl. 7.2)" \
+    grep -q "session established (nc 00000001)" "$run/ua-capif.out"
+check R2c.nef-capif "the NEF accepted the access token of the CCF for AF_ID $fqdn.FF00000001" \
+    grep -aqF "accepted for AF_ID $fqdn.FF00000001" "$f5log"
 
 # ---------------------------------------------------------------- R3
 step "R3 new primary authentication"
@@ -460,6 +490,8 @@ cp "$f5log" "$run/free5gc.log"
 for f in free5gc.log ue.log gnb.log; do
     check "R7.no-key-$f" "no 64-hexadecimal string in $f" bash -c "! grep -aEq '[0-9a-fA-F]{64}' '$run/$f'"
 done
+check CP20.free5gc "no access token, onboarding credential or private key in the log of free5GC (CCF, NEF)" \
+    bash -c '! grep -aqE "eyJ[A-Za-z0-9_-]{8,}" "$1" && ! grep -aqF "PRIVATE KEY" "$1"' _ "$run/free5gc.log"
 
 if [ "$keep" != --keep ]; then
     step "stop"
@@ -468,6 +500,7 @@ if [ "$keep" != --keep ]; then
     sudo kill -INT -- "-$runpid" 2>/dev/null
     for ((i = 0; i < 30; i++)); do kill -0 "$runpid" 2>/dev/null || break; sleep 1; done
     pkill -INT -x aanf
+    pkill -INT -x ccf
     sleep 2
     sudo ./force_kill.sh >/dev/null 2>&1
     echo "free5GC, gNB and UE stopped; the UE namespace and the N6 rules are kept"

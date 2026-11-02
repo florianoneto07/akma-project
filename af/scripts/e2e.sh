@@ -9,8 +9,9 @@
 #   user@host  free5GC host; FREE5GC_HOST when absent
 #
 # Prerequisites: on the free5GC host, the repository at ~/akma-free5gc, the
-# free5GC and UERANSIM patches applied, the AAnF installed and the seed tool
-# at ~/akma-tools/seed; here, af/scripts/build-wolfssl.sh,
+# free5GC and UERANSIM patches applied, the AAnF and the CAPIF core function
+# (CCF, with the certificates of make-capif-certs.sh) installed and the seed
+# tool at ~/akma-tools/seed; here, af/scripts/build-wolfssl.sh,
 # af/scripts/build-af.sh, af/scripts/make-test-ca.sh and
 # free5gc/scripts/build-aanf.sh run, and the AF configuration of
 # af/config/afcfg.yaml.
@@ -50,8 +51,10 @@ L="$here/build/e2e/$ts"
 R="akma-e2e/$ts" # relative to the home directory on the free5GC host
 afcfg="$here/config/afcfg.yaml"
 afcfg_ext="$here/config/afcfg-external.yaml"
+afcfg_capif="$here/config/afcfg-capif.yaml"
 aanf="$(sed -n 's#^ *aanfUri: *https\{0,1\}://\([^/[:space:]]*\).*#\1#p' "$afcfg" | head -1)"
 nef="$(sed -n 's#^ *nefUri: *https\{0,1\}://\([^/[:space:]]*\).*#\1#p' "$afcfg_ext" | head -1)"
+ccf="$(sed -n 's#^ *ccfUri: *https://\([^/[:space:]]*\).*#\1#p' "$afcfg_capif" | head -1)"
 af_ip="$(sed -n 's/^ *listen: *\([0-9.]*\):[0-9]*.*/\1/p' "$afcfg" | head -1)"
 nrf="http://127.0.0.10:8000"
 seed_local="$repo/free5gc/build/bin/seed"
@@ -123,6 +126,24 @@ af_variant() {
         /^  listen:/ && extra != "" { print "  " extra }' >"$L/afcfg-$1.yaml"
     "$here/build/bin/af" -c "$L/afcfg-$1.yaml" >"$L/af-$1.log" 2>&1 &
     echo $!
+}
+
+# capif_variant <name> <listen> -> pid of an extra AF as API invoker of
+# CAPIF, with one digest-http server at <listen>: the files of
+# af/build/capif, a state of its own in the run directory, and offboarding
+# when it stops.
+capif_variant() {
+    digest_http_only "$afcfg_capif" "$2" | sed -E \
+        -e "s#^(    (ccfCa|credential): )\.\./#\1$here/#" \
+        -e "s#^(    state: ).*#\1$L/capif-state-$1.json#" \
+        -e "s#^(    offboardOnExit: ).*#\1true#" >"$L/afcfg-$1.yaml"
+    "$here/build/bin/af" -c "$L/afcfg-$1.yaml" >"$L/af-$1.log" 2>&1 &
+    echo $!
+}
+# capif_state <field>: a field of the state of the AF in CAPIF mode
+capif_state() {
+    python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1])).get(sys.argv[2], ""))' \
+        "$L/capif-state-capif.json" "$1" 2>/dev/null
 }
 
 # psk_variant <name> <listen> ["key: value"]... -> pid of an extra AF with one
@@ -224,6 +245,7 @@ group_A() { # system up, A_KID_1 registered
     expect N26 "test contexts removed" "$(grep -c '^removed' <<<"$out")" "^2$"
 
     group_nef "$akid1"
+    group_cp "$akid1"
 }
 
 # The TLS profiles (TS 24.109 Annex K): what the AF saw of the sessions of
@@ -320,6 +342,28 @@ group_nef() {
     expect E00 "AFs outside the operator network registered at the NRF through the tunnel" \
         "$(cat "$L/af-nef.log" "$L/af-nef-anon.log" | grep -c 'registered at the NRF')" "^2$"
     python3 -I "$here/scripts/negative/nef_api.py" "${nrf#http://}" "$nef" "$aanf" "$af_ip" "$akid1" >>"$results" 2>&1
+}
+
+# The AF outside the operator network as API invoker of CAPIF (TS 29.522
+# cl. 7.2) and a second API invoker in Python, independent of the Go code.
+# The AF stays up for the Ua* of the UE (R2c) and offboards in group B.
+capif_secret=""
+group_cp() {
+    local akid1="$1"
+    echo "== A (CAPIF): the AF as API invoker of the CCF"
+    mkdir -p "$here/build/capif"
+    if ! scp -q -o BatchMode=yes "$host:$R/ccf-ca.pem" "$host:$R/af1-external.jwt" "$here/build/capif/"; then
+        fail CP00 "the CA of the CCF and the onboarding credential not copied from $host"
+        return
+    fi
+    extra_pids+=("$(capif_variant capif "$af_ip:8086")")
+    wait_log "$L/af-capif.log" "The NEF has the authentication data of API invoker" 30
+    expect CP00 "the AF in CAPIF mode starts: onboarding, discovery, OAUTH and check-authentication" \
+        "$(grep -acE 'Onboarded at the CCF|3gpp-akma discovered at|Security method OAUTH|The NEF has the authentication data' \
+            "$L/af-capif.log")" "^4$"
+    capif_secret="$(capif_state onboardingSecret)"
+    python3 -I "$here/scripts/negative/capif_api.py" "$ccf" "$here/build/capif/ccf-ca.pem" \
+        "$here/build/capif/af1-external.jwt" "$nef" "$aanf" "$akid1" "$(capif_state apiInvokerId)" >>"$results" 2>&1
 }
 
 # The DTLS profiles (TS 33.535 Annex C): what the AF saw of the associations
@@ -421,6 +465,14 @@ group_B() { # after the new authentication
     stop_extra
     expect E12 "AFs outside the operator network deregistered from the NRF" \
         "$(cat "$L/af-nef.log" "$L/af-nef-anon.log" | grep -c 'Deregistered from the NRF')" "^2$"
+    expect CP19 "the AF in CAPIF mode offboards when it stops (TS 33.122 cl. 6.8)" \
+        "$(grep -c 'Offboarded from the CCF' "$L/af-capif.log")" "^1$"
+    if grep -aqE 'eyJ[A-Za-z0-9_-]{8,}|PRIVATE KEY' "$L/af-capif.log" ||
+        { [ -n "$capif_secret" ] && grep -aqF -- "$capif_secret" "$L/af-capif.log"; }; then
+        fail CP20.af "no access token, onboarding credential, onboarding secret or private key in the log of the AF"
+    else
+        pass CP20.af "no access token, onboarding credential, onboarding secret or private key in the log of the AF"
+    fi
     echo "== B: A-KID after a new authentication"
     expect B1 "previous A-KID refused by the AAnF: 403 K_AKMA_NOT_PRESENT (TS 33.535 cl. 6.1 NOTE 1a)" "$(retrieve "$akid1")" "^403 (K_AKMA_NOT_PRESENT)"
     expect B2 "new A-KID: 200" "$(retrieve "$akid2")" "^200 "
@@ -449,13 +501,14 @@ worker() {
 
 # ---------------------------------------------------------------- preflight
 echo "== preflight"
+[ -n "$ccf" ] || { echo "ccfUri missing in $afcfg_capif" >&2; exit 1; }
 for f in "$here/build/bin/af" "$uaclient" "$seed_local"; do
     [ -x "$f" ] || { echo "$f missing: run af/scripts/build-af.sh and free5gc/scripts/build-aanf.sh" >&2; exit 1; }
 done
 [ -f "$ca" ] || { echo "$ca missing: run af/scripts/make-test-ca.sh" >&2; exit 1; }
 ssh_b true || { echo "cannot reach $host by SSH" >&2; exit 1; }
 for f in akma-free5gc/af/scripts/e2e-remote.sh akma-free5gc/af/scripts/ue-netns.sh akma-free5gc/af/build/bin/uaclient \
-    akma-tools/seed UERANSIM/build/nr-akma-selftest; do
+    akma-tools/seed UERANSIM/build/nr-akma-selftest free5gc/bin/ccf free5gc/config/ccfcfg.yaml free5gc/cert/ccf-ca.pem; do
     ssh_b "test -e $f" || { echo "$host:$f missing (see the prerequisites in $0)" >&2; exit 1; }
 done
 [ -n "$aanf" ] && [ -n "$af_ip" ] || { echo "aanfUri or listen missing in $afcfg" >&2; exit 1; }
@@ -464,7 +517,7 @@ bind="$(ssh_b "sed -n 's/^ *bindingIPv4: *\([0-9.]*\).*/\1/p' ~/free5gc/config/a
     { echo "aanfUri of $afcfg ($aanf) is not the AAnF of $host (bindingIPv4 ${bind:-missing})" >&2; exit 1; }
 {
     echo "commit $(git -C "$repo" describe --always --dirty 2>/dev/null)"
-    for nf in nrf udm ausf amf config run; do ssh_b "~/akma-free5gc/free5gc/scripts/patch-nf.sh $nf status | head -1"; done
+    for nf in nrf udm ausf amf nef config run; do ssh_b "~/akma-free5gc/free5gc/scripts/patch-nf.sh $nf status | head -1"; done
     ssh_b "~/akma-free5gc/af/scripts/patch-ueransim.sh status | head -1"
 } | tee "$L/preflight.txt"
 out="$(ssh_b "~/UERANSIM/build/nr-akma-selftest ~/akma-free5gc/shared/akma/testdata/vectors.json" 2>&1)"
