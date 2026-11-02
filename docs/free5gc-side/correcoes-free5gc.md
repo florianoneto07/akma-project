@@ -1,6 +1,6 @@
 # Correções do free5GC para o AKMA
 
-**Criado em:** 19 de outubro de 2026 · **Atualizado em:** 2 de novembro de 2026 (F13: o CAPIF verificado no laboratório); 30 de outubro de 2026 (F13: o CCF e o NEF feitos); 29 de outubro de 2026 (F13: MVP-9 aprovado); 28 de outubro de 2026 (F16 a F20, MVP-12; conferência no free5GC v4.3.0, MVP-13) · **Base:** free5GC v4.2.3 (NRF v1.4.5, UDM, AUSF e AMF v1.4.5, NEF v1.2.5, `openapi` v1.2.4)
+**Criado em:** 19 de outubro de 2026 · **Atualizado em:** 2 de novembro de 2026 (F21 a F25, MVP-11; F13: o CAPIF verificado no laboratório); 30 de outubro de 2026 (F13: o CCF e o NEF feitos); 29 de outubro de 2026 (F13: MVP-9 aprovado); 28 de outubro de 2026 (F16 a F20, MVP-12; conferência no free5GC v4.3.0, MVP-13) · **Base:** free5GC v4.2.3 (NRF v1.4.5, UDM, AUSF e AMF v1.4.5, NEF v1.2.5, `openapi` v1.2.4)
 
 Registro de tudo o que o projeto encontrou no free5GC e que precisa mudar para o AKMA funcionar conforme a norma. Pedido do responsável em 19/10/2026: este registro vai para o repositório público (MVP-7, plano seção 5). A regra de cada entrada:
 
@@ -34,12 +34,17 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
 | F18 | AMF | sem o *callback* da notificação de reautenticação | corrigido, *patch* `amf/0001` (MVP-12) |
 | F19 | AMF | não faz a autenticação primária pedida pela rede doméstica | corrigido, *patch* `amf/0001` (MVP-12) |
 | F20 | AMF, UDM | o AMF exige *token* de acesso nas notificações; o UDM manda a de desregistro com o escopo errado | aberto; a notificação nova do MVP-12 vai sem *token* |
+| F21 | `openapi` | o cliente SBI não confere o servidor nem apresenta certificado | aberto; a corrigir no MVP-11, *patch* `openapi/0005` |
+| F22 | `util` | as NFs gravam os segredos das sessões TLS | aberto; a corrigir no MVP-11, *patch* `util/0001` |
+| F23 | NRF, `openapi` | *tokens* do NRF em `RS512`, fora do perfil JWS | aberto; a corrigir no MVP-11, *patches* `nrf/0005` e `openapi/0006` |
+| F24 | todas as NFs, `openapi` | perfis sem `fqdn` e URIs montados por IP | aberto; a corrigir no MVP-11, *patches* por NF e `openapi/0005` |
+| F25 | NRF, `openapi` | certificados das NFs fora do perfil de TS 33.310 | aberto; a corrigir no MVP-11, `make-sba-certs.sh` e *patch* `nrf/0005` |
 
 ### Conferência no free5GC v4.3.0 (28/10/2026)
 
 Ponto L6 do MVP-13: antes de publicar, cada item conferido na versão mais recente do free5GC. A v4.3.0 saiu em 30/09/2026. Ela fixa o NRF em `4522e4a9`, o UDM em `ba18ef3b`, o AUSF em `b693e38a`, o AMF em `9fc0ac3f`, o NEF em `6cd30f51`, a *webconsole* em `c40b94b6` e o `openapi` v1.3.0 em todas, e traz uma NF nova, o SCP. Fonte: os arquivos dessas versões no GitHub, lidos em 28/10/2026.
 
-**Os vinte itens continuam presentes na v4.3.0.** Os *patches* do projeto seguem para a v4.2.3; portá-los à v4.3.0 é do item *Upstream* do plano. O que se conferiu em cada item:
+**Os vinte itens continuam presentes na v4.3.0.** Os *patches* do projeto seguem para a v4.2.3; portá-los à v4.3.0 é do item *Upstream* do plano. F21 a F25, do MVP-11, foram conferidos só na v4.2.3. O que se conferiu em cada item:
 
 | Item | Na v4.3.0 |
 |---|---|
@@ -61,12 +66,14 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
 
 | Repositório | Itens | *Patches* do projeto |
 |---|---|---|
-| `nrf` | F1, F2, F3, F4, F15 | `nrf/0001` a `0003` (F1 a F3) |
-| `openapi` | F5, F6, F16 | `openapi/0001` a `0003` (F6, F16); `openapi/0004`, os modelos e clientes do CAPIF (F13) |
-| `udm` | F7, F10, F17, F20 (a notificação de desregistro) | `udm/0001`, `udm/0002` (F7, F17) |
-| `ausf` | F8 | `ausf/0001` |
-| `amf` | F18, F19, F20 (a verificação de *token* nos *callbacks*) | `amf/0001` (F18, F19) |
-| `nef` | F11, F12, F13, F14 | `nef/0001` (F11), `nef/0002` (F13, o CAPIF) |
+| `nrf` | F1, F2, F3, F4, F15, F23, F24, F25 | `nrf/0001` a `0003` (F1 a F3) |
+| `openapi` | F5, F6, F16, F21, F23, F24, F25 | `openapi/0001` a `0003` (F6, F16); `openapi/0004`, os modelos e clientes do CAPIF (F13) |
+| `util` | F22 | — |
+| `udm` | F7, F10, F17, F20 (a notificação de desregistro), F24 | `udm/0001`, `udm/0002` (F7, F17) |
+| `ausf` | F8, F24 | `ausf/0001` |
+| `amf` | F18, F19, F20 (a verificação de *token* nos *callbacks*), F24 | `amf/0001` (F18, F19) |
+| `nef` | F11, F12, F13, F14, F24 | `nef/0001` (F11), `nef/0002` (F13, o CAPIF) |
+| `smf`, `pcf`, `udr`, `nssf`, `chf`, `bsf` | F24 | — |
 | `webconsole` | F9 | — (*script* `provision-akma-subscriber.sh`) |
 | `free5gc` (configuração, `run.sh`, banco de testes) | integração sem cláusula (abaixo) | `config/`, `run/`, `test/` |
 
@@ -276,6 +283,62 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
   - TS 33.501 §13.4.1.0: *"The OAuth 2.0 framework does not apply to the notification operation."*
 - **Como deve ser.** As rotas que recebem notificações não exigem *token*; quem notifica não pede *token* ao NRF.
 - **No projeto.** Aberto nas notificações que já existiam. Decisão do responsável de 28/10/2026, no MVP-12: a rota nova da notificação de reautenticação fica fora da verificação de *token*, e o UDM a manda sem *token* (`amf.md`, `udm.md`).
+
+## F21 — O cliente SBI não confere o servidor nem apresenta certificado
+
+- **O que o free5GC faz.** `[FREE5GC]` O cliente HTTP/2 do `openapi` v1.2.4 (`client.go`, `innerHTTP2Client`) usa `InsecureSkipVerify: true` e não apresenta certificado de cliente; `udr/ImsDataRepository/client.go` faz o mesmo. Todas as NFs usam esse cliente. Com `oauth: true` e `https`, o NRF exige e confere certificado de cliente contra `cert/root.pem` (`internal/sbi/server.go`, `configureOAuthMutualTLS`): nessa configuração, nenhuma NF consegue falar com ele.
+- **Onde a norma diz.** `[3GPP]`
+  - TS 33.501 §13.1.0: *"All network functions shall support mutually authenticated TLS and HTTPS"*; *"Network functions shall support both server-side and client-side certificates."*; *"TLS clients shall include the SNI extension as specified in RFC 9113"*.
+  - TS 33.501 §13.3.2.1: *"If the PLMN uses token-based authorization, the network shall use protection at the transport layer as described in clause 13.1."*
+  - TS 33.310 §6.3.1: *"Validity of certificates received from the TLS entity shall be verified by CRLs or OCSP responses"*.
+- **Como deve ser.** O cliente confere o certificado do servidor: a CA do operador, o nome do URI (o DNS-ID) ou o IP, e a revogação. Apresenta o certificado da NF e manda o SNI quando o URI tem nome. O perfil TLS é o de TS 33.210 §6.2, com as restrições da RFC 9113 §9.2.
+- **No projeto.** Aprovado no MVP-11 (T5, T7): o pacote `sbitls` e o cliente no *patch* `openapi/0005`, fase (a) (`tls-sbi.md` §6.2).
+
+## F22 — As NFs gravam os segredos das sessões TLS
+
+- **O que o free5GC faz.** `[FREE5GC]` `httpwrapper.NewHttp2Server` (`util` v1.3.2): com o caminho de log (`-l`), cria `log/<data>/key/<nf>sslkey.log` e põe `KeyLogWriter` no servidor. Os servidores de métricas usam a mesma função. Com `https`, o arquivo recebe os segredos de cada sessão, e quem o lê decifra o tráfego. Na VM do free5GC, em 02/11/2026, os arquivos existiam, vazios, porque a SBI estava em `http`.
+- **Onde a norma diz.** `[3GPP]` TS 33.501 §13.1.0: *"TLS shall be used for transport protection within a PLMN unless network security is provided by other means."* TS 33.535 §4.4.0: as interfaces do AAnF *"shall be confidentiality, integrity and replay protected"*. `[INTERPRETAÇÃO]` As normas não falam do registro dos segredos; ele anula a confidencialidade que essas cláusulas pedem.
+- **Como deve ser.** Nenhum segredo de sessão TLS em arquivo. Se houver, só por uma opção explícita de depuração, desligada por padrão.
+- **No projeto.** Aprovado no MVP-11 (T6): *patch* `util/0001`, fase (a). O AAnF, que copiou o padrão, deixa de gravar `aanf_sslkey.log`.
+
+## F23 — *Tokens* do NRF em `RS512`
+
+- **O que o free5GC faz.** `[FREE5GC]` O NRF assina os *tokens* com `RS512`, com a chave RSA do próprio certificado (`processor/access_token.go`, `AccessTokenProcedure`; `context.GetTokenCtx`), sem `kid`. `oauth.VerifyOAuth` (`openapi`) só aceita `RS512`.
+- **Onde a norma diz.** `[3GPP]`
+  - TS 33.501 §13.4.1.0: *"The Access token shall follow the JWS profile specified in the clause 6.3.3 of TS 33.210"*.
+  - TS 33.210 §6.3.3.1: *"The "alg" header parameter value ES256 (ECDSA using P-256 and SHA-256) shall be supported."*; *"The "kid" header parameter shall be supported."* Na V20.0.0: *"Usage of "alg" header parameter values RS256, RS384 and RS512 (RSASSA-PKCS1-v1_5 using SHA-256, SHA-384 and SHA-512, respectively) is not recommended."* §6.3.3.4: *"The "x5t#S256" header parameter should be supported."*
+  - TS 33.310 tab. 6.1.3c.3-2: o certificado da chave que assina os *tokens*, com `id-kp-oauthAccessTokenSigning` (RFC 9509).
+- **Como deve ser.** O NRF assina com `ES256`, com `kid` e `x5t#S256`, com uma chave ECDSA P-256 cujo certificado segue a tab. 6.1.3c.3-2. Os produtores conferem `ES256`.
+- **No projeto.** Aprovado no MVP-11 (T11): *patches* `nrf/0005` e `openapi/0006`, fase (b) (`tls-sbi.md` §7.2 e §7.4).
+
+## F24 — Perfis sem `fqdn` e URIs montados por IP
+
+- **O que o free5GC faz.** `[FREE5GC]`
+  - Os perfis das NFs só têm endereços IP, sem `fqdn`. O `apiPrefix` de cada serviço leva o URI inteiro, `<esquema>://<IP>:<porta>`.
+  - O próprio URI de cada NF, do perfil, dos *callbacks* e do `Location`, sai do IP (`GetIPv4Uri()`, `context.Url` e equivalentes).
+  - Os consumidores montam o URI de outra NF de quatro jeitos: `SearchNFServiceUri` (AMF, SMF, UDM, PCF) devolve o `fqdn` sem esquema nem porta; o do NEF põe o esquema, sem a porta; `openapi.GetNFServiceUri` (AUSF) prefere o `apiPrefix`; o SMF e o PCF usam `service.ApiPrefix` direto.
+  - Com o `fqdn` no perfil, sem mais nada, o AMF, o SMF, o UDM e o PCF montam URIs inválidos.
+- **Onde a norma diz.** `[3GPP]`
+  - TS 29.510 tab. 6.1.6.2.2-1, NOTA 1: *"If the NF supports the NF services with "https" URI scheme (i.e use of TLS is mandatory), then the FQDN shall be provided in the NF Profile or the NF Service profile (see clause 6.1.6.2.3) and it shall be used to construct the target URI"*. Tab. 6.1.6.2.3-1, NOTA 8, diz o mesmo.
+  - TS 29.510 tab. 6.1.6.2.5-1, NOTA 4: com `https`, o consumidor *"shall use such port number along with the FQDN parameter present in the NFService or NFProfile data types to construct the target URI"*.
+  - TS 29.510 tab. 6.2.6.2.4-1 e TS 29.501 §4.4.1: o `apiPrefix` é *"optional deployment-specific string that starts with a "/" character"*.
+  - TS 33.501 §13.1.0: o cliente manda o SNI, que não aceita IP (RFC 6066 §3).
+- **Como deve ser.** Com `https`, cada NF registra o seu FQDN, e os URIs próprios usam o nome. O consumidor monta `https://<FQDN>:<porta>`, mais o `apiPrefix`, que é só o caminho, e manda o SNI com o nome.
+- **No projeto.** Aprovado no MVP-11 (T4): um *patch* por NF e o *helper* corrigido no `openapi/0005`, fase (a) (`tls-sbi.md` §3.3). O modo por IP, opcional, é o DV-17. O `apiPrefix` com o URI inteiro fica, a decidir no ponto T22 da especificação.
+
+## F25 — Certificados das NFs fora do perfil de TS 33.310
+
+- **O que o free5GC faz.** `[FREE5GC]`
+  - Com OAuth2, o NRF gera para cada NF que se registra um certificado (`oauth.GenerateCertificate`, `context.SignNFCert`): RSA 2048, 10 anos, `C=TW, ST=Taiwan, L=Hsinchu, O=free5gc, OU=free5gc`, o CN e o DNS com o tipo da NF; sem `keyUsage`, `extendedKeyUsage`, ponto de distribuição de CRL nem `nfTypes`.
+  - O NRF regera o próprio certificado a cada partida; na VM do free5GC: `CN=NRF`, `DNS:NRF`, sem o URI do NF Instance ID.
+  - No pedido de *token*, o NRF confere o arquivo que ele mesmo gerou, e não o certificado da sessão TLS, e só avisa quando a cadeia não confere (*"unknown authority"*).
+  - Os certificados TLS que vêm com o free5GC (`cert/<nf>.pem`) também ficam fora do perfil (`O=free5GC`, sem o URI nem o `nfTypes`).
+- **Onde a norma diz.** `[3GPP]`
+  - TS 33.501 §13.1.0: *"TLS client and server certificates shall be compliant with the SBA certificate profile specified in clause 6.1.3c of TS 33.310"*.
+  - TS 33.310 §6.1.3c.3, tab. 6.1.3c.3-1: o *Subject* com `C` e `O` igual ao domínio de origem; *"3 years or less"*; `keyUsage` crítico com `digitalSignature`; `extendedKeyUsage`; `authorityKeyIdentifier`; `cRLDistributionPoint`; `subjectAltName` crítico, que *"shall ... contain a URI-ID with the URI for the NF Instance ID"* e o DNS-ID com o FQDN; `nfTypes` (RFC 9310). §6.1.3c.2: *"ECDSA is recommended"*.
+  - TS 33.501 §13.4.1.1.2 passo 2: o NRF confere o pedido de *token* com *"the public key certificate of the NF Service Consumer or those in the NF profile"*. TS 33.310 §6.1.3c.3 segue *"the provisions of RFC 5280"*, em que a validação sem uma cadeia até a âncora falha (RFC 5280 §6.1).
+- **Como deve ser.** Certificados emitidos pela CA do operador no perfil de §6.1.3c.3. O NRF confere o certificado da sessão TLS e recusa o que não tem cadeia válida.
+- **No projeto.** Aprovado no MVP-11 (T3, T9): os certificados de `make-sba-certs.sh`, fase (a); o NRF sem gerar certificados e com a conferência do certificado da sessão, *patch* `nrf/0005`, fase (b) (`tls-sbi.md` §4 e §7.1).
 
 ---
 
