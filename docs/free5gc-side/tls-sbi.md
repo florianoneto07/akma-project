@@ -1,6 +1,6 @@
 # TLS nas SBI e entre o NEF e o AF — especificação
 
-**MVP:** MVP-11 · **Data:** 2 de novembro de 2026 · **Estado:** **escrita, a aprovar** pelo responsável, com os pontos T18 a T39 da seção 13. O escopo foi aprovado no plano em 02/11/2026, com os pontos T1 a T17 (plano, seção 4): o T4 revisto, com os dois modos e o padrão por nome; o T14 na opção (b). Nada implementado; nenhuma VM alterada.
+**MVP:** MVP-11 · **Data:** 2 de novembro de 2026 · **Estado:** **aprovada** pelo responsável em 04/11/2026, com os pontos T18 a T39 da seção 13 como propostos; o DV-18, o F26 e os defeitos D-AJ e D-AK registrados na mesma data. O escopo foi aprovado no plano em 02/11/2026, com os pontos T1 a T17 (plano, seção 4): o T4 revisto, com os dois modos e o padrão por nome; o T14 na opção (b). Nada implementado; nenhuma VM alterada.
 
 Este documento detalha o que o plano aprovou: a PKI de teste do operador, os nomes das NFs, o TLS mútuo em toda a SBI, a identidade dos certificados nos *tokens* e nas políticas, e o TLS mútuo entre o NEF e o AF de fora e entre o NEF e o CCF. Os pontos abertos continuam a numeração do plano, do T18 em diante. Neste texto, "CA do operador" é a CA de teste da SBI (T3), e "CA do CCF" é a do MVP-9, que assina os certificados dos *invokers*.
 
@@ -34,7 +34,7 @@ O texto segue a baseline; onde a versão nova acrescenta algo que pesa, o texto 
 
 ### 1.2 O que a leitura acrescentou
 
-Pontos que o plano não trazia. Os que pedem decisão estão na seção 13.
+Pontos que o plano não trazia. Os que pediam decisão estão na seção 13.
 
 1. `[3GPP]` TS 29.510 §5.4.2.2.1: *"The NRF may verify that the input attributes (e.g. NF type) in the access token request match with the corresponding ones in the public key certificate of the NF service consumer. If the verification is successful, other authorization check shall be performed, otherwise, the request shall be rejected immediately with "400 Bad Request" status code, and "error" attribute set to "invalid_client"."* O T9 aprovado dizia 403 (T18).
 2. `[3GPP]` TS 33.501 §13.4.1.1.2 passo 2: além de `exp`, `aud` e `sub`, o produtor *"shall check that the identity in the issuer claim in the access token matches the identity of the OAuth 2.0 authorization server(s)"*. NOTA 2a: o produtor precisa da raiz para validar *"the NRF's OAuth 2.0 Access Token certificate (chain)"*. TS 33.310 §6.1.3c.3, NOTA 1b: sem o URI com o NF Instance ID no certificado de assinatura, *"the identity of the NRF in JWT access token "iss" Issuer claim ... cannot be securely validated"* (T29).
@@ -53,7 +53,7 @@ Pontos que o plano não trazia. Os que pedem decisão estão na seção 13.
 
 ## 2. Situação no free5GC v4.2.3
 
-Os achados 1 a 5 do plano, conferidos nas fontes (`free5gc/build/src-orig/NFs`, `openapi` v1.2.4 e v1.2.5-0.20260527003827-02dc71b4d94f, `util` v1.3.2), e um sexto. Entram em `correcoes-free5gc.md` como F21 a F25 (aprovados com o T17); o F26 depende do T30.
+Os achados 1 a 5 do plano, conferidos nas fontes (`free5gc/build/src-orig/NFs`, `openapi` v1.2.4 e v1.2.5-0.20260527003827-02dc71b4d94f, `util` v1.3.2), e um sexto. Estão em `correcoes-free5gc.md` como F21 a F25 (aprovados com o T17) e F26 (T30).
 
 | Achado | Onde | O que o free5GC faz | Registro |
 |---|---|---|---|
@@ -592,15 +592,15 @@ O `e2e.sh` completo, com código 0, inclusive o registro do UE com sessão PDU (
 
 ## 10. Registros
 
-- **Desvios.** DV-1 e DV-9 encerrados no fim da fase (c); DV-16 reduzido ao OCSP e ao `x5t#S256` (T36); DV-17 implementado; DV-18, se o T27 for a opção (a).
-- **Correções do free5GC.** F21 a F25 entram agora em `correcoes-free5gc.md`; F26, depois do T30. F4, F5 e F12 corrigidos no projeto (T12, T29).
-- **Defeitos.** D-AJ (a indicação do TLS mútuo no método 3, achado 10) e D-AK (a referência da tab. 6.1.3c.3-2, achado 14), no registro de defeitos e na cópia em `~/akma`, depois da aprovação.
+- **Desvios.** O DV-18 (T27, opção a) está registrado desde 04/11/2026. Na implementação: DV-1 e DV-9 encerrados no fim da fase (c); DV-16 reduzido ao OCSP e ao `x5t#S256` (T36); DV-17 e DV-18 implementados.
+- **Correções do free5GC.** F21 a F26 estão em `correcoes-free5gc.md`. Na implementação: F4, F5 e F12 corrigidos no projeto (T12, T29).
+- **Defeitos.** D-AJ (a indicação do TLS mútuo no método 3, achado 10) e D-AK (a referência da tab. 6.1.3c.3-2, achado 14) estão no registro de defeitos e na cópia em `~/akma`, desde 04/11/2026.
 
 ## 11. Limitações
 
 - O banco de testes do free5GC continua em `http` (seção 6.9).
 - `apiPrefix` continua com o URI inteiro, fora de TS 29.501 §4.4.1 (F24; T22).
-- A CRL só por HTTP, sem LDAPv3 (T27); sem OCSP nem OCSP *stapling* (DV-10, DV-16).
+- A CRL só por HTTP, sem LDAPv3 (DV-18); sem OCSP nem OCSP *stapling* (DV-10, DV-16).
 - Sem a inscrição automática de certificados (TS 33.310 §10.2 e §10.3): os certificados saem do *script*, e a chave da CA fica na .130.
 - A *webconsole* do free5GC, que o laboratório não usa (a assinatura sai do `mongosh`), não fala com o NRF em TLS mútuo.
 - O CHF tem outros servidores TLS que não são SBI (o CGF e o ABMF, `chfcfg.yaml`), com os certificados do free5GC: ficam como estão.
@@ -636,6 +636,8 @@ O que o plano já tirou: NDS/IP, o SEPP e o N32; o SCP, a comunicação indireta
 | T37 | Banco de testes do free5GC | continua em `http` (seção 6.9) | `[FREE5GC]` um processo, um cliente global. Alternativa: um cliente por NF no `openapi`, uma mudança grande no free5GC |
 | T38 | `e2e.sh` | o grupo S da seção 9.2, por fase; o grupo do NEF do MVP-6 no modo CAPIF (seção 9.3); as três puladas de volta | critérios 1 a 8. Alternativa: os negativos de certificado só nos testes Go |
 | T39 | Registros | a seção 10, com F26 (T30), DV-18 (T27), D-AJ e D-AK | a regra do registro de desvios |
+
+**Aprovação de 04/11/2026.** O responsável aprovou os pontos T18 a T39 como propostos. No T27, ficou a opção (a): só HTTP, com o desvio DV-18. Registrados na mesma data: o DV-18, as notas do DV-9, do DV-16 e do DV-17, o F26, os defeitos D-AJ e D-AK e, no plano, os pontos T1, T4, T7, T9, T14 e T17 revistos.
 
 ## 14. Arquivos e *commits* por fase
 
