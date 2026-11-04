@@ -22,8 +22,9 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-13 | *Claims* do *token* do CCF: `iss` com o identificador do *invoker*, ao lado de `client_id`, e `exp` como instante | **implementado** (MVP-9, 02/11/2026) | MVP-9 |
 | DV-14 | CAPIF parcial: só o caminho do AKMA | **implementado** (MVP-9, 02/11/2026) | MVP-9 |
 | DV-15 | HTTP/2 por ALPN no CCF, contra o *upgrade* do HTTP de TS 29.222 §7.3 | **implementado** (MVP-9, 02/11/2026) | MVP-9 |
-| DV-16 | CAPIF-1e sem revogação de certificados (sem ponto de distribuição de CRL, CRL nem OCSP) e *token* do CCF sem `x5t#S256` | **implementado** (MVP-9, 02/11/2026); a rever no MVP-11 | MVP-9 |
+| DV-16 | CAPIF-1e sem revogação de certificados (sem ponto de distribuição de CRL, CRL nem OCSP) e *token* do CCF sem `x5t#S256` | **implementado** (MVP-9, 02/11/2026); revisto na especificação do MVP-11 (04/11/2026): a revogação sai do desvio na fase (c), e ficam o OCSP e o `x5t#S256` | MVP-9, MVP-11 |
 | DV-17 | SBI por IP, sem o FQDN no perfil nem o SNI, como modo opcional; o padrão segue a norma | **decidido** (MVP-11, 02/11/2026); a implementar | MVP-11 |
+| DV-18 | CRL só por HTTP, sem o LDAPv3 que TS 33.310 §6.1a pede como método principal | **decidido** (MVP-11, 04/11/2026); a implementar | MVP-11 |
 
 **Consolidação (MVP-5, 18/10/2026).** Nenhum desvio novo surgiu no MVP-5. Estado e evidência de cada um no roteiro ponta a ponta (`docs/af-side/e2e.md`, execução `20261018-171510`):
 
@@ -205,6 +206,8 @@ O certificado de cliente exige mudar o servidor SBI comum do NEF do free5GC. O T
 **CAPIF (02/11/2026, MVP-9).** O AF externo também pode obter o *token* do CCF, que é o caminho da norma (TS 29.522 §7.2), e o NEF aceita os dois modos (`allowNrfTokens: true`). CAPIF-2e, entre o AF e o NEF, continua em `http` até o MVP-11, com a mesma política de endereço. O `check-authentication` também passa por essa política. Evidência: [CP04], [CP06], [CP16], [CP17] e [R2c] na execução `20261102-093804` (`docs/af-side/e2e.md` §5.9).
 
 **MVP-11 (02/11/2026).** Decisão do responsável no ponto T14 do MVP-11, opção (b): o AF de fora usa só o modo CAPIF, com TLS mútuo em CAPIF-2e pelo método 3 (TS 33.122 §6.5.2.3 passo 5) e o certificado que o CCF emitiu na entrada. O NEF deixa de aceitar *token* do NRF na `3gpp-akma` (`allowNrfTokens: false`), e o AF de fora deixa de falar com o NRF, que é o servidor de autorização das NFs do operador (TS 33.501 §13.4.1.1.1). O desvio se encerra inteiro, sem atalho: o transporte (§12.2 e §12.3), a autenticação mútua (§12.5) e a origem do *token* (TS 29.522 §7.2). O modo sem CAPIF (TS 29.522 §6) fica no código do NEF, desligado; um servidor de autorização próprio para ele pode entrar no MVP-14.
+
+**Especificação do MVP-11 (04/11/2026).** Aprovada com os pontos T19 e T34 de `docs/free5gc-side/tls-sbi.md`. O transporte de CAPIF-2e entra na fase (a), com o grupo do NEF do MVP-6 no modo CAPIF. A ligação do certificado ao *token* (o CN do certificado igual ao `client_id`) e `allowNrfTokens: false` entram na fase (c). A política de endereço do NEF sai do modo CAPIF: `sourceAddresses` fica opcional, só para o modo sem CAPIF. `[LACUNA]` TS 29.222 não tem atributo para a indicação do TLS mútuo que TS 33.122 §6.5.2.3 passo 5 atribui ao CCF (defeito D-AJ): a política do CCF é sempre o TLS mútuo.
 
 ---
 
@@ -398,6 +401,14 @@ Rever no MVP-11.
 
 **MVP-11 (02/11/2026).** O MVP-11, aprovado nesta data, traz dois pontos que mudam este desvio: o T7, que manda conferir a CRL em toda ponta TLS (TS 33.310 §6.3.1), e o T14, opção (b), em que o NEF passa a conferir o certificado do *invoker* em CAPIF-2e. A especificação do MVP-11 revê o desvio com os dois.
 
+**Revisão (04/11/2026, MVP-11).** Decisão do responsável no ponto T36 de `docs/free5gc-side/tls-sbi.md` (§8.4). Na fase (c):
+
+- os certificados que o CCF emite e o `ccf.pem` ganham o ponto de distribuição `http://192.168.16.130:8030/ccf-ca.crl`;
+- o CCF assina a CRL da sua CA e revoga o certificado do *invoker* na saída (TS 33.122 §6.8);
+- o CCF, o NEF e o AF conferem essa CRL nas suas pontas.
+
+A parte da revogação sai deste desvio com a implementação. Ficam o OCSP *stapling*, como no DV-10, e o `x5t#S256` do *token* do CCF, cuja chave continua sem certificado. A CRL vai só por HTTP (DV-18).
+
 ---
 
 ## DV-17 — SBI por IP, como modo opcional
@@ -419,4 +430,30 @@ Os certificados são os mesmos nos dois modos, com o FQDN e o IP no `subjectAltN
 
 **Impacto.** No modo por IP, o perfil da NF não tem o FQDN que TS 29.510 pede com `https`, o cliente não manda o SNI, e a identidade do servidor é conferida pelo IP do certificado, não pelo nome. O TLS mútuo, a CRL e a ligação do *token* ao certificado (T7, T9 e T10) não mudam.
 
-**Implementação.** A fazer no MVP-11, pela especificação `docs/free5gc-side/tls-sbi.md`.
+**Implementação.** A fazer no MVP-11, pela especificação `docs/free5gc-side/tls-sbi.md`, aprovada em 04/11/2026 (T21; §3.2). A escolha é a chave `sbi.fqdn` de cada NF e do AAnF (`internal.fqdn` no CCF): com ela, por nome; sem ela, por IP, com um aviso no log quando há `https`. Quem só é cliente, como o AF, segue a forma do URI configurado. Nas configurações do projeto, o modo é por nome.
+
+---
+
+## DV-18 — CRL só por HTTP, sem LDAPv3
+
+**Norma.** `[3GPP]` TS 33.310 V19.5.0:
+
+- §6.1a: *"CRL retrieval with LDAPv3 (RFC 4510 [67], RFC 4517 [68], RFC 4523 [69], RFC 4512 [70]) shall be supported as the primary method. HTTP may be used for checking the revocation status of TLS and NE certificates."*
+- §6.1.1: *"CRLs as specified in subclause 6.1a shall be supported for certificate revocation verification."*
+- tab. 6.1.3c.3-1, `cRLDistributionPoint`: *"this indicates if the CRL is available for retrieval using access protocol and location with LDAP or HTTP URI."*
+
+**O que o projeto faz.** `[MVP]` As CRL da CA do operador e da CA do CCF ficam num serviço HTTP, em `http://192.168.16.130:8030/<ca>.crl`. Cada ponta TLS as baixa pelo ponto de distribuição do certificado do outro lado. O LDAPv3 não é suportado: nem o serviço nem as pontas falam LDAP, e um certificado cujo ponto de distribuição não tenha URI `http` é recusado.
+
+**Por quê.** Decidido pelo responsável em 04/11/2026, no ponto T27 do MVP-11, opção (a), entre três:
+
+- (a) esta;
+- (b) ler o *"HTTP may be used"* como suficiente para entidades TLS, sem registrar desvio;
+- (c) o LDAPv3 também, com um servidor de diretório na máquina do free5GC e um cliente LDAP em Go.
+
+O próprio §6.1a permite o HTTP para os certificados TLS, que são os deste MVP. O laboratório não tem diretório. O registro existe porque o *"shall be supported"* do LDAPv3 fica sem atender.
+
+**Impacto.** Um operador com a CRL só num diretório LDAP não serve a este código: o certificado com o ponto de distribuição `ldap://` é recusado. A conferência da CRL em cada ponta, a falha fechada e o resto do T7 não mudam.
+
+**Implementação.** A fazer no MVP-11, pela especificação `docs/free5gc-side/tls-sbi.md` (§5).
+
+**Como fechar.** Um leitor de CRL por LDAPv3 no pacote `sbitls`, com um diretório no ponto de distribuição.

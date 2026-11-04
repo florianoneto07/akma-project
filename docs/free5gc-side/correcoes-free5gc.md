@@ -1,6 +1,6 @@
 # Correções do free5GC para o AKMA
 
-**Criado em:** 19 de outubro de 2026 · **Atualizado em:** 2 de novembro de 2026 (F21 a F25, MVP-11; F13: o CAPIF verificado no laboratório); 30 de outubro de 2026 (F13: o CCF e o NEF feitos); 29 de outubro de 2026 (F13: MVP-9 aprovado); 28 de outubro de 2026 (F16 a F20, MVP-12; conferência no free5GC v4.3.0, MVP-13) · **Base:** free5GC v4.2.3 (NRF v1.4.5, UDM, AUSF e AMF v1.4.5, NEF v1.2.5, `openapi` v1.2.4)
+**Criado em:** 19 de outubro de 2026 · **Atualizado em:** 4 de novembro de 2026 (F26 e os estados de F4, F5, F12 e F24: especificação do MVP-11 aprovada); 2 de novembro de 2026 (F21 a F25, MVP-11; F13: o CAPIF verificado no laboratório); 30 de outubro de 2026 (F13: o CCF e o NEF feitos); 29 de outubro de 2026 (F13: MVP-9 aprovado); 28 de outubro de 2026 (F16 a F20, MVP-12; conferência no free5GC v4.3.0, MVP-13) · **Base:** free5GC v4.2.3 (NRF v1.4.5, UDM, AUSF e AMF v1.4.5, NEF v1.2.5, `openapi` v1.2.4)
 
 Registro de tudo o que o projeto encontrou no free5GC e que precisa mudar para o AKMA funcionar conforme a norma. Pedido do responsável em 19/10/2026: este registro vai para o repositório público (MVP-7, plano seção 5). A regra de cada entrada:
 
@@ -17,15 +17,15 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
 | F1 | NRF | descarta `aanfInfoList` | corrigido, *patch* `nrf/0001` |
 | F2 | NRF | recusa descoberta de `AANF` por Routing Indicator | corrigido, *patch* `nrf/0002` |
 | F3 | NRF | *token* com `aud` vazio | corrigido, *patch* `nrf/0003` |
-| F4 | NRF | sem escopos por operação e por tipo de consumidor | aberto |
-| F5 | `openapi` | `VerifyOAuth` não confere `exp` nem `aud` | contornado no AAnF; aberto nas NFs do free5GC |
+| F4 | NRF | sem escopos por operação e por tipo de consumidor | aberto; a corrigir no MVP-11, *patch* `nrf/0005` e AAnF |
+| F5 | `openapi` | `VerifyOAuth` não confere `exp` nem `aud` | contornado no AAnF; aberto nas NFs do free5GC; a corrigir no MVP-11, *patch* `openapi/0006` |
 | F6 | `openapi` | sem modelos nem cliente do Naanf_AKMA | corrigido, *patches* `openapi/0001` e `0002` |
 | F7 | UDM | não envia `akmaInd` nem `routingId` | corrigido, *patch* `udm` |
 | F8 | AUSF | não gera K_AKMA nem registra no AAnF | corrigido, *patch* `ausf` |
 | F9 | *webconsole* | sem `akmaAllowed` e `routingId`; a edição os apaga | contornado por *script* |
 | F10 | UDM | `id-translation-result` só traduz GPSI → SUPI | aberto (plano, seção 5) |
 | F11 | NEF | sem a API `3gpp-akma` | corrigido, *patch* `nef/0001` (MVP-6) |
-| F12 | NEF | 401 do *middleware* OAuth2 sem `ProblemDetails` nem `WWW-Authenticate` | aberto; mantido no MVP-6 por decisão do responsável |
+| F12 | NEF | 401 do *middleware* OAuth2 sem `ProblemDetails` nem `WWW-Authenticate` | aberto; mantido no MVP-6 por decisão do responsável; a corrigir no MVP-11, *patch* `openapi/0006` |
 | F13 | NEF | APIs do AF sem CAPIF e sem TLS mútuo | o CAPIF corrigido, `nef/0002` e o CCF (MVP-9, verificado em 02/11/2026); o TLS no MVP-11 (DV-9) |
 | F14 | NEF | pede o *token* de `nnrf-nfm` para o tipo errado e não se descadastra | aberto |
 | F15 | NRF | `complexQuery` sem `routing-indicator` para `AANF` | aberto |
@@ -39,12 +39,13 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
 | F23 | NRF, `openapi` | *tokens* do NRF em `RS512`, fora do perfil JWS | aberto; a corrigir no MVP-11, *patches* `nrf/0005` e `openapi/0006` |
 | F24 | todas as NFs, `openapi` | perfis sem `fqdn` e URIs montados por IP | aberto; a corrigir no MVP-11, *patches* por NF e `openapi/0005` |
 | F25 | NRF, `openapi` | certificados das NFs fora do perfil de TS 33.310 | aberto; a corrigir no MVP-11, `make-sba-certs.sh` e *patch* `nrf/0005` |
+| F26 | NRF | *tokens* com `iss` vazio e certificado do NRF sem o NF Instance ID | aberto; a corrigir no MVP-11, *patch* `nrf/0005` |
 
 ### Conferência no free5GC v4.3.0 (28/10/2026)
 
 Ponto L6 do MVP-13: antes de publicar, cada item conferido na versão mais recente do free5GC. A v4.3.0 saiu em 30/09/2026. Ela fixa o NRF em `4522e4a9`, o UDM em `ba18ef3b`, o AUSF em `b693e38a`, o AMF em `9fc0ac3f`, o NEF em `6cd30f51`, a *webconsole* em `c40b94b6` e o `openapi` v1.3.0 em todas, e traz uma NF nova, o SCP. Fonte: os arquivos dessas versões no GitHub, lidos em 28/10/2026.
 
-**Os vinte itens continuam presentes na v4.3.0.** Os *patches* do projeto seguem para a v4.2.3; portá-los à v4.3.0 é do item *Upstream* do plano. F21 a F25, do MVP-11, foram conferidos só na v4.2.3. O que se conferiu em cada item:
+**Os vinte itens continuam presentes na v4.3.0.** Os *patches* do projeto seguem para a v4.2.3; portá-los à v4.3.0 é do item *Upstream* do plano. F21 a F26, do MVP-11, foram conferidos só na v4.2.3. O que se conferiu em cada item:
 
 | Item | Na v4.3.0 |
 |---|---|
@@ -66,7 +67,7 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
 
 | Repositório | Itens | *Patches* do projeto |
 |---|---|---|
-| `nrf` | F1, F2, F3, F4, F15, F23, F24, F25 | `nrf/0001` a `0003` (F1 a F3) |
+| `nrf` | F1, F2, F3, F4, F15, F23, F24, F25, F26 | `nrf/0001` a `0003` (F1 a F3) |
 | `openapi` | F5, F6, F16, F21, F23, F24, F25 | `openapi/0001` a `0003` (F6, F16); `openapi/0004`, os modelos e clientes do CAPIF (F13) |
 | `util` | F22 | — |
 | `udm` | F7, F10, F17, F20 (a notificação de desregistro), F24 | `udm/0001`, `udm/0002` (F7, F17) |
@@ -111,14 +112,14 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
   - O AAnF registra no `NFService` `naanf-akma`, por exemplo, `allowedOperationsPerNfType: {AUSF: [naanf-akma, naanf-akma:anchorkey], NEF: [naanf-akma, naanf-akma:applicationkeyget, naanf-akma:applicationkeyget:supi-access], AF: [...]}`.
   - O NRF só concede o escopo pedido se ele estiver na lista do tipo ou da instância do consumidor.
   - O AAnF confere o escopo de cada operação e só devolve o SUPI com `supi-access`.
-- **No projeto.** Aberto. `[MVP]` O AAnF confere só `naanf-akma` (`aanf.md` §5).
+- **No projeto.** Aberto. `[MVP]` O AAnF confere só `naanf-akma` (`aanf.md` §5). Aprovado no MVP-11 (T12 e T31): o NRF pelo *patch* `nrf/0005` e o AAnF, fase (b), com a lista de cada tipo em `tls-sbi.md` §7.3.
 
 ## F5 — `oauth.VerifyOAuth` não confere `exp` nem `aud`
 
 - **O que o free5GC faz.** `[FREE5GC]` `oauth.VerifyOAuth` (`openapi` v1.2.4, `oauth/oauth.go`) confere a assinatura e o escopo do *token*. Não confere a validade (`exp`) nem o destinatário (`aud`). Todas as NFs do free5GC que exigem *token* usam essa função, inclusive o *middleware* do NEF.
 - **Onde a norma diz.** `[3GPP]` TS 33.501 §13.4.1.1.2 passo 2: o produtor *"checks that the audience claim in the access token matches its own identity or the NF type of NF Service Producer"* e *"checks that the access token has not expired by verifying the expiration time"*. TS 29.522 §7.2, para o NEF com CAPIF: o NEF confere *"whether the NEF identifier in the "token" matches its own published identifier"*.
 - **Como deve ser.** `VerifyOAuth` recusa *token* vencido e *token* cujo `aud` não seja a instância nem o tipo do produtor. O 401 segue TS 29.500 §6.7.3 (F12).
-- **No projeto.** O AAnF faz as duas verificações por conta própria (`aanf.md` §5). Nas NFs do free5GC, aberto.
+- **No projeto.** O AAnF faz as duas verificações por conta própria (`aanf.md` §5). Nas NFs do free5GC, aberto. Aprovado no MVP-11 (T10 e T29): *patch* `openapi/0006`, fase (b), em todas as NFs (`tls-sbi.md` §7.4).
 
 ## F6 — `openapi` sem os modelos e o cliente do Naanf_AKMA
 
@@ -180,7 +181,7 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
 - **Como deve ser.** O 401 leva:
   - `WWW-Authenticate: Bearer realm="<URI da API>"`, com `error="invalid_token"` quando o pedido trazia *token*;
   - corpo `ProblemDetails` (`status: 401` e `detail`) em `application/problem+json`.
-- **No projeto.** Aberto. Mantido no MVP-6 por decisão do responsável (19/10/2026), porque corrigir muda todas as APIs do NEF. Observado no laboratório em 19/10/2026: `401` com `{"error":"verify OAuth Authorization header invalid"}` em `application/json` e sem `WWW-Authenticate` (`docs/af-side/teste-nef.md`).
+- **No projeto.** Aberto. Mantido no MVP-6 por decisão do responsável (19/10/2026), porque corrigir muda todas as APIs do NEF. Observado no laboratório em 19/10/2026: `401` com `{"error":"verify OAuth Authorization header invalid"}` em `application/json` e sem `WWW-Authenticate` (`docs/af-side/teste-nef.md`). Aprovado no MVP-11 (T29): as respostas de TS 29.500 §6.7.3 em todas as NFs, *patch* `openapi/0006`, fase (b) (`tls-sbi.md` §7.4).
 
 ## F13 — APIs do AF no NEF sem CAPIF e sem TLS mútuo
 
@@ -324,7 +325,7 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
   - TS 29.510 tab. 6.2.6.2.4-1 e TS 29.501 §4.4.1: o `apiPrefix` é *"optional deployment-specific string that starts with a "/" character"*.
   - TS 33.501 §13.1.0: o cliente manda o SNI, que não aceita IP (RFC 6066 §3).
 - **Como deve ser.** Com `https`, cada NF registra o seu FQDN, e os URIs próprios usam o nome. O consumidor monta `https://<FQDN>:<porta>`, mais o `apiPrefix`, que é só o caminho, e manda o SNI com o nome.
-- **No projeto.** Aprovado no MVP-11 (T4): um *patch* por NF e o *helper* corrigido no `openapi/0005`, fase (a) (`tls-sbi.md` §3.3). O modo por IP, opcional, é o DV-17. O `apiPrefix` com o URI inteiro fica, a decidir no ponto T22 da especificação.
+- **No projeto.** Aprovado no MVP-11 (T4): um *patch* por NF e o *helper* corrigido no `openapi/0005`, fase (a) (`tls-sbi.md` §3.3). O modo por IP, opcional, é o DV-17. O `apiPrefix` continua com o URI inteiro, agora com o nome, para o SMF e o PCF que o usam direto: essa parte fica aberta (T22).
 
 ## F25 — Certificados das NFs fora do perfil de TS 33.310
 
@@ -339,6 +340,16 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
   - TS 33.501 §13.4.1.1.2 passo 2: o NRF confere o pedido de *token* com *"the public key certificate of the NF Service Consumer or those in the NF profile"*. TS 33.310 §6.1.3c.3 segue *"the provisions of RFC 5280"*, em que a validação sem uma cadeia até a âncora falha (RFC 5280 §6.1).
 - **Como deve ser.** Certificados emitidos pela CA do operador no perfil de §6.1.3c.3. O NRF confere o certificado da sessão TLS e recusa o que não tem cadeia válida.
 - **No projeto.** Aprovado no MVP-11 (T3, T9): os certificados de `make-sba-certs.sh`, fase (a); o NRF sem gerar certificados e com a conferência do certificado da sessão, *patch* `nrf/0005`, fase (b) (`tls-sbi.md` §4 e §7.1).
+
+## F26 — *Tokens* do NRF com `iss` vazio e certificado do NRF sem o NF Instance ID
+
+- **O que o free5GC faz.** `[FREE5GC]` O campo `NRFContext.Nrf_NfInstanceID` (`internal/context/context.go`) nunca é preenchido. `AccessTokenProcedure` (`processor/access_token.go`) o põe em `iss`, e todo *token* pedido pelas NFs sai com `iss` vazio. `InitNrfContext` o passa a `oauth.GenerateCertificate`, e o certificado do NRF sai sem o URI: na VM do free5GC, `CN=NRF`, `DNS:NRF`. O `GetTokenCtx` do próprio NRF usa outro campo, `NrfNfProfile.NfInstanceId`, que a configuração preenche.
+- **Onde a norma diz.** `[3GPP]`
+  - TS 29.510 tab. 6.3.5.2.4-1: `iss`, obrigatório: *"This IE shall contain NF instance id of the NRF."*
+  - TS 33.501 §13.4.1.1.2 passo 2: *"The claims in the token shall include the NF Instance Id of NRF (issuer)"*; o produtor *"shall check that the identity in the issuer claim in the access token matches the identity of the OAuth 2.0 authorization server(s) (NRF or NRF Set) that is allowed to issue access tokens to this NF Service Producer."*
+  - TS 33.310 §6.1.3c.3: o `subjectAltName`, nos certificados TLS e nos que validam a assinatura dos *tokens*, *"shall ... contain a URI-ID with the URI for the NF Instance ID as an URN"*. NOTA 1b: sem esse URI, *"the identity of the NRF in JWT access token "iss" Issuer claim ... cannot be securely validated by NF producers"*.
+- **Como deve ser.** O NRF põe em `iss` o próprio NF Instance ID, o mesmo do URI do certificado que valida a assinatura. O produtor confere `iss` contra esse URI.
+- **No projeto.** Aprovado no MVP-11 (T29 e T30): *patch* `nrf/0005`, fase (b) (`tls-sbi.md` §7.2 e §7.4). O certificado de assinatura sai de `make-sba-certs.sh`.
 
 ---
 

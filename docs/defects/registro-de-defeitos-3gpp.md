@@ -5,7 +5,7 @@
 
 Cada item registra a inconsistência, as fontes que a evidenciam, a decisão adotada pelo projeto e o grupo de trabalho responsável.
 
-**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio. 28 de outubro de 2026 — D-B: especificação do MVP-12 aprovada. Estes defeitos são a base das recomendações à 3GPP da V2 do repositório público (plano, MVP-13). Na implementação do MVP-12, D-B implementado (DV-12) e D-O e D-P acrescentados, de TS 29.503. No MVP-13: todos os itens conferidos nas versões mais recentes das normas (seção seguinte), e as lacunas que o projeto teve de decidir acrescentadas como sugestões, D-Q a D-Z. 29 de outubro de 2026 — D-AA a D-AC, do CAPIF, achados na proposta do MVP-9, aprovada nessa data. Na mesma data, D-AD a D-AG, da especificação do CAPIF (`docs/free5gc-side/capif.md`), aprovada. 2 de novembro de 2026 — D-AH e D-AI, achados na implementação do MVP-9.
+**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio. 28 de outubro de 2026 — D-B: especificação do MVP-12 aprovada. Estes defeitos são a base das recomendações à 3GPP da V2 do repositório público (plano, MVP-13). Na implementação do MVP-12, D-B implementado (DV-12) e D-O e D-P acrescentados, de TS 29.503. No MVP-13: todos os itens conferidos nas versões mais recentes das normas (seção seguinte), e as lacunas que o projeto teve de decidir acrescentadas como sugestões, D-Q a D-Z. 29 de outubro de 2026 — D-AA a D-AC, do CAPIF, achados na proposta do MVP-9, aprovada nessa data. Na mesma data, D-AD a D-AG, da especificação do CAPIF (`docs/free5gc-side/capif.md`), aprovada. 2 de novembro de 2026 — D-AH e D-AI, achados na implementação do MVP-9. 4 de novembro de 2026 — D-AJ e D-AK, da especificação do MVP-11 (`docs/free5gc-side/tls-sbi.md`), aprovada nessa data.
 
 ### Situação no projeto (22/10/2026)
 
@@ -42,6 +42,8 @@ Todos os itens estão no texto das normas; nenhum é defeito do projeto. A decis
 | D-AF, D-AG | PEM, `authenticationInfo`, `authorizationInfo` e `apiScheme` fixados em `capif.md` (pontos C18, C21 e C26) |
 | D-AH | o CCF recusa `securityInfo` vazio, pela tabela 8.5.4.2.2-1 (`capif.md` §5.6) |
 | D-AI | `ES256` com `kid` no *token* e na credencial de entrada (C9 e C19 revistos em 30/10/2026, `capif.md` §15.1) |
+| D-AJ | a política do CCF é sempre o TLS mútuo, com a CA do *invoker* em `authenticationInfo` (ponto T34 de `tls-sbi.md`), a implementar no MVP-11 |
+| D-AK | editorial, nada a implementar |
 
 ### Conferência nas versões mais recentes (28/10/2026)
 
@@ -668,6 +670,44 @@ Acrescentados em 29/10/2026, da leitura de TS 29.222, TS 33.122 e TS 29.522 para
 **Proposta.** Citar TS 33.210 §6.3.3 no Anexo C de TS 33.122.
 
 **Decisão do projeto** (C9 e C19 revistos em 30/10/2026; `capif.md` §15.1). `ES256` com `kid` no *token* e na credencial de entrada.
+
+---
+
+## Defeitos do TLS nas SBI
+
+Acrescentados em 04/11/2026, da leitura de TS 33.122, TS 29.222 e TS 33.310 para a especificação do MVP-11 (`docs/free5gc-side/tls-sbi.md` §1.2). São falhas do texto, como D-A a D-P.
+
+## D-AJ — Indicação do TLS mútuo no método 3 de CAPIF-2e
+
+| | |
+|---|---|
+| **Especificações** | TS 33.122 V19.4.0, §6.5.2.3 passo 5; TS 29.222 V19.8.0, tabelas 8.2.4.3.6-1 e 8.5.4.2.3-1, e §10.3 |
+| **Grupo responsável** | 3GPP SA3 para TS 33.122; CT3 para TS 29.222 |
+
+**Descrição.** TS 33.122 §6.5.2.3 passo 5: o *invoker* se autentica no AEF *"by establishing a TLS session with the API exposing function based on the authentication and authorization method (i.e. Server (AEF) side certificate authentication or certificate-based mutual authentication) as indicated by CAPIF core function"*. TS 29.222 não tem como levar essa indicação: `SecurityMethod` só tem `PSK`, `PKI` e `OAUTH` (tabela 8.2.4.3.6-1), e `SecurityInformation` só traz `selSecurityMethod`, `authenticationInfo` e `authorizationInfo`, estas duas cadeias sem formato (tabela 8.5.4.2.3-1). O mesmo passo 5 põe o *Authentication Initiation Request* *"prior to establishment of TLS session"*, e TS 29.222 §10.3 só diz que o *invoker* *"shall initiate the authentication with the API exposing function using the Initiate_Authentication service operation"*. Nenhuma das duas diz que proteção esse pedido tem. TS 29.222 V20.1.0 tem o mesmo texto; TS 33.122 não tem versão mais nova.
+
+**Impacto.** Um *invoker* não sabe pela norma se o AEF vai pedir certificado de cliente, e um AEF não sabe como o CCF lhe diz isso. Sem proteção, o `Initiate_Authentication` leva o identificador do *invoker* em claro.
+
+**Proposta.** Acrescentar a `SecurityInformation` um atributo com o modo do TLS do método 3, ou fixar o modo em TS 33.122. Dizer em TS 29.222 §10.3 sobre que TLS corre o `Initiate_Authentication`.
+
+**Decisão do projeto** (ponto T34 de `tls-sbi.md`). A política do CCF é sempre o TLS mútuo, e a indicação ao AEF é a CA do *invoker* em `authenticationInfo`. O AF apresenta o certificado quando o NEF o pede no *handshake*, e o `check-authentication` também vai sobre o TLS mútuo.
+
+---
+
+## D-AK — A tabela 6.1.3c.3-2 de TS 33.310 remete a si mesma (editorial)
+
+| | |
+|---|---|
+| **Especificação** | TS 33.310 V19.5.0, §6.1.3c.3 |
+| **Grupo responsável** | 3GPP SA3 |
+
+**Descrição.** O texto antes da tabela 6.1.3c.3-2, do certificado dos *tokens*, diz: *"the rest of extensions remains the same as in table 6.1.3c.3-2, except for TLS feature extension that it is not applicable in this case"*. A tabela 6.1.3c.3-2 só tem `keyUsage` e `extendedKeyUsage`; o resto das extensões, inclusive o TLS *feature*, está na tabela 6.1.3c.3-1.
+
+**Impacto.** Quem lê ao pé da letra não acha as outras extensões do certificado de assinatura.
+
+**Proposta.** Trocar por *"table 6.1.3c.3-1"*.
+
+**Decisão do projeto.** O certificado que assina os *tokens* do NRF segue a tabela 6.1.3c.3-1 nas outras extensões (`tls-sbi.md` §4.3).
 
 ---
 
