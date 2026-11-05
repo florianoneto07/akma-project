@@ -16,6 +16,7 @@ import (
 	"github.com/florianoneto07/akma-free5gc/free5gc/aanf/internal/sbi/consumer"
 	"github.com/florianoneto07/akma-free5gc/free5gc/aanf/internal/sbi/processor"
 	"github.com/florianoneto07/akma-free5gc/free5gc/aanf/pkg/app"
+	"github.com/free5gc/openapi/sbitls"
 	"github.com/free5gc/util/httpwrapper"
 	logger_util "github.com/free5gc/util/logger"
 )
@@ -34,7 +35,7 @@ type Server struct {
 	router     *gin.Engine
 }
 
-func NewServer(aanf ServerAanf, tlsKeyLogPath string) (*Server, error) {
+func NewServer(aanf ServerAanf) (*Server, error) {
 	s := &Server{
 		ServerAanf: aanf,
 	}
@@ -45,7 +46,7 @@ func NewServer(aanf ServerAanf, tlsKeyLogPath string) (*Server, error) {
 	bindAddr := cfg.GetSbiBindingAddr()
 	logger.SBILog.Infof("Binding addr: [%s]", bindAddr)
 	var err error
-	if s.httpServer, err = httpwrapper.NewHttp2Server(bindAddr, tlsKeyLogPath, s.router); err != nil {
+	if s.httpServer, err = httpwrapper.NewHttp2Server(bindAddr, "", s.router); err != nil {
 		logger.InitLog.Errorf("Initialize HTTP server failed: %v", err)
 		return nil, err
 	}
@@ -125,6 +126,7 @@ func (s *Server) startServer(wg *sync.WaitGroup) {
 	case "http":
 		err = s.httpServer.ListenAndServe()
 	case "https":
+		sbitls.ConfigureServer(s.httpServer)
 		err = s.httpServer.ListenAndServeTLS(
 			cfg.GetCertPemPath(),
 			cfg.GetCertKeyPath())

@@ -26,6 +26,7 @@ import (
 type AANFContext struct {
 	NfId              string
 	RegisterIPv4      string
+	Fqdn              string // FQDN in the NF profile; empty with URIs by IP address
 	BindingIPv4       string
 	SBIPort           int
 	UriScheme         models.UriScheme
@@ -105,12 +106,17 @@ func New(cfg *factory.Config) (*AANFContext, error) {
 		if sbi.Scheme == "https" {
 			c.UriScheme = models.UriScheme_HTTPS
 		}
+		c.Fqdn = sbi.Fqdn
 		c.BindingIPv4 = os.Getenv(sbi.BindingIPv4)
 		if c.BindingIPv4 == "" {
 			c.BindingIPv4 = sbi.BindingIPv4
 		}
 	}
-	c.Url = string(c.UriScheme) + "://" + c.RegisterIPv4 + ":" + strconv.Itoa(c.SBIPort)
+	host := c.RegisterIPv4
+	if c.Fqdn != "" {
+		host = c.Fqdn
+	}
+	c.Url = string(c.UriScheme) + "://" + host + ":" + strconv.Itoa(c.SBIPort)
 
 	lifetime, err := configuration.Akma.GetKafLifetime()
 	if err != nil {

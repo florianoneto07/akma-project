@@ -151,6 +151,7 @@ func BuildNfProfile(c *aanf_context.AANFContext) models.NrfNfManagementNfProfile
 		NfInstanceId:  c.NfId,
 		NfType:        models.NrfNfManagementNfType_AANF,
 		NfStatus:      models.NrfNfManagementNfStatus_REGISTERED,
+		Fqdn:          c.Fqdn,
 		Ipv4Addresses: []string{c.RegisterIPv4},
 		PlmnList:      append([]models.PlmnId(nil), c.PlmnList...),
 	}

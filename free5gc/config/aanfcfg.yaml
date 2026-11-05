@@ -3,18 +3,24 @@ info:
   description: AANF initial local configuration
 
 configuration:
-  # Fixed NF instance ID (UUID v4). With OAuth2 enabled, the NRF of free5GC
-  # signs a certificate cert/aanf_<nfInstanceId>.pem at each new registration;
-  # a fixed ID keeps it to one file.
+  # Fixed NF instance ID (UUID v4): the one of the certificate (TS 33.310
+  # cl. 6.1.3c.3). With OAuth2 enabled, the NRF of free5GC signs a certificate
+  # cert/aanf_<nfInstanceId>.pem at each new registration; a fixed ID keeps it
+  # to one file.
   nfInstanceId: b6f417f0-06fa-4c38-b291-33066f5a5fe7
   sbi: # Service-based interface information
-    scheme: http # the protocol for sbi (http or https); http is h2c, without TLS
+    scheme: https # the protocol for sbi (http or https); http is h2c, without TLS
+    fqdn: aanf.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address (DV-17)
     registerIPv4: 192.168.16.130 # IP used to register to NRF; reachable from the AF host
     bindingIPv4: 192.168.16.130 # IP used to bind the service
     port: 8010 # port used to bind the service; not used by any free5GC NF (8000 is their SBI port)
+    tls: # the certificate of the SBI (TS 33.310 cl. 6.1.3c.3)
+      pem: cert/sba/aanf.pem
+      key: cert/sba/aanf.key
+      ca: cert/sba/sba-ca.pem # CA of the operator: the certificates of the peers
   serviceNameList: # the SBI services provided by this AANF
     - naanf-akma # Naanf_AKMA service (TS 29.535)
-  nrfUri: http://127.0.0.10:8000 # a valid URI of NRF
+  nrfUri: https://nrf.5gc.mnc093.mcc208.3gppnetwork.org:8000 # a valid URI of NRF
   nrfCertPem: cert/nrf.pem # NRF certificate, used to verify OAuth2 access tokens
   plmnSupportList: # the PLMNs (Network Identifier) of this AANF
     - mcc: "208" # Mobile Country Code (3 digits string, digit: 0~9)

@@ -256,6 +256,9 @@ type Sbi struct {
 	BindingIPv4  string `yaml:"bindingIPv4,omitempty" valid:"host,required"`  // IP used to run the server in the node.
 	Port         int    `yaml:"port,omitempty" valid:"port,required"`
 	Tls          *Tls   `yaml:"tls,omitempty" valid:"optional"`
+	// Fqdn is the FQDN of the AAnF in its NF profile (TS 29.510 cl. 6.1.6.2.2
+	// NOTE 1). Without it, the URIs go by IP address (DV-17).
+	Fqdn string `yaml:"fqdn,omitempty" valid:"dns,optional"`
 }
 
 func (s *Sbi) validate() (bool, error) {
@@ -271,6 +274,7 @@ func (s *Sbi) validate() (bool, error) {
 type Tls struct {
 	Pem string `yaml:"pem,omitempty" valid:"type(string),minstringlength(1),required"`
 	Key string `yaml:"key,omitempty" valid:"type(string),minstringlength(1),required"`
+	Ca  string `yaml:"ca,omitempty" valid:"optional"` // CA of the peers on the SBI
 }
 
 func appendInvalid(err error) error {
@@ -316,6 +320,16 @@ func (c *Config) GetCertKeyPath() string {
 		return ""
 	}
 	return c.Configuration.Sbi.Tls.Key
+}
+
+// GetCertCaPath returns the file with the CA of the peers on the SBI.
+func (c *Config) GetCertCaPath() string {
+	c.RLock()
+	defer c.RUnlock()
+	if c.Configuration.Sbi.Tls != nil {
+		return c.Configuration.Sbi.Tls.Ca
+	}
+	return ""
 }
 
 func (c *Config) GetLogEnable() bool {

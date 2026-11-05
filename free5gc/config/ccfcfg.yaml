@@ -41,6 +41,7 @@ configuration:
         - af1.akma.example.0100000008 # OSCORE with a context from K_AF (TS 33.535 Annex D)
         - af1.akma.example.FF00000001 # simplified Ua*, test only (TS 33.220 H.2 NOTE 2)
         - af4.akma.example.FF00000001 # test only: outside the policy of the NEF
+        - af5.akma.example.FF00000001 # test only: accepted by the NEF and not by the AAnF (negative test E07)
 
 logger: # log output setting
   enable: true # true or false
