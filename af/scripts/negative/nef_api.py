@@ -98,16 +98,18 @@ def run(inv, credential, nef, aanf, akid, sba, other):
     report("E03", "anonymous access through the NEF: K_AF without supi and gpsi",
            s == 200 and "kaf" in rsp and "supi" not in rsp and "gpsi" not in rsp, f"{s}")
 
-    # E04: no access token: 401 from the OAuth2 middleware of the NEF (F12: no ProblemDetails).
+    # E04: no access token: 401, as TS 29.500 cl. 6.7.3 says.
     s, ct, d = retrieve(ctx, nef, "", {"afId": AF_ID, "aKId": akid})
-    report("E04", "no access token: 401", s == 401, f"{s} {ct.split(';')[0]}")
+    report("E04", "no access token: 401 with ProblemDetails",
+           s == 401 and ct.startswith("application/problem+json"), f"{s} {ct.split(';')[0]}")
 
-    # E05: token of the NRF for another service (naanf-akma for the AAnF): 401.
+    # E05: token of the NRF for another producer (naanf-akma for the AAnF): 403 of aud (TS 29.500 cl. 6.7.3).
+    desc = "access token of another producer: 403 ACCESS_TOKEN_CLAIM_MISMATCH"
     if not other:
-        report("E05", "access token of another service: 401", False, "no naanf-akma token of the NRF")
+        report("E05", desc, False, "no naanf-akma token of the NRF")
     else:
         s, ct, d = retrieve(ctx, nef, other, {"afId": AF_ID, "aKId": akid})
-        report("E05", "access token of another service: 401", s == 401, f"{s}")
+        report("E05", desc, s == 403 and as_json(d).get("cause") == "ACCESS_TOKEN_CLAIM_MISMATCH", problem(s, ct, d))
 
     # E06: AF_ID not authorized by the NEF (TS 33.535 cl. 6.3 step 2): 403 without cause.
     s, ct, d = retrieve(ctx, nef, token, {"afId": "af2.akma.example.FF00000001", "aKId": akid})

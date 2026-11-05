@@ -356,7 +356,7 @@ group_T() {
 # The AF outside the operator network, through the NEF (TS 33.535 cl. 6.3),
 # as API invoker of CAPIF (TS 29.522 cl. 7.2), and anonymous access
 # (cl. 6.2.2). The extra AFs stay up for the Ua* of the UE (R2n) and are
-# stopped in group B. The access token of the NRF for another service, for
+# stopped in group B. The access token of the NRF for another producer, for
 # E05, comes from the seed tool on the free5GC host.
 group_nef() {
     local akid1="$1" name
