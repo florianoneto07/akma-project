@@ -1,6 +1,6 @@
 # TLS nas SBI e entre o NEF e o AF — especificação
 
-**MVP:** MVP-11 · **Data:** 2 de novembro de 2026 · **Estado:** **aprovada** pelo responsável em 04/11/2026, com os pontos T18 a T39 da seção 13 como propostos; o DV-18, o F26 e os defeitos D-AJ e D-AK registrados na mesma data. O escopo foi aprovado no plano em 02/11/2026, com os pontos T1 a T17 (plano, seção 4): o T4 revisto, com os dois modos e o padrão por nome; o T14 na opção (b). Nada implementado; nenhuma VM alterada.
+**MVP:** MVP-11 · **Data:** 2 de novembro de 2026 · **Estado:** **aprovada** pelo responsável em 04/11/2026, com os pontos T18 a T39 da seção 13 como propostos; o DV-18, o F26 e os defeitos D-AJ e D-AK registrados na mesma data. O escopo foi aprovado no plano em 02/11/2026, com os pontos T1 a T17 (plano, seção 4): o T4 revisto, com os dois modos e o padrão por nome; o T14 na opção (b). **Fase (a) implementada e verificada** em 04/11/2026 (seção 15); as fases (b) e (c) estão por fazer.
 
 Este documento detalha o que o plano aprovou: a PKI de teste do operador, os nomes das NFs, o TLS mútuo em toda a SBI, a identidade dos certificados nos *tokens* e nas políticas, e o TLS mútuo entre o NEF e o AF de fora e entre o NEF e o CCF. Os pontos abertos continuam a numeração do plano, do T18 em diante. Neste texto, "CA do operador" é a CA de teste da SBI (T3), e "CA do CCF" é a do MVP-9, que assina os certificados dos *invokers*.
 
@@ -660,3 +660,48 @@ Cada fase termina com o `e2e.sh` completo. O responsável faz os *commits*; as m
 **Fase (c).** `free5gc/ccf/` e `ccfcfg.yaml`; `free5gc/patches/nef/0004-capif-tls.patch` e `free5gc/patches/config/0006-capif-tls.patch`; o AF; o `e2e.sh`; `desvios.md` (DV-1, DV-9, DV-16, DV-17 e DV-18), `correcoes-free5gc.md`, o registro de defeitos, a matriz de rastreabilidade (revisão 11) e o plano.
 
 Na .130, antes da fase (a): *backup* de `config/` e `cert/` e um *snapshot* da VM, anunciados antes. O `/etc/hosts` das duas máquinas muda na fase (a), também anunciado.
+
+## 15. Implementação da fase (a)
+
+Esta seção registra o que a especificação não fixava. Nada aqui muda um ponto aprovado nem a leitura da norma.
+
+### 15.1 O código
+
+- **O par de quem fala com o produtor.** O `AuthorizationCheck` de cada NF continua com a assinatura do free5GC. O roteador chama, depois dele, `oauth.CheckTokenPeer(token, c.Request.TLS)` e, na recusa, `oauth.WriteTokenError`. Assim, os *mocks* dos testes das NFs não mudam. Na fase (a), as duas funções só guardam o lugar: a primeira aceita, a segunda escreve o `401` de hoje. A fase (b) as preenche (seção 7.4).
+- **`http.DefaultTransport`.** O `sbitls.Init` também configura esse transporte. O NEF e os clientes do BSF no SMF e no PCF usam o cliente padrão do Go, que sem isso não teria o TLS da SBI.
+- **Grupos do NEF.** A conferência da CA por grupo (seção 8.1) já entra na fase (a), com o transporte do CAPIF-2e: um *middleware* novo, `checkClientCA`, em `internal/sbi/client_ca.go`. O `capif.invokerCa` diz a CA dos *invokers*, e o `capif.invokerCrl: false` dispensa a CRL deles até a fase (c), quando os certificados de *invoker* passam a ter ponto de distribuição (seção 8.4).
+- **`interface` do CAPIF.** O `capif.interface` do `nefcfg.yaml` aceita `fqdn` ou `ipv4Addr`, um dos dois. O CCF já aceitava: TS 29.222 pede exatamente um dos três endereços.
+- **NSSF.** O `nrfId` da lista de NSI passa ao URI do NRF pelo nome.
+- **BSF.** Chave nova, `nfInstanceId`, porque o BSF não tinha como fixar o identificador que o certificado carrega.
+- **AMF.** A recusa da seção 3.3, `sbi.fqdn` diferente de `amfName`, fica no `NewApp`, junto do `sbitls.Init`.
+- **`config/0004`.** O *patch* é gerado com uma linha de contexto, para valer sobre as configurações do AMF, do SMF e da UPF com as edições manuais do N2 e do N3 (`docs/tutorial` parte 9).
+- **AAnF.** O `NewApp` recebe o contexto e a configuração, porque o `sbitls.Init` precisa da configuração antes de criar o servidor. O banco de testes acompanha (`test/0002`).
+
+### 15.2 As ferramentas
+
+- **`seed`.** O NF Instance ID e o tipo do perfil temporário no NRF saem do certificado (`sbitls.NfInstanceId` e `NfTypes`), para que a fase (b) não mude nada na ferramenta. O comando novo `token` imprime um *token* do NRF, para o E05.
+- **`sbi_tls.py`.** O S01 a S04, o S06 e o S07 estão em `af/scripts/negative/sbi_tls.py`, só com o módulo `ssl` do Python. Roda da máquina do free5GC em todas as portas (passo R1s) e da máquina do AF no AAnF e no NEF. É mais do que a tabela da seção 9.2 pede: o S06 e o S07 valem em todas as portas.
+- **S01.** O servidor do Go, numa porta TLS, responde a um pedido HTTP/1.1 com `HTTP/1.0 400 Bad Request` e o texto `Client sent an HTTP request to an HTTPS server`, e fecha. A um h2c, fecha sem responder. Os dois contam como recusa no TLS: nenhum dos dois chega à aplicação.
+- **S03.** O `sbitls.New` recusa partir com um certificado próprio de outra CA. Por isso, o S03 é do Python, e não do `seed`.
+- **S04.** Além do nome, do URI e do IP, onde o arquivo existe, o certificado apresentado é conferido contra o arquivo instalado. Com o S05, isso vale pelo perfil da seção 4.7.
+- **S08.** O Go confere o nome antes da cadeia. O `other-ca` da seção 4.5, com o nome dele, seria recusado pelo nome, e não pela CA. O passo emite na hora, com a CA de `other-ca`, um certificado com o nome do AAnF, e o `seed` só pode recusar pela CA.
+- **S09.** O `s_server` mostra o SNI com `-servername` e `-cert2`.
+- **S19.** Os `*sslkey.log` que execuções antigas deixaram em `log/` não contam: a conferência olha só os arquivos escritos na execução.
+
+### 15.3 O E07
+
+O AF_ID `af3` do MVP-6 estava na política do NEF e fora do perfil do CCF, de propósito (CP16). Com o *token* do CCF, o NEF o recusa antes de chegar ao AAnF, e o E07 passaria sem provar o que diz. O AF_ID novo `af5.akma.example.FF00000001`, de teste, está na política do NEF e no perfil `af1-external` do CCF, e fora da lista do AAnF. O E07 passa a usá-lo; o `af3` fica para o CP16.
+
+### 15.4 A verificação
+
+- **`e2e.sh`.** `288 passed, 0 failed, 0 skipped`, na execução `20261104-190824` (`docs/af-side/e2e.md` §5.10). O D03, o O04 e o O05 voltaram.
+- **Banco de testes do free5GC.** Na .130, com os *patches* da fase: os três `TestAkma` e o `TestRegistration` passam.
+- **`go vet` e `go test -race`.** Nenhum aviso e nenhuma corrida, nos módulos do projeto e nas onze NFs. Os testes do AF também passam com o wolfSSL. Duas falhas não vêm do projeto:
+  - no SMF, `internal/pfcp/handler`: `TestHandlePfcpAssociationSetupRequest`, `TestHandlePfcpAssociationUpdateRequest` e `TestHandlePfcpManagementRequest` falham do mesmo jeito no SMF sem *patch*;
+  - no UDR, `TestUDR_InfluData_CreateThenGet` precisa do MongoDB, que a máquina do AF não tem.
+- **Os *patches*.** A árvore original com os *patches* reconstrói as cópias testadas das onze NFs.
+
+### 15.5 Para a fase (c)
+
+- O NEF guarda a CRL da CA do CCF até o `nextUpdate`. O S18 precisa de uma idade máxima menor, senão o certificado de um *invoker* que saiu ainda passa.
+- Depois de uma nova entrada, o AF continua com a conexão HTTP/2 antiga, com o certificado anterior. O AF precisa fechar as conexões ociosas ao trocar de certificado.

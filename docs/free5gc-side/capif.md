@@ -40,7 +40,7 @@ O plano (MVP-9, "Situação normativa") resume as normas. As operações que o M
 ```
                  VM do AF (.129)                             VM do free5GC (.130)
   AF externo ──(CAPIF-1e) HTTPS, TLS mútuo ───────────► CCF 192.168.16.130:8020
-  AF externo ──(CAPIF-2e) http (DV-9) ────────────────► NEF 192.168.16.130:8000
+  AF externo ──(CAPIF-2e) HTTPS, TLS mútuo ───────────► NEF nef.5gc...:8000
                                                         NEF ──(CAPIF-3/4) http (DV-1) ──► CCF 127.0.0.1:8020
                                                         NEF ──(SBI, sem mudança) ───────► NRF e AAnF 192.168.16.130:8010
 ```
@@ -49,7 +49,7 @@ O plano (MVP-9, "Situação normativa") resume as normas. As operações que o M
 |---|---|---|---|
 | AF → CCF (CAPIF-1e) | `https://192.168.16.130:8020` | TLS 1.3 e 1.2; só de servidor na entrada, mútuo depois | C3; TS 33.122 §6.1 e §6.3.1.1 |
 | NEF → CCF (CAPIF-3/4) | `http://127.0.0.1:8020` | sem TLS até o MVP-11 | C3; DV-1 |
-| AF → NEF (CAPIF-2e) | `http://192.168.16.130:8000`, descoberto no CCF | sem TLS até o MVP-11 | C3; DV-9 |
+| AF → NEF (CAPIF-2e) | `https://nef.5gc.mnc093.mcc208.3gppnetwork.org:8000`, descoberto no CCF | TLS mútuo desde a fase (a) do MVP-11: o AF apresenta o certificado do CCF e confere o do NEF com o `aefCa` | C3; `tls-sbi.md` §6.7 |
 
 As duas portas 8020 ficam em endereços diferentes. O servidor externo só serve as APIs do *invoker*; o interno, só as do provedor (publicação e dados do *invoker*). Uma API pedida no servidor errado recebe `404`.
 
@@ -350,7 +350,7 @@ Respostas do modo CAPIF, com `ProblemDetails` em `application/problem+json`:
 
 ### 7.1 Configuração
 
-`af/config/afcfg-capif.yaml`: o `afcfg-external.yaml` sem `nefUri` e `nrfUri`, com a seção `capif`:
+`af/config/afcfg-capif.yaml`, com a seção `capif`:
 
 ```yaml
   capif: # the AF as API invoker (TS 29.522 cl. 7.2); the NEF is discovered at the CCF
@@ -359,7 +359,8 @@ Respostas do modo CAPIF, com `ProblemDetails` em `application/problem+json`:
     credential: ../build/capif/af1-external.jwt
     state: ../build/capif/af1-external.json # API invoker ID, certificate, private key and secret
     notificationDestination: https://192.168.16.129/capif/notify # mandatory; not served: the CCF sends no notification
-    apiScheme: http # scheme of the discovered apiRoot (TS 29.501 cl. 4.4.1); http while the NEF has no TLS
+    apiScheme: https # scheme of the discovered apiRoot (TS 29.501 cl. 4.4.1; TS 33.501 cl. 12.3)
+    aefCa: ../build/sba/sba-ca.pem # CA of the certificate of the NEF, pre-provisioned (TS 33.122 cl. 6.5.2.3)
     offboardOnExit: false
 ```
 
@@ -403,13 +404,13 @@ No formato do free5GC. Nunca aparecem *tokens*, credenciais de entrada, segredos
 
 ### 10.2 `e2e.sh`: grupo CP e passo R2c
 
-O `e2e-remote.sh` sobe o CCF com o free5GC (`run.sh -aanf -ccf`) e emite a credencial (`ccf credential`); o `e2e.sh` copia para a máquina do AF a CA do CCF e a credencial. O grupo CP roda depois do grupo do NEF do MVP-6. O `af/scripts/negative/capif_api.py` faz o papel de um segundo *invoker*, em Python (`ssl` e o OpenSSL da linha de comando para o par de chaves), independente do AF em Go.
+O `e2e-remote.sh` sobe o CCF com o free5GC (`run.sh -crl -aanf -ccf`) e emite a credencial (`ccf credential`); o `e2e.sh` copia para a máquina do AF a CA do CCF e a credencial. O grupo CP roda depois do grupo do NEF do MVP-6. O `af/scripts/negative/capif_api.py` faz o papel de um segundo *invoker*, em Python (`ssl` e o OpenSSL da linha de comando para o par de chaves), independente do AF em Go.
 
 | ID | Verificação | Esperado |
 |---|---|---|
 | CP00 | o AF do modo CAPIF sobe | no log do AF: entrada, descoberta, `OAUTH` e `check-authentication` |
 | CP01 | entrada do `capif_api.py` | `201` e `Location`; certificado com CN igual ao identificador, emitido pela CA do CCF (`openssl verify`) |
-| CP02 | descoberta | `apiRoot` `http://192.168.16.130:8000`, `aefId` `nef-aef`, `securityMethods` `[OAUTH]` |
+| CP02 | descoberta | `apiRoot` `https://nef.5gc.mnc093.mcc208.3gppnetwork.org:8000`, `aefId` `nef-aef`, `securityMethods` `[OAUTH]` |
 | CP03 | método de segurança | `201`, `selSecurityMethod` `OAUTH` |
 | CP04 | `check-authentication` | `200` |
 | CP05 | *token* | `200`, `token_type` `Bearer`, `Cache-Control: no-store`; `iss` = `client_id` = identificador; `scope` `3gpp#nef-aef:3gpp-akma`; `exp` igual ao instante do pedido mais a vida, com tolerância de poucos segundos |
@@ -435,7 +436,7 @@ As 161 verificações de hoje continuam, com o grupo do NEF do MVP-6 (C13).
 ## 11. Limitações
 
 - CAPIF parcial (DV-14): sem eventos, revogação, *logging*, auditoria, política de acesso, roteamento, registro do provedor pela API, descoberta aberta, interconexão, RNAA, ocultação de topologia e tarifação.
-- Sem TLS entre o AF e o NEF e entre o NEF e o CCF até o MVP-11 (DV-9, DV-1).
+- Sem TLS entre o NEF e o CCF até a fase (c) do MVP-11 (DV-1). Entre o AF e o NEF, TLS mútuo desde a fase (a).
 - O estado do CCF fica em memória (seção 5.12).
 - Um CCF, um provedor (o NEF), um AEF.
 - Sem TLS em CAPIF-3, o CCF não sabe qual AEF pede os dados do *invoker* (seção 5.9).

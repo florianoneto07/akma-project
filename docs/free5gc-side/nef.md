@@ -268,3 +268,11 @@ Como reproduzir, na máquina do free5GC, com o free5GC parado: `patch-nf.sh nef 
 | cliente do NEF, registro no NRF, `anonymous` | testes de `af/af/internal/{nef,nrf,aanf,config}` | passa, também com `-race` |
 | Ua\* do UE em outra máquina com o AF interno, o externo e o externo anônimo | `docs/af-side/teste-nef.md` | atendido |
 | negativos da API do NEF (E00 a E12) e o Ua\* do UE com os AF extras (R2n) | `af/scripts/e2e.sh` | 83 verificações, nenhuma falha (execução `20261019-213720`; `docs/af-side/e2e.md` §4.1 e §5.2) |
+
+## 12. Depois do MVP-11, fase (a)
+
+`tls-sbi.md` muda o que este documento descreve, sem mudar a operação da seção 3:
+
+- O NEF serve em `https://nef.5gc.mnc093.mcc208.3gppnetwork.org:8000`, com TLS mútuo. Os grupos da SBI aceitam a CA do operador; os do CAPIF, `3gpp-akma` e `aef-security`, a CA do CCF (`tls-sbi.md` §15.1).
+- O AF de fora é *invoker* do CAPIF (T14). O túnel SSH da seção 2.1 e o `afcfg-external.yaml` saíram. O código de `af/af/internal/nrf` fica, com os testes Go, como o modo sem CAPIF no NEF, que o laboratório não usa.
+- A entrada `af3` da política do NEF fica para o CP16, e o E07 usa o `af5` (`tls-sbi.md` §15.3).

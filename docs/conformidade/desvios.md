@@ -7,7 +7,7 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 
 | Nº | Assunto | Estado | MVP |
 |---|---|---|---|
-| DV-1 | SBI sem TLS (h2c); CAPIF-3/4 sem TLS até o MVP-11 | **implementado** (MVP-1, 17/10/2026); estendido a CAPIF-3/4, **implementado** (MVP-9, 02/11/2026); **a encerrar** no MVP-11, aprovado em 02/11/2026 | MVP-1, MVP-9, MVP-11 |
+| DV-1 | SBI sem TLS (h2c); CAPIF-3/4 sem TLS até o MVP-11 | **implementado** (MVP-1, 17/10/2026); estendido a CAPIF-3/4, **implementado** (MVP-9, 02/11/2026); SBI com TLS mútuo desde a fase (a) do MVP-11 (04/11/2026); **a encerrar** na fase (c) | MVP-1, MVP-9, MVP-11 |
 | DV-2 | Subscrição de `ROAMING_STATUS` desabilitada | **implementado** (MVP-1, 17/10/2026) — parcial: a etapa não existe; o campo só aceita `false` | MVP-1 |
 | DV-3 | Só SUPI do tipo IMSI | **implementado** (MVP-0, 16/10/2026) | MVP-0 |
 | DV-4 | Sem NFKC no lado UE | **implementado** (MVP-4, 18/10/2026) | MVP-4 |
@@ -15,7 +15,7 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-6 | `realm` do Digest conforme TS 33.535 | **implementado** (MVP-3, 18/10/2026) | MVP-3 |
 | DV-7 | Nunca emitir 204 em `retrieve-applicationkey` | **implementado** (MVP-1, 17/10/2026) | MVP-1 |
 | DV-8 | `aud` vazio tolerado no token OAuth2 | **encerrado** em 17/10/2026 (MVP-1b: NRF corrigido, AAnF estrito) | MVP-1 |
-| DV-9 | NEF–AF externo sem TLS nem certificado de cliente | **implementado** (MVP-6, 19/10/2026); vale também para CAPIF-2e (MVP-9, 02/11/2026); **a encerrar** no MVP-11 (T14, opção b, 02/11/2026) | MVP-6, MVP-9, MVP-11 |
+| DV-9 | NEF–AF externo sem TLS nem certificado de cliente | **implementado** (MVP-6, 19/10/2026); vale também para CAPIF-2e (MVP-9, 02/11/2026); TLS mútuo no CAPIF-2e desde a fase (a) do MVP-11 (04/11/2026); **a encerrar** na fase (c) (T14, opção b, 02/11/2026) | MVP-6, MVP-9, MVP-11 |
 | DV-10 | Perfis TLS do Ua\* sem `TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384` e sem OCSP *stapling*, recomendados por TS 33.210 | **implementado** (MVP-8, 21/10/2026) | MVP-8 |
 | DV-11 | CoAP sobre DTLS sem a suíte obrigatória de RFC 7252, `TLS_PSK_WITH_AES_128_CCM_8`; vale TS 33.210 | **implementado** (MVP-8, 21/10/2026) | MVP-8 |
 | DV-12 | `trigger-auth` com POST, contra a precedência do YAML (TS 29.503 Anexo A.1), que declara `get` | **implementado** (MVP-12, 28/10/2026) | MVP-12 |
@@ -23,8 +23,8 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-14 | CAPIF parcial: só o caminho do AKMA | **implementado** (MVP-9, 02/11/2026) | MVP-9 |
 | DV-15 | HTTP/2 por ALPN no CCF, contra o *upgrade* do HTTP de TS 29.222 §7.3 | **implementado** (MVP-9, 02/11/2026) | MVP-9 |
 | DV-16 | CAPIF-1e sem revogação de certificados (sem ponto de distribuição de CRL, CRL nem OCSP) e *token* do CCF sem `x5t#S256` | **implementado** (MVP-9, 02/11/2026); revisto na especificação do MVP-11 (04/11/2026): a revogação sai do desvio na fase (c), e ficam o OCSP e o `x5t#S256` | MVP-9, MVP-11 |
-| DV-17 | SBI por IP, sem o FQDN no perfil nem o SNI, como modo opcional; o padrão segue a norma | **decidido** (MVP-11, 02/11/2026); a implementar | MVP-11 |
-| DV-18 | CRL só por HTTP, sem o LDAPv3 que TS 33.310 §6.1a pede como método principal | **decidido** (MVP-11, 04/11/2026); a implementar | MVP-11 |
+| DV-17 | SBI por IP, sem o FQDN no perfil nem o SNI, como modo opcional; o padrão segue a norma | **decidido** (MVP-11, 02/11/2026); **implementado** (fase a, 04/11/2026) | MVP-11 |
+| DV-18 | CRL só por HTTP, sem o LDAPv3 que TS 33.310 §6.1a pede como método principal | **decidido** (MVP-11, 04/11/2026); **implementado** (fase a, 04/11/2026) | MVP-11 |
 
 **Consolidação (MVP-5, 18/10/2026).** Nenhum desvio novo surgiu no MVP-5. Estado e evidência de cada um no roteiro ponta a ponta (`docs/af-side/e2e.md`, execução `20261018-171510`):
 
@@ -430,7 +430,7 @@ Os certificados são os mesmos nos dois modos, com o FQDN e o IP no `subjectAltN
 
 **Impacto.** No modo por IP, o perfil da NF não tem o FQDN que TS 29.510 pede com `https`, o cliente não manda o SNI, e a identidade do servidor é conferida pelo IP do certificado, não pelo nome. O TLS mútuo, a CRL e a ligação do *token* ao certificado (T7, T9 e T10) não mudam.
 
-**Implementação.** A fazer no MVP-11, pela especificação `docs/free5gc-side/tls-sbi.md`, aprovada em 04/11/2026 (T21; §3.2). A escolha é a chave `sbi.fqdn` de cada NF e do AAnF (`internal.fqdn` no CCF): com ela, por nome; sem ela, por IP, com um aviso no log quando há `https`. Quem só é cliente, como o AF, segue a forma do URI configurado. Nas configurações do projeto, o modo é por nome.
+**Implementação.** Fase (a) do MVP-11, em 04/11/2026, pela especificação `docs/free5gc-side/tls-sbi.md`, aprovada na mesma data (T21; §3.2). A escolha é a chave `sbi.fqdn` de cada NF e do AAnF (`internal.fqdn` no CCF): com ela, por nome; sem ela, por IP, com um aviso no log quando há `https`. Quem só é cliente, como o AF, segue a forma do URI configurado. Nas configurações do projeto, o modo é por nome.
 
 ---
 
@@ -454,6 +454,6 @@ O próprio §6.1a permite o HTTP para os certificados TLS, que são os deste MVP
 
 **Impacto.** Um operador com a CRL só num diretório LDAP não serve a este código: o certificado com o ponto de distribuição `ldap://` é recusado. A conferência da CRL em cada ponta, a falha fechada e o resto do T7 não mudam.
 
-**Implementação.** A fazer no MVP-11, pela especificação `docs/free5gc-side/tls-sbi.md` (§5).
+**Implementação.** Fase (a) do MVP-11, em 04/11/2026, pela especificação `docs/free5gc-side/tls-sbi.md` (§5): o serviço `free5gc/crl/` e a conferência no pacote `sbitls`.
 
 **Como fechar.** Um leitor de CRL por LDAPv3 no pacote `sbitls`, com um diretório no ponto de distribuição.

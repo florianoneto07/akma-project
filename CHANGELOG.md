@@ -2,6 +2,19 @@
 
 ## [Não lançado]
 
+### MVP-11 — TLS mútuo nas SBI, fase (a) (04/11/2026)
+- **PKI:** `free5gc/scripts/make-sba-certs.sh` e `free5gc/config/sba-entities.conf`: a CA do operador, um certificado por NF no perfil de TS 33.310 §6.1.3c.3, os certificados de teste e a conferência dos perfis.
+- **CRL:** `free5gc/crl/`, um serviço HTTP só de leitura, com `run.sh -crl` (*patch* `run/0003`). A CRL é conferida nas duas pontas, com falha fechada (DV-18).
+- **`openapi`:** *patch* `0005`, com o pacote `sbitls`: o perfil TLS, a CA, a CRL e a identidade do certificado. O cliente passa a conferir o servidor e a apresentar o certificado da NF (F21). `GetNFServiceUri` usa o nome (F24).
+- **`util`:** *patch* `0001`, sem o registro dos segredos do TLS (F22).
+- **NFs:** um *patch* `*-sbi-tls` por NF, com `sbi.fqdn` e `sbi.tls.ca`; `config/0004` põe o laboratório em `https`, pelos nomes. O modo por IP continua opcional (DV-17).
+- **NEF:** a CA de cada grupo de rotas: a do operador na SBI e a do CCF no CAPIF-2e.
+- **AAnF e `seed`:** TLS mútuo; `seed --cert`, `--key`, `--ca` e `seed token`.
+- **AF:** `sbiTls` e `aefCa`; o AF de fora é só *invoker* do CAPIF, e o `afcfg-external.yaml` e o túnel SSH saíram.
+- **Roteiro:** passo R1s e grupo S, com `af/scripts/negative/sbi_tls.py`; o grupo do NEF no modo CAPIF; o E07 com o AF_ID `af5`. O `tamper` dos testes do CAPIF trocava um caractere que só tem enchimento, e o CP08 falhava em uma de cada quatro credenciais.
+- **Execução de 04/11/2026:** 288 verificações, nenhuma falha, nenhuma pulada; D03, O04 e O05 voltaram.
+- **Documentos:** `tls-sbi.md` §15, `nef.md`, `aanf.md`, `capif.md`, `nrf.md`, `openapi.md`, `af.md`, `e2e.md`, o tutorial (parte 12 e os comandos das outras partes), F21 a F25 de `correcoes-free5gc.md`, DV-1, DV-9, DV-17 e DV-18.
+
 ### MVP-12 — Renovação da K_AKMA pelo AAnF (28/10/2026)
 - **AAnF:** `akma.kakmaRefresh` (desligado por padrão). Ao entregar uma K_AF de uma K_AKMA mais velha que isso, o AAnF pede ao UDM, em segundo plano, uma nova autenticação primária (`Nudm_UECM_AuthTrigger`, TS 33.535 §6.4.4), uma vez por K_AKMA. Descobre o UDM no NRF e pede os *tokens* quando o OAuth2 está ligado. Cada contexto guarda quando a K_AKMA foi registrada.
 - **`openapi`:** *patch* `0003`, com `AuthTriggerInfo`, `ReauthNotificationInfo`, `reauthNotifyCallbackUri` nos registros do AMF, a operação `AuthTrigger` (POST, DV-12) e a notificação ao AMF.

@@ -1,6 +1,6 @@
 # Tutorial — AKMA sobre o free5GC
 
-Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde ao MVP-9 (CAPIF), que veio depois do MVP-12. O MVP-5 foi o primeiro MVP funcional. Em 19/10/2026 ele foi seguido do início numa VM com o free5GC v4.2.3 recém-instalado, e o roteiro da parte 8 terminou com 63 verificações e nenhuma falha (critério 4 do MVP-5).
+Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde à fase (a) do MVP-11 (TLS mútuo nas SBI), que veio depois do MVP-9 (CAPIF). O MVP-5 foi o primeiro MVP funcional. Em 19/10/2026 ele foi seguido do início numa VM com o free5GC v4.2.3 recém-instalado, e o roteiro da parte 8 terminou com 63 verificações e nenhuma falha (critério 4 do MVP-5).
 
 | Parte | Conteúdo | Disponível |
 |---|---|---|
@@ -15,6 +15,9 @@ Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia of
 | 9 | AF fora da rede do operador, acesso anônimo e UERANSIM em outra máquina | sim |
 | 10 | Renovar a K_AKMA: o AAnF pede uma nova autenticação | sim |
 | 11 | CAPIF: o AF obtém o *token* do CCF | sim |
+| 12 | TLS mútuo nas SBI | sim |
+
+**Ordem.** As configurações do repositório já usam TLS e nomes. Numa instalação nova, faça as seções 12.1 a 12.4 logo depois da parte 2, e só então a parte 3.
 
 ---
 
@@ -35,7 +38,8 @@ Os comandos usam os endereços do laboratório: **192.168.16.130** para a máqui
 - no `aanfcfg.yaml` (seção 3.2);
 - no `--aanf` do `seed` (seção 3.6);
 - no `afcfg.yaml` (seção 6.2);
-- no argumento do `e2e.sh` (seção 8.2).
+- no argumento do `e2e.sh` (seção 8.2);
+- em `free5gc/config/sba-entities.conf` (seção 12.1).
 
 Se o Go não estiver instalado, instale-o num diretório de usuário, sem privilégios:
 
@@ -143,7 +147,7 @@ cd free5gc/aanf && go test ./...
 O `deploy.sh` (seção 3.4) instala o `free5gc/config/aanfcfg.yaml` do repositório quando a máquina do free5GC ainda não tem um, e depois não o sobrescreve. Ajuste esse arquivo antes do *deploy*, ou ajuste depois a cópia instalada, `~/free5gc/config/aanfcfg.yaml`, na máquina do free5GC. O arquivo do repositório tem os endereços do laboratório. Os campos:
 
 - `sbi.registerIPv4` e `sbi.bindingIPv4`: um endereço da máquina do free5GC que a máquina do AF alcance. Não use um *loopback* `127.0.0.x`, a menos que o AF rode na mesma máquina. Porta 8010: a 8000 é a das NFs do free5GC, e o NEF passa a usá-la no endereço da máquina (parte 9).
-- `nrfUri` e `nrfCertPem`: os mesmos das outras NFs (`http://127.0.0.10:8000`, `cert/nrf.pem`).
+- `nrfUri` e `nrfCertPem`: os mesmos das outras NFs (`https://nrf.5gc.mnc093.mcc208.3gppnetwork.org:8000`, `cert/nrf.pem`).
 - `plmnSupportList`: a PLMN da sua rede.
 - `routingIndicators`: os RIDs dos assinantes, **entre aspas** (`"0000"`). Com a lista vazia, o AAnF atende qualquer RID.
 - `akma.authorizedAfs`: cada AF que pode pedir K_AF, com o AF_ID (`<FQDN>.<identificador Ua* em 10 hexadecimais>`) e o endereço de origem do AF.
@@ -169,7 +173,7 @@ O *script*:
 2. guarda o binário original em `bin/nrf.orig`;
 3. recompila com `make nrf`.
 
-`patch-nf.sh nrf revert` desfaz tudo. Depois de corrigir, confirme que o free5GC continua funcionando como antes: `./run.sh` e o registro do UE do teste de instalação.
+`patch-nf.sh nrf revert` desfaz tudo. Depois de corrigir, confirme que o free5GC continua funcionando como antes: `./run.sh -crl` e o registro do UE do teste de instalação.
 
 ### 3.4 Instalar e iniciar
 
@@ -202,7 +206,7 @@ mongosh --quiet free5gc --eval 'printjson(db.NfProfile.find({nfType: "AANF"}, {_
 O perfil deve ter `nfType: 'AANF'`, o serviço `naanf-akma` (versão `v1`) no endereço configurado e o `aanfInfoList` com os RIDs. Para conferir a descoberta, rode na máquina do free5GC o `seed`, que o `deploy.sh` deixou em `~/akma-tools/`, fora do `PATH`:
 
 ```bash
-~/akma-tools/seed discover --nrf http://127.0.0.10:8000 --routing-indicator 0000
+~/akma-tools/seed discover --nrf https://nrf.5gc.mnc093.mcc208.3gppnetwork.org:8000 --routing-indicator 0000
 ```
 
 O AAnF deve aparecer na lista. Com um RID que ele não atende, a resposta é `null`. É assim que o AUSF vai encontrá-lo na parte 4 (TS 33.535 §6.7).
@@ -211,12 +215,12 @@ O AAnF deve aparecer na lista. Com um RID que ele não atende, a resposta é `nu
 
 Os valores abaixo são do vetor `testbed-ue` (`shared/akma/testdata/vectors.json`). O `seed` precisa de um *token* OAuth2 para registrar, e o NRF só é alcançável na máquina do free5GC. Para obtê-lo, o `seed` se registra no NRF como um AF temporário e se descadastra ao sair.
 
-`[MVP]` O `--aanf` dá o endereço do AAnF, o `sbi.registerIPv4` da seção 3.2 com a porta 8010. Sem ele, o `seed` usa o do laboratório (`http://192.168.16.130:8010`).
+`[MVP]` O `--aanf` dá o URI do AAnF, o `sbi.fqdn` da seção 3.2 com a porta 8010. Sem ele, o `seed` usa o do laboratório (`https://aanf.5gc.mnc093.mcc208.3gppnetwork.org:8010`).
 
 Na máquina do free5GC, no papel do AUSF:
 
 ```bash
-~/akma-tools/seed register --nrf http://127.0.0.10:8000 --aanf http://192.168.16.130:8010 --supi imsi-208930000000001 --k-ausf 141ef548f86e3a2a1ad949331caa9e6bb12401afa321bde4f9f23b84870dd654 --rid 0000 --mcc 208 --mnc 93
+~/akma-tools/seed register --nrf https://nrf.5gc.mnc093.mcc208.3gppnetwork.org:8000 --aanf https://aanf.5gc.mnc093.mcc208.3gppnetwork.org:8010 --supi imsi-208930000000001 --k-ausf 141ef548f86e3a2a1ad949331caa9e6bb12401afa321bde4f9f23b84870dd654 --rid 0000 --mcc 208 --mnc 93
 ```
 
 A saída deve trazer o A-KID `rid0000.atidiz1FN8DkMGyxwtfTVYsKUsWnzOJdBOLlQEiQlK2gHNA=@5gc.mnc093.mcc208.3gppnetwork.org`.
@@ -224,7 +228,7 @@ A saída deve trazer o A-KID `rid0000.atidiz1FN8DkMGyxwtfTVYsKUsWnzOJdBOLlQEiQlK
 Na máquina do AF (o endereço dela precisa estar em `authorizedAfs`), no papel do AF, com o `seed` da seção 3.1:
 
 ```bash
-free5gc/build/bin/seed retrieve --aanf http://192.168.16.130:8010 --af-id af1.akma.example.FF00000001 --akid 'rid0000.atidiz1FN8DkMGyxwtfTVYsKUsWnzOJdBOLlQEiQlK2gHNA=@5gc.mnc093.mcc208.3gppnetwork.org'
+free5gc/build/bin/seed retrieve --cert af/build/sba/af1.pem --aanf https://aanf.5gc.mnc093.mcc208.3gppnetwork.org:8010 --af-id af1.akma.example.FF00000001 --akid 'rid0000.atidiz1FN8DkMGyxwtfTVYsKUsWnzOJdBOLlQEiQlK2gHNA=@5gc.mnc093.mcc208.3gppnetwork.org'
 ```
 
 A K_AF deve ser `00c16845c2e4e1256755b84bb06d94e2e659d8ba53c59e874fc149bffd5ea04b`, a mesma que o oráculo da parte 2 calcula. O `expiry` deve estar uma hora à frente, em UTC.
@@ -241,7 +245,7 @@ Respostas que indicam configuração errada:
 Por fim, para remover o contexto, na máquina do free5GC:
 
 ```bash
-~/akma-tools/seed remove --nrf http://127.0.0.10:8000 --aanf http://192.168.16.130:8010 --supi imsi-208930000000001
+~/akma-tools/seed remove --nrf https://nrf.5gc.mnc093.mcc208.3gppnetwork.org:8000 --aanf https://aanf.5gc.mnc093.mcc208.3gppnetwork.org:8010 --supi imsi-208930000000001
 ```
 
 ---
@@ -316,7 +320,7 @@ Três testes devem passar:
 - `TestAkma5GAKA` e `TestAkmaEAPAKAPrime`: o UE de teste deriva a K_AF da própria K_AUSF, e ela é igual à que o AAnF entrega;
 - `TestAkmaWithoutSubscription`: sem assinatura, nada é registrado.
 
-**Pelo UERANSIM.** Inicie o free5GC (`./run.sh`), o AAnF (`~/akma-free5gc/free5gc/scripts/run-aanf.sh start`), o gNB e o UE. No log do free5GC deve aparecer `AKMA key material of imsi-208930000000001 registered at the AAnF`. O log do AAnF (`~/free5gc/log/aanf/aanf.log`) mostra o A-KID guardado, da forma `rid0000.atid<44 caracteres>@5gc.mnc093.mcc208.3gppnetwork.org`. A parte 5 põe tudo isso numa tela só.
+**Pelo UERANSIM.** Inicie o free5GC (`./run.sh -crl`), o AAnF (`~/akma-free5gc/free5gc/scripts/run-aanf.sh start`), o gNB e o UE. No log do free5GC deve aparecer `AKMA key material of imsi-208930000000001 registered at the AAnF`. O log do AAnF (`~/free5gc/log/aanf/aanf.log`) mostra o A-KID guardado, da forma `rid0000.atid<44 caracteres>@5gc.mnc093.mcc208.3gppnetwork.org`. A parte 5 põe tudo isso numa tela só.
 
 Se o UE do UERANSIM ficar em `MM-DEREGISTERED/LIMITED-SERVICE` logo depois de iniciar, reinicie o UE. É uma corrida da seleção de célula do UERANSIM ("no SI"), sem relação com o AKMA.
 
@@ -350,7 +354,7 @@ Se o AAnF estiver rodando pelo `run-aanf.sh`, pare-o: os dois usariam a mesma po
 Daqui em diante, inicie o free5GC assim:
 
 ```bash
-cd ~/free5gc && ./run.sh -aanf
+cd ~/free5gc && ./run.sh -crl -aanf
 ```
 
 O AAnF aparece na mesma tela, com uma linha de partida que mostra o que ele atende:
@@ -404,7 +408,7 @@ Na tela do `run.sh`, as linhas com `[AKMA]`, nesta ordem:
 1. `[UDM][AKMA] AKMA indication sent to the AUSF for imsi-…, Routing Indicator 0000`;
 2. `[AUSF][AKMA] AKMA indication received from the UDM …`;
 3. `[AUSF][AKMA] K_AKMA and A-KID derived for imsi-…: A-KID …`;
-4. `[AUSF][AKMA] AAnF for Routing Indicator 0000: http://… (discovered at the NRF)`;
+4. `[AUSF][AKMA] AAnF for Routing Indicator 0000: https://… (discovered at the NRF)`;
 5. `[AANF][AKMA] AKMA context of imsi-… registered, A-KID …`;
 6. `[AUSF][AKMA] AKMA key material of imsi-… registered at the AAnF`.
 
@@ -686,6 +690,7 @@ A máquina do AF precisa de acesso SSH por chave à do free5GC (seção 1.1), do
 
 - o repositório em `~/akma-free5gc`;
 - os *patches* aplicados, o AAnF implantado e o `seed` em `~/akma-tools/`;
+- os nomes, os certificados e o serviço da CRL da parte 12;
 - o UERANSIM com os *patches* e o `linkIp: 10.100.0.1`;
 - o `uaclient` compilado com o wolfSSL em `~/akma-free5gc/af/build/bin/` (seção 7.3).
 
@@ -699,7 +704,7 @@ Na máquina do AF, com o usuário e o endereço da máquina do free5GC:
 af/scripts/e2e.sh woca@192.168.16.130
 ```
 
-Sem o argumento, o roteiro usa a máquina do free5GC do laboratório, `woca@192.168.16.130`. O endereço do AAnF vem do `aanfUri` de `af/config/afcfg.yaml`. Antes de começar, o roteiro confere que é o `sbi.bindingIPv4` do `aanfcfg.yaml` instalado na máquina do free5GC.
+Sem o argumento, o roteiro usa a máquina do free5GC do laboratório, `woca@192.168.16.130`. O endereço do AAnF vem do `aanfUri` de `af/config/afcfg.yaml`. Antes de começar, o roteiro confere que é o `sbi.fqdn` do `aanfcfg.yaml` instalado na máquina do free5GC e copia os certificados da máquina do AF para `af/build/sba/`.
 
 O roteiro pede a senha de `sudo` da máquina do free5GC uma vez e leva cerca de quatro minutos. Ele:
 
@@ -770,27 +775,11 @@ A configuração do NEF muda pelo *patch* de configuração da parte 4 (`free5gc
 
 O AAnF precisa aceitar os pedidos que chegam pelo NEF. No `~/free5gc/config/aanfcfg.yaml`, a lista `akma.authorizedNefs` dá o endereço do NEF e os AF_ID externos aceitos dele (`docs/free5gc-side/aanf.md` §2). O AAnF escuta na porta 8010.
 
-Suba o free5GC com `./run.sh -aanf`. Na tela do NEF deve aparecer `Start SBI server (listen on 192.168.16.130:8000)`; na do AAnF, `AF_IDs accepted from a NEF: [af1.akma.example.0100000007 af1.akma.example.0100011301 …]`.
+Suba o free5GC com `./run.sh -crl -aanf`. Na tela do NEF deve aparecer `Start SBI server (listen on 192.168.16.130:8000)`; na do AAnF, `AF_IDs accepted from a NEF: [af1.akma.example.0100000007 af1.akma.example.0100011301 …]`.
 
 ### 9.2 Rodar o AF fora da rede do operador
 
-O AF externo se registra no NRF para obter o *token* da API do NEF. No laboratório o NRF escuta num endereço de *loopback* da máquina do free5GC, e o AF o alcança por um túnel SSH (`nef.md` §2.1). Na máquina do AF, deixe o túnel aberto num terminal:
-
-```bash
-ssh -N -L 127.0.0.10:8000:127.0.0.10:8000 woca@192.168.16.130
-```
-
-A configuração do AF externo está em `af/config/afcfg-external.yaml`. Ela tem `nefUri` no lugar de `aanfUri`, além de `nrfUri`, e os mesmos perfis do AF interno, nas portas TCP 8453 a 8455 e UDP 5693 a 5695. Em outro terminal:
-
-```bash
-af/build/bin/af -c af/config/afcfg-external.yaml
-```
-
-Na tela do AF:
-
-```
-[INFO][AF][Main] AF outside the operator network: K_AF through the NEF at http://192.168.16.130:8000; registered at the NRF http://127.0.0.10:8000 as AF … (OAuth2 true)
-```
+Desde o MVP-11, o AF de fora da rede é *API invoker* do CAPIF: obtém o *token* do CCF e fala com o NEF por TLS mútuo. Os passos estão na parte 11, e a configuração é `af/config/afcfg-capif.yaml`, com os mesmos perfis do AF interno, nas portas TCP 8453 a 8455 e UDP 5693 a 5695. O túnel até o NRF e o `afcfg-external.yaml`, do MVP-6, saíram do laboratório.
 
 Com o UE no ar (parte 7), autentique o UE no AF externo:
 
@@ -808,7 +797,7 @@ A saída do cliente é a mesma da seção 7.3. Na tela do free5GC aparecem as li
 
 As linhas do NEF não mostram o SUPI. A resposta do NEF ao AF também não o traz (§6.3 passo 5).
 
-Ao encerrar o AF com Ctrl-C, ele se descadastra do NRF.
+Com `offboardOnExit: true`, ao encerrar com Ctrl-C o AF sai do CCF.
 
 ### 9.3 Acesso anônimo
 
@@ -821,7 +810,7 @@ Na tela do NEF, o pedido anônimo aparece como `K_AF request … , anonymous`. O
 Quem pede a remoção do contexto, pela norma, é o OAM (TS 29.535 §4.2.1.3.2 e tab. 4.2.2.1-1). No laboratório, o `seed` faz esse papel, na máquina do free5GC:
 
 ```bash
-~/akma-tools/seed remove --nrf http://127.0.0.10:8000 --aanf http://192.168.16.130:8010 --supi imsi-208930000000001
+~/akma-tools/seed remove --nrf https://nrf.5gc.mnc093.mcc208.3gppnetwork.org:8000 --aanf https://aanf.5gc.mnc093.mcc208.3gppnetwork.org:8010 --supi imsi-208930000000001
 ```
 
 A resposta é `removed`. Depois disso, o AF recebe `403 AKMA_KEY_NOT_AVAILABLE` até uma nova autenticação primária do UE (seção 7.4).
@@ -936,7 +925,7 @@ O `deploy.sh` não sobrescreve a configuração instalada. Acrescente ao bloco `
 
 ### 10.3 Ver a renovação
 
-Suba o free5GC com o AAnF (`./run.sh -aanf`, parte 5), o gNB e o UE no *namespace* (parte 7). Espere um minuto depois do registro do UE e faça um Ua\* com um AF_ID que o AF ainda não usou com esse A-KID. O AF guarda cada K_AF até ela vencer e, para um AF_ID já usado, não consultaria o AAnF:
+Suba o free5GC com o AAnF (`./run.sh -crl -aanf`, parte 5), o gNB e o UE no *namespace* (parte 7). Espere um minuto depois do registro do UE e faça um Ua\* com um AF_ID que o AF ainda não usou com esse A-KID. O AF guarda cada K_AF até ela vencer e, para um AF_ID já usado, não consultaria o AAnF:
 
 ```bash
 sudo ~/akma-free5gc/af/scripts/ue-netns.sh ua -profile psk-tls13 -n 1
@@ -946,7 +935,7 @@ O AF recebe a K_AF, e a tela do free5GC mostra a cadeia, na ordem em que aparece
 
 ```
 [INFO][AANF][AKMA] K_AKMA of imsi-208930000000001 registered 1m5s ago: refresh requested from the UDM (TS 33.535 cl. 6.4.4)
-[INFO][AANF][AKMA] UDM for Nudm_UECM_AuthTrigger: http://127.0.0.3:8000 (discovered at the NRF)
+[INFO][AANF][AKMA] UDM for Nudm_UECM_AuthTrigger: https://udm.5gc.mnc093.mcc208.3gppnetwork.org:8000 (discovered at the NRF)
 [INFO][AMF][AKMA] Re-authentication of imsi-208930000000001 requested by the UDM: started (ngKSI 1)
 [INFO][UDM][AKMA] AuthTrigger for imsi-208930000000001 from AANF at 127.0.0.1: re-authentication notified to the AMF …
 [INFO][AANF][AKMA] Refresh of K_AKMA of imsi-208930000000001 accepted by the UDM: new primary authentication requested
@@ -962,7 +951,7 @@ O UE mostra `AKMA key material derived, A-KID[…]` com o A-KID novo, igual ao d
 O `seed` manda o mesmo pedido que o AAnF, sem esperar a política. Na máquina do free5GC:
 
 ```bash
-~/akma-tools/seed trigger-auth --nrf http://127.0.0.10:8000 --supi imsi-208930000000001
+~/akma-tools/seed trigger-auth --nrf https://nrf.5gc.mnc093.mcc208.3gppnetwork.org:8000 --supi imsi-208930000000001
 ```
 
 A saída é `accepted (204)`. Um segundo pedido para o mesmo SUPI em menos de 60 s recebe `UDM answered 403 (REAUTHENTICATION_NOT_ALLOWED; …)`: é a política do UDM (TS 33.501 §6.1.5.2, NOTA A).
@@ -1028,7 +1017,7 @@ O `run.sh` ganha a opção `-ccf`, que põe o CCF logo antes do NEF.
 ### 11.3 Subir o free5GC e emitir a credencial
 
 ```bash
-./run.sh -aanf -ccf
+./run.sh -crl -aanf -ccf
 ```
 
 Na tela devem aparecer:
@@ -1057,7 +1046,7 @@ O AF entra no CCF, descobre o NEF, obtém o método `OAUTH` e pede o `check-auth
 
 ```
 [INFO][AF][CAPIF] Onboarded at the CCF as API invoker 6cdc32e3-…
-[INFO][AF][CAPIF] 3gpp-akma discovered at http://192.168.16.130:8000, AEF nef-aef
+[INFO][AF][CAPIF] 3gpp-akma discovered at https://nef.5gc.mnc093.mcc208.3gppnetwork.org:8000, AEF nef-aef
 [INFO][AF][CAPIF] Security method OAUTH at AEF nef-aef
 [INFO][AF][CAPIF] The NEF has the authentication data of API invoker 6cdc32e3-…
 ```
@@ -1074,9 +1063,152 @@ O `e2e.sh` (parte 8) faz tudo isso sozinho: sobe o CCF, emite a credencial, roda
 ### 11.5 Limitações
 
 - O CAPIF é parcial: só o caminho do AKMA (DV-14).
-- CAPIF-3/4 e CAPIF-2e ficam sem TLS até o MVP-11 (DV-1 e DV-9).
-- Os certificados não têm revogação, nem CRL nem OCSP, e o *token* não leva `x5t#S256` (DV-16).
+- CAPIF-3/4 fica sem TLS até a fase (c) do MVP-11 (DV-1). O CAPIF-2e tem TLS mútuo desde a parte 12.
+- Os certificados dos *invokers* não têm revogação, nem CRL nem OCSP, e o *token* não leva `x5t#S256` (DV-16).
 - O CCF guarda tudo na memória. Depois de reiniciá-lo, o NEF publica de novo, e o AF entra de novo quando o CCF não o conhece mais.
 - Um *token* já emitido vale até `exp` (10 min), mesmo depois da saída do *invoker*.
 
-Para desfazer: `./run.sh -aanf`, sem `-ccf`, deixa o CCF parado, e o AF volta à parte 9 com `af/config/afcfg-external.yaml`. Com `allowNrfTokens: true`, o NEF aceita os dois modos.
+Para desfazer: `./run.sh -crl -aanf`, sem `-ccf`, deixa o CCF parado. O AF de fora para de funcionar, porque precisa dele para o *token*.
+
+## 12. TLS mútuo nas SBI
+
+Até o MVP-9, as NFs falavam em HTTP/2 sem TLS. TS 33.501 §13.1.0 pede TLS mútuo na SBI, com os certificados de TS 33.310. Esta parte põe no laboratório uma CA do operador, um certificado por NF, com o nome e o NF Instance ID, os nomes da SBI no lugar dos endereços e a CRL. O AF de fora passa a falar com o NEF por TLS mútuo. A especificação é `docs/free5gc-side/tls-sbi.md`.
+
+Esta parte corresponde à fase (a) do MVP-11. Os *tokens* e as políticas ainda não usam a identidade do certificado, e o NEF ainda fala em `http` com o CCF: isso vem nas fases (b) e (c).
+
+**Ordem.** As configurações do repositório já usam TLS e nomes. Numa instalação nova, faça as seções 12.1 a 12.4 antes da parte 3, depois de instalar o free5GC. As partes 3 a 11 continuam valendo, com os URIs da seção 12.6.
+
+### 12.1 Os nomes
+
+Os nomes resolvem pelo `/etc/hosts`. Com o repositório em `~/akma-free5gc`, na máquina do free5GC, acrescente os treze nomes de `free5gc/config/sba-entities.conf`:
+
+```bash
+awk '$1 == "nf" || $1 == "ccf" { print $5, $4 }' ~/akma-free5gc/free5gc/config/sba-entities.conf | sudo tee -a /etc/hosts
+```
+
+Na máquina do AF, só os dois servidores que ela alcança:
+
+```bash
+awk '$1 == "nf" && ($2 == "aanf" || $2 == "nef") { print $5, $4 }' free5gc/config/sba-entities.conf | sudo tee -a /etc/hosts
+```
+
+Com outros endereços, troque-os em `sba-entities.conf` antes de gerar os certificados, junto com o da CRL.
+
+### 12.2 A PKI
+
+Na máquina do free5GC:
+
+```bash
+~/akma-free5gc/free5gc/scripts/make-sba-certs.sh ~/free5gc/cert/sba ~/akma-free5gc/free5gc/config/sba-entities.conf
+```
+
+O *script* faz a CA do operador, os certificados das NFs, os de teste e a CRL, em `cert/crl/sba-ca.crl`. A CRL vale uma semana. Para assinar de novo, passe `crl` como terceiro argumento; o `e2e.sh` faz isso a cada execução. Para conferir cada certificado contra o seu perfil, passe `check`:
+
+```bash
+~/akma-free5gc/free5gc/scripts/make-sba-certs.sh ~/free5gc/cert/sba ~/akma-free5gc/free5gc/config/sba-entities.conf check
+```
+
+A resposta é `every certificate fits its profile`. A chave da CA fica nessa máquina, sem senha: é uma PKI de teste.
+
+O NEF lê na partida as chaves do CCF. Faça-as já. A seção 9.1 repete o comando, que mantém o que existe:
+
+```bash
+~/akma-free5gc/free5gc/scripts/make-capif-certs.sh ~/free5gc/cert 192.168.16.130
+```
+
+### 12.3 O `openapi`, o `util` e as NFs
+
+Com o free5GC parado, na máquina do free5GC:
+
+```bash
+~/akma-free5gc/free5gc/scripts/prepare-openapi.sh
+```
+
+```bash
+~/akma-free5gc/free5gc/scripts/prepare-openapi.sh ~/akma-free5gc/free5gc/build/openapi-test v1.2.5-0.20260527003827-02dc71b4d94f
+```
+
+```bash
+~/akma-free5gc/free5gc/scripts/prepare-util.sh
+```
+
+O `openapi` ganha o pacote `sbitls`, usado por todas as NFs, pelo AAnF e pelo AF. O `util` deixa de gravar os segredos das sessões TLS em `log/<nf>sslkey.log` (F22).
+
+Se você seguiu as partes anteriores com uma versão antiga do repositório, antes de atualizá-lo guarde os *patches* aplicados, como na seção 11.2, e desfaça cada conjunto com essa cópia. O `config` precisa de um cuidado: o `patch-nf.sh` recusa arquivos com mudança local, e o `0004` toca o `amfcfg.yaml` e o `smfcfg.yaml`, onde a seção 9.5 mudou o N2 e o N3. Desfaça essas duas linhas antes do `apply` e refaça depois.
+
+Aplique os *patches*. Cada NF é recompilada, e o binário original fica em `bin/<nf>.orig`:
+
+```bash
+for t in nrf amf ausf udm nef smf udr pcf nssf chf bsf config run test; do ~/akma-free5gc/free5gc/scripts/patch-nf.sh $t apply; done
+```
+
+As configurações passam a `https`, com `sbi.fqdn`, `sbi.tls.ca` e o `nrfUri` pelo nome. Cada NF tem um `nfInstanceId` fixo, o do certificado, e o `amfName` passa a ser o FQDN do AMF.
+
+### 12.4 O serviço da CRL
+
+Cada ponta do TLS baixa a CRL do endereço que está no certificado, `http://192.168.16.130:8030/sba-ca.crl`. Sem a CRL, a conexão é recusada. Na máquina do AF:
+
+```bash
+free5gc/scripts/build-crl.sh
+```
+
+O `deploy.sh` da seção 3.4 leva `bin/crl` e `config/crlcfg.yaml`. O `run.sh` ganha a opção `-crl`, que põe o serviço antes de todas as NFs. Daqui em diante, inicie o free5GC assim:
+
+```bash
+cd ~/free5gc && ./run.sh -crl -aanf -ccf
+```
+
+### 12.5 O AAnF, o `seed` e o AF
+
+O `aanfcfg.yaml` e os `afcfg*.yaml` do repositório já estão em TLS. Se o AAnF já estava instalado, recompile-o e implante de novo, com `--force-config`, que mostra as diferenças antes de trocar:
+
+```bash
+free5gc/scripts/build-aanf.sh
+```
+
+```bash
+free5gc/scripts/deploy.sh woca@192.168.16.130 --force-config
+```
+
+Se o CCF já estava instalado, atualize a configuração dele, que ganhou o AF_ID de teste `af5` (`tls-sbi.md` §15.3). Na máquina do free5GC:
+
+```bash
+cp ~/akma-free5gc/free5gc/config/ccfcfg.yaml ~/free5gc/config/
+```
+
+O AF precisa do certificado dele e da CA do operador em `af/build/sba/`. A chave da CA não sai da máquina do free5GC. Na máquina do AF:
+
+```bash
+mkdir -p af/build/sba && scp woca@192.168.16.130:free5gc/cert/sba/sba-ca.pem woca@192.168.16.130:free5gc/cert/sba/af1.pem woca@192.168.16.130:free5gc/cert/sba/af1.key af/build/sba/
+```
+
+### 12.6 Os URIs
+
+Os comandos das partes anteriores usam os nomes:
+
+| Onde | URI |
+|---|---|
+| NRF, no `--nrf` do `seed` | `https://nrf.5gc.mnc093.mcc208.3gppnetwork.org:8000` |
+| AAnF, no `--aanf` do `seed` e no `aanfUri` do AF | `https://aanf.5gc.mnc093.mcc208.3gppnetwork.org:8010` |
+| NEF, descoberto no CCF | `https://nef.5gc.mnc093.mcc208.3gppnetwork.org:8000` |
+
+Na máquina do free5GC, o `seed` usa o certificado do papel de cada comando, em `~/free5gc/cert/sba`. Na máquina do AF, passe `--cert af/build/sba/af1.pem` no `retrieve`.
+
+### 12.7 Conferir
+
+Suba o free5GC como na seção 12.4. Na tela devem aparecer:
+
+- do serviço da CRL, `Start CRL service (http, listen on 192.168.16.130:8030)`;
+- das NFs, os URIs com os nomes, como `AAnF for Routing Indicator 0000: https://aanf.5gc.mnc093.mcc208.3gppnetwork.org:8010 (discovered at the NRF)`.
+
+Um cliente com um certificado revogado é recusado no *handshake*, e o servidor registra o motivo. Nenhuma NF grava mais `log/<nf>sslkey.log`.
+
+O `e2e.sh` (parte 8) confere tudo isso. O passo R1s testa cada porta da SBI, sem o código Go do projeto, e o `seed` contra um `openssl s_server` (`docs/af-side/e2e.md` §4.3).
+
+### 12.8 Limitações
+
+- Os *tokens* do NRF continuam em `RS512`, sem o vínculo com o certificado de quem os pede. Isso muda na fase (b).
+- O AAnF continua autorizando pelo endereço de origem até a fase (b).
+- O NEF fala em `http` com o CCF, e os certificados dos *invokers* não têm CRL, até a fase (c).
+- A *webconsole* do free5GC não fala com o NRF em TLS mútuo. O laboratório não a usa: a assinatura sai do `mongosh`.
+- O BSF tem o *patch* e o certificado, mas o `run.sh` só o sobe com `-bsf`, que o laboratório não usa.

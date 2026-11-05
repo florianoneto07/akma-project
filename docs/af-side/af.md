@@ -38,7 +38,7 @@ Nos perfis PSK:
 - **Expiração:** encerra a sessão TLS (`close_notify`) quando a K_AF vence. O *handshake* seguinte segue a política: `refetch` pede a K_AF de novo; `reject` recusa.
 - **Retomada:** por *tickets*, válidos até a expiração da K_AF e no máximo 24 horas (TS 33.222 §5.4.1.4). No K.2, os *tickets* valem 24 horas (§5.3.1.5).
 
-`[MVP]` O AF roda na VM do AF (192.168.16.129, ADR-0001-R2). O AAnF o autoriza pelo endereço de origem e pelo AF_ID (DV-1).
+`[MVP]` O AF roda na VM do AF (192.168.16.129, ADR-0001-R2). Desde o MVP-11, fala com o AAnF por TLS mútuo. O AAnF ainda o autoriza pelo endereço de origem e pelo AF_ID, até a fase (b) (DV-1).
 
 ## 2. Arquivos
 
@@ -75,13 +75,15 @@ Os campos e os padrões estão em `ua-star.md` §11; os perfis, em `ua-star-norm
 | `profiles` | `digest-tls` em `192.168.16.129:8443`, com `certificate` e `key` de `make-test-ca.sh`; `psk-tls13` em `:8444`; `psk-tls12` em `:8445`; `psk-dtls13` em UDP `:5684`; `psk-dtls12` em UDP `:5685`; `oscore` em UDP `:5683`. O `digest-http` em `:8080` fica comentado: o `e2e.sh` o acrescenta |
 | `uaStarId` | `FF00000001`, só do `digest-http` |
 | `kafExpiry` | `refetch` |
-| `aanfUri` | `http://192.168.16.130:8010` |
+| `aanfUri` | `https://aanf.5gc.mnc093.mcc208.3gppnetwork.org:8010`; o nome está no `/etc/hosts` desta máquina |
+| `nfInstanceId` | o do certificado `af1`, `2170454b-4cfa-406a-a77c-2137042b54b4` |
+| `sbiTls` | MVP-11: `certificate`, `key` e `ca`, os arquivos `af1.pem`, `af1.key` e `sba-ca.pem` de `make-sba-certs.sh`, copiados para `af/build/sba/` (TS 33.501 §13.1.0; `docs/free5gc-side/tls-sbi.md` §6.7) |
 
 Sem `profiles`, o `listen` de antes vale como um perfil `digest-http`. Com `profiles`, `listen` não pode aparecer.
 
 Cada AF_ID dos perfis precisa estar em `akma.authorizedAfs` do `aanfcfg.yaml`, com o endereço do AF (`docs/free5gc-side/aanf.md` §2): `af1.akma.example.` mais `0100011301`, `0100011302`, `0100011303`, `010001C02B` e `010001C02C` (K.2 com certificado ECDSA), `0100000007`, `010001D001`, `0100000009`, `0100000008` e `FF00000001`. O mesmo vale para a política do NEF e para a do UE.
 
-**AF fora da rede do operador (MVP-6).** Com `nefUri` no lugar de `aanfUri`, o AF pede a K_AF ao NEF (`POST {nefUri}/3gpp-akma/v1/retrieve`, TS 29.522 §4.4.23.2; TS 33.535 §6.3). Especificação: `docs/free5gc-side/nef.md`.
+**AF fora da rede do operador (MVP-6).** Desde o MVP-11, o laboratório usa o modo CAPIF abaixo. O modo do NRF continua no código e nos testes Go, sem configuração de exemplo. Com `nefUri` no lugar de `aanfUri`, o AF pede a K_AF ao NEF (`POST {nefUri}/3gpp-akma/v1/retrieve`, TS 29.522 §4.4.23.2; TS 33.535 §6.3). Especificação: `docs/free5gc-side/nef.md`.
 
 | Campo | Uso |
 |---|---|
@@ -100,7 +102,8 @@ No modo externo, o AF se registra no NRF na partida e se descadastra ao encerrar
 | `ccfCa`, `credential` | a informação de entrada (TS 33.122 §6.1 passo 1): a CA do CCF e a credencial de entrada, feitas na máquina do free5GC e copiadas para `af/build/capif/` |
 | `state` | arquivo `0600` que o AF escreve: identificador do *invoker*, certificado, chave privada e segredo de entrada |
 | `notificationDestination` | obrigatório no CCF; o AF não o serve, porque o CCF não manda notificações |
-| `apiScheme` | esquema do `apiRoot` descoberto, `http` enquanto o NEF não tem TLS; `https` quando ausente |
+| `apiScheme` | esquema do `apiRoot` descoberto; `https` quando ausente |
+| `aefCa` | MVP-11: a CA do certificado do NEF, `sba-ca.pem`, obrigatória com `https` (TS 33.122 §6.5.2.3). No CAPIF-2e, o AF apresenta o certificado que o CCF emitiu na entrada |
 | `offboardOnExit` | `true` faz o AF sair do CCF ao encerrar e apagar o estado |
 
 Na partida, o AF entra no CCF (ou usa o estado), descobre `3gpp-akma`, obtém o método `OAUTH` e pede o `check-authentication` ao NEF; só então serve o Ua\*. O *token* é pedido no primeiro pedido de K_AF, fica só na memória e é renovado 30 s antes do fim. Quando o NEF recusa o *token*, o AF pede outro e repete o pedido uma vez (TS 33.122 C.4.1).

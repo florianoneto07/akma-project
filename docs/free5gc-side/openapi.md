@@ -1,6 +1,6 @@
 # `free5gc/openapi`: modelos e clientes do Naanf_AKMA e do CAPIF
 
-**MVP:** MVP-1; *patch* 0003 no MVP-12; *patch* 0004 no MVP-9 · **Decisão:** D6 do plano; ponto C4 do MVP-9 · **Data:** 17 de outubro de 2026; 0003 em 28 de outubro de 2026; 0004 em 29 de outubro de 2026
+**MVP:** MVP-1; *patch* 0003 no MVP-12; *patch* 0004 no MVP-9; *patch* 0005 no MVP-11 · **Decisão:** D6 do plano; ponto C4 do MVP-9 · **Data:** 17 de outubro de 2026; 0003 em 28 de outubro de 2026; 0004 em 29 de outubro de 2026; 0005 em 4 de novembro de 2026
 
 ## 1. O que falta no `openapi` do free5GC
 
@@ -12,7 +12,7 @@
 
 ## 2. Arquivos
 
-Os *patches* 0001, 0002 e 0004 só acrescentam arquivos. O 0003 (MVP-12) também altera três arquivos existentes: os dois modelos de registro do AMF e o `client.go` do `Nudm_UEContextManagement`.
+Os *patches* 0001, 0002 e 0004 só acrescentam arquivos. O 0003 (MVP-12) também altera três arquivos existentes: os dois modelos de registro do AMF e o `client.go` do `Nudm_UEContextManagement`. O 0005 (MVP-11) altera `client.go`, `util.go` e `udr/ImsDataRepository/client.go`.
 
 | *Patch* (repositório) | Arquivos acrescentados ao `openapi` | Conteúdo |
 |---|---|---|
@@ -20,6 +20,7 @@ Os *patches* 0001, 0002 e 0004 só acrescentam arquivos. O 0003 (MVP-12) também
 | `free5gc/patches/openapi/0002-naanf-akma-client.patch` | `aanf/AKMA/{client,configuration,api_common}.go` e um arquivo por operação | cliente das três operações, no estilo dos clientes gerados do free5GC |
 | `free5gc/patches/openapi/0003-home-network-triggered-authentication.patch` | `models/model_auth_trigger_info.go`, `model_reauth_notification_info.go`; `udm/UEContextManagement/api_trigger_the_primary_re_authentication.go`, `api_amf_registration_reauth_notification.go`. Altera `models/model_amf3_gpp_access_registration.go`, `model_amf_non3_gpp_access_registration.go` e `udm/UEContextManagement/client.go` | a autenticação primária pedida pela rede doméstica (MVP-12, correção F16): `AuthTriggerInfo`, `ReauthNotificationInfo`, o atributo `reauthNotifyCallbackUri` nos dois registros do AMF, a operação `AuthTrigger` e a notificação `Call3GppRegistrationReauthNotificationPost` |
 | `free5gc/patches/openapi/0004-capif-models-and-clients.patch` | 24 modelos `models/model_capif_*.go`; `capif/{APIInvokerManagement,DiscoverService,PublishService,Security,AEFSecurity}/`, cada um com `{client,configuration,api_common}.go` e as operações | o CAPIF do MVP-9 (correção F13; `capif.md`, ponto C4): os modelos e os clientes das operações que o CCF, o NEF e o AF usam |
+| `free5gc/patches/openapi/0005-sbi-tls.patch` | `sbitls/{sbitls,identity,crl}.go` e testes; `oauth/peer.go`. Altera `client.go`, `util.go` (`GetNFServiceUri`) e `udr/ImsDataRepository/client.go` | o TLS mútuo da SBI do MVP-11 (correções F21 e F24; `tls-sbi.md` §6.2 e §3.3): o perfil TLS, a conferência do certificado, a CRL e o URI pelo nome |
 
 **0003.** `[3GPP]` TS 29.503 §6.2.6.2.35 e §6.2.6.2.36 (tipos), §6.2.6.2.2 e §6.2.6.2.3 (atributo), §6.2.3.13 (`trigger-auth`) e §6.2.5.6 (notificação); `TS29503_Nudm_UECM.yaml` v1.4.2. O campo novo vai no fim de cada modelo de registro, para o *patch* não mexer no alinhamento dos outros. `AuthTrigger` usa POST, como a tabela 6.2.3.13.4.1-1, e não o `get` do YAML (DV-12, defeito D-B). A notificação devolve `Pending` para o `202` do AMF. As duas operações tratam os códigos de erro do YAML e o 307/308 como os clientes do 0002.
 

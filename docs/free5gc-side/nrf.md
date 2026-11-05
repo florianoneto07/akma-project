@@ -20,6 +20,7 @@ Cada correção é um *patch* separado, com seu teste, para poder ir ao free5GC 
 | | `internal/sbi/processor/nf_discovery_aanf_test.go` (novo) | testes da validação e do filtro |
 | `free5gc/patches/nrf/0003-access-token-audience.patch` | `internal/sbi/processor/access_token.go` | `aud` do token = `targetNfInstanceId` do pedido, ou o `targetNfType` quando o consumidor não pede instância |
 | | `internal/sbi/processor/access_token_aud_test.go` (novo) | teste dos dois casos |
+| `free5gc/patches/nrf/0004-sbi-tls.patch` | `pkg/factory/`, `pkg/service/`, `internal/sbi/` | MVP-11, fase (a): `sbi.tls` com o certificado da SBI, separado do `sbi.cert` que ainda assina os *tokens* em `RS512`; o `sbitls` no servidor e no cliente (`tls-sbi.md` §6.5) |
 
 ## 3. O que cada correção faz e por quê
 
@@ -86,7 +87,7 @@ cd ~/free5gc/NFs/nrf && go test ./internal/context/ ./internal/sbi/processor/
 3. Descoberta com a ferramenta do projeto, na máquina do free5GC:
 
 ```bash
-~/akma-tools/seed discover --nrf http://127.0.0.10:8000 --routing-indicator 0000
+~/akma-tools/seed discover --nrf https://nrf.5gc.mnc093.mcc208.3gppnetwork.org:8000 --routing-indicator 0000
 ```
 
 Deve listar o AAnF. Com `--routing-indicator 0001` ou `000`, a lista vem vazia (`null`).

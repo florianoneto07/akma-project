@@ -15,7 +15,7 @@
 | `free5gc/aanf/pkg/service/init.go` | ciclo de vida: contexto, servidor SBI, registro e cancelamento no NRF |
 | `free5gc/aanf/internal/context/context.go` | contexto da NF, verificação de token, política de AFs |
 | `free5gc/aanf/internal/context/akma_context.go` | armazenamento dos contextos AKMA |
-| `free5gc/aanf/internal/sbi/{server,api_akma}.go` | servidor h2c, rotas, erros de protocolo |
+| `free5gc/aanf/internal/sbi/{server,api_akma}.go` | servidor HTTP/2, com TLS mútuo desde o MVP-11 (`tls-sbi.md` §6.6) e h2c com `scheme: http`; rotas, erros de protocolo |
 | `free5gc/aanf/internal/sbi/processor/` | as três operações |
 | `free5gc/aanf/internal/sbi/consumer/` | Nnrf_NFManagement; desde o MVP-12, a descoberta do UDM (Nnrf_NFDiscovery) e o `Nudm_UECM_AuthTrigger` (seção 11) |
 | `free5gc/aanf/internal/util/problem.go` | `ProblemDetails` |
@@ -38,7 +38,9 @@ Além dos campos comuns às NFs do free5GC (`sbi`, `serviceNameList`, `nrfUri`, 
 
 | Campo | Exemplo | Regra | Marcação |
 |---|---|---|---|
-| `nfInstanceId` | UUID v4 fixo | opcional; sem ele, gerado a cada partida | `[MVP]` fixo para não acumular certificados no NRF |
+| `nfInstanceId` | UUID v4 fixo | opcional; sem ele, gerado a cada partida. No TLS mútuo, é o do certificado | `[MVP]` fixo para não acumular certificados no NRF; `[3GPP]` TS 33.310 §6.1.3c.3 |
+| `sbi.fqdn` | `aanf.5gc.mnc093.mcc208.3gppnetwork.org` | MVP-11: modo por nome; sem ela, por IP | `[3GPP]` TS 29.510 §6.1.6.2.2 NOTA 1; DV-17 |
+| `sbi.tls.pem`, `key`, `ca` | `cert/sba/aanf.pem`, `aanf.key`, `sba-ca.pem` | MVP-11: obrigatórios com `scheme: https`; `tls-sbi.md` §4 | `[3GPP]` TS 33.501 §13.1.0 |
 | `serviceNameList` | `[naanf-akma]` | só esse valor é aceito | `[3GPP]` TS 29.535 §5.1.1 |
 | `routingIndicators` | `["0000"]` | cadeias de 1 a 4 dígitos; vazio = atende qualquer RID. Mesmo sem aspas, `0000` é lido como `"0000"` (teste `TestRoutingIndicatorLeadingZerosKept`) | `[3GPP]` TS 29.510 `AanfInfo`; TS 23.003 §2.2B |
 | `akma.kafLifetime` | `1h` | duração Go positiva; padrão `1h` | `[3GPP]` política do operador (TS 33.535 §5.2); `[MVP]` o valor |
@@ -169,12 +171,12 @@ O mesmo *script* aceita `stop`, `status` e `foreground`; na própria máquina do
 
 Registro no NRF: `registro-nrf.md` §7. Fluxo das três operações com a ferramenta `seed` e o vetor `testbed-ue` (`shared/akma/testdata/vectors.json`):
 
-`[MVP]` O `seed` fala com o AAnF no endereço de `--aanf`, cujo padrão é o do laboratório (`http://192.168.16.130:8010`). Em outra máquina, passe `--aanf http://<sbi.registerIPv4>:8010` em `register`, `retrieve` e `remove`; sem isso, a resposta é `connection refused` ou, pior, vem de outro AAnF.
+`[MVP]` O `seed` fala com o AAnF no endereço de `--aanf`, cujo padrão é o do laboratório (`https://aanf.5gc.mnc093.mcc208.3gppnetwork.org:8010`). Em outra máquina, passe `--aanf` em `register`, `retrieve` e `remove`; sem isso, a resposta é `connection refused` ou, pior, vem de outro AAnF. Desde o MVP-11, o `seed` é um cliente TLS da SBI: usa o certificado do papel do comando, em `~/free5gc/cert/sba`, ou o de `--cert` (`tls-sbi.md` §6.7).
 
 1. Na máquina do free5GC, no papel do AUSF, com token obtido do NRF:
 
 ```bash
-~/akma-tools/seed register --nrf http://127.0.0.10:8000 --supi imsi-208930000000001 --k-ausf 141ef548f86e3a2a1ad949331caa9e6bb12401afa321bde4f9f23b84870dd654 --rid 0000 --mcc 208 --mnc 93
+~/akma-tools/seed register --nrf https://nrf.5gc.mnc093.mcc208.3gppnetwork.org:8000 --supi imsi-208930000000001 --k-ausf 141ef548f86e3a2a1ad949331caa9e6bb12401afa321bde4f9f23b84870dd654 --rid 0000 --mcc 208 --mnc 93
 ```
 
 A saída deve mostrar `a-kid: rid0000.atidiz1FN8DkMGyxwtfTVYsKUsWnzOJdBOLlQEiQlK2gHNA=@5gc.mnc093.mcc208.3gppnetwork.org`.
@@ -187,7 +189,7 @@ free5gc/build/bin/seed retrieve --af-id af1.akma.example.FF00000001 --akid 'rid0
 
 A saída deve mostrar `kaf: 00c16845c2e4e1256755b84bb06d94e2e659d8ba53c59e874fc149bffd5ea04b`, que é a K_AF do vetor, com `expiry` uma hora à frente, em UTC, e o `supi`.
 
-3. Na máquina do free5GC: `~/akma-tools/seed remove --nrf http://127.0.0.10:8000 --supi imsi-208930000000001` responde `removed`. Repetido, responde `404 (AKMA_CONTEXT_NOT_FOUND)`. O passo 2 passa a responder `403 (K_AKMA_NOT_PRESENT)`.
+3. Na máquina do free5GC: `~/akma-tools/seed remove --nrf https://nrf.5gc.mnc093.mcc208.3gppnetwork.org:8000 --supi imsi-208930000000001` responde `removed`. Repetido, responde `404 (AKMA_CONTEXT_NOT_FOUND)`. O passo 2 passa a responder `403 (K_AKMA_NOT_PRESENT)`.
 
 Resultado em 17/10/2026, todos conforme o esperado:
 
@@ -206,7 +208,7 @@ Os erros de protocolo (411, 413, 415, 501…) não foram repetidos pela rede: a 
 
 ## 10. Limitações
 
-- Sem TLS (DV-1); sem subscrição de *roaming* (DV-2).
+- TLS mútuo desde o MVP-11, fase (a); a política continua por endereço até a fase (b) (DV-1; `tls-sbi.md`). Sem subscrição de *roaming* (DV-2).
 - Contexto em memória, perdido ao reiniciar.
 - Exige o NRF corrigido (`nrf.md`): sem o *patch* 0003, os tokens chegam sem `aud` e `register-anchorkey` e `remove-context` respondem 401. Sem os *patches* 0001 e 0002, o perfil fica sem `aanfInfoList` e o AAnF não pode ser descoberto.
 - O AAnF não entra no `run.sh` do free5GC: alterar esse arquivo fica para quando o AAnF for proposto *upstream*.
@@ -229,7 +231,7 @@ Os erros de protocolo (411, 413, 415, 501…) não foram repetidos pela rede: a 
 **Ferramenta.** `seed trigger-auth` manda o mesmo pedido, sem esperar a política, para os testes do UDM. Com `--nrf`, registra-se no NRF como um AF temporário e pede o *token* de `nudm-uecm`. `--method` e `--body` mandam o pedido como dados, para os testes negativos:
 
 ```bash
-~/akma-tools/seed trigger-auth --nrf http://127.0.0.10:8000 --supi imsi-208930000000001
+~/akma-tools/seed trigger-auth --nrf https://nrf.5gc.mnc093.mcc208.3gppnetwork.org:8000 --supi imsi-208930000000001
 ```
 
 A saída é `accepted (204)` ou `UDM answered <status> (<causa>; <detalhe>)`.
