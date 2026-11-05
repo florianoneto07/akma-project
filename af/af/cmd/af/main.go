@@ -29,6 +29,7 @@ import (
 	"github.com/florianoneto07/akma-free5gc/af/af/internal/server"
 	"github.com/florianoneto07/akma-free5gc/af/akmaoscore"
 	"github.com/florianoneto07/akma-free5gc/af/akmatls"
+	"github.com/free5gc/openapi/sbitls"
 	logger_util "github.com/free5gc/util/logger"
 )
 
@@ -67,6 +68,20 @@ func run(cfgPath, logPath string) error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	// The AF as NF of type AF, a TLS client of the SBI (TS 33.501 cl. 13.1.0).
+	// The nfInstanceId of the configuration is the one of the certificate.
+	if s.SbiTls != nil {
+		if err := sbitls.Init(sbitls.Config{
+			Certificate:  s.SbiTls.Certificate,
+			Key:          s.SbiTls.Key,
+			CA:           s.SbiTls.CA,
+			NfInstanceId: s.NfInstanceID,
+			Logger:       logger.MainLog,
+		}); err != nil {
+			return fmt.Errorf("sbiTls: %w", err)
+		}
+	}
 
 	var keys server.KeyProvider
 	switch {

@@ -81,6 +81,10 @@ type Configuration struct {
 	// token of the NEF API. Without CAPIF, TS 29.522 cl. 6 leaves the token
 	// issuer to local configuration. Required with nefUri.
 	NrfURI string `yaml:"nrfUri,omitempty"`
+	// SbiTls is the TLS of the AF as NF of type AF, a client of the AAnF: its
+	// certificate of the SBA profile (TS 33.310 cl. 6.1.3c.3) and the CA of
+	// the operator. Without it, only http URIs work.
+	SbiTls *SbiTls `yaml:"sbiTls,omitempty"`
 	// Capif makes the AF an API invoker of CAPIF: outside the operator
 	// network, it discovers the NEF at the CAPIF core function and requests
 	// K_AF through it with an access token of the CAPIF core function
@@ -95,6 +99,14 @@ type Configuration struct {
 	// ClockOffset shifts the clock of the AF, a Go duration ("2h", "-2h").
 	// Test only: it simulates an AF whose clock disagrees with the AAnF's.
 	ClockOffset string `yaml:"clockOffset,omitempty"`
+}
+
+// SbiTls configures the TLS client of the SBI. A relative path is relative to
+// the configuration file.
+type SbiTls struct {
+	Certificate string `yaml:"certificate"`
+	Key         string `yaml:"key"`
+	CA          string `yaml:"ca"`
 }
 
 // Capif configures the AF as API invoker of CAPIF (TS 23.222; TS 29.222).
@@ -117,6 +129,10 @@ type Capif struct {
 	// APIScheme is the scheme of the apiRoot of the discovered APIs,
 	// "http" or "https" (TS 29.501 cl. 4.4.1); https when absent.
 	APIScheme string `yaml:"apiScheme,omitempty"`
+	// AefCA is the file with the CA of the certificates of the API exposing
+	// functions, pre-provisioned (TS 33.122 cl. 6.5.2.3): relative to the
+	// configuration file. Mandatory with the https scheme.
+	AefCA string `yaml:"aefCa,omitempty"`
 	// OffboardOnExit makes the AF offboard from the CAPIF core function
 	// when it stops (TS 33.122 cl. 6.8).
 	OffboardOnExit bool `yaml:"offboardOnExit,omitempty"`
@@ -161,6 +177,7 @@ type Settings struct {
 	NefURI        string
 	NrfURI        string
 	Capif         *Capif
+	SbiTls        *SbiTls
 	NfInstanceID  string
 	Anonymous     bool
 	ClockOffset   time.Duration
@@ -184,6 +201,16 @@ func Load(path string) (*Settings, error) {
 	dir := filepath.Dir(path)
 	if c := s.Capif; c != nil {
 		for _, f := range []*string{&c.CcfCA, &c.Credential, &c.State} {
+			if !filepath.IsAbs(*f) {
+				*f = filepath.Join(dir, *f)
+			}
+		}
+		if c.AefCA != "" && !filepath.IsAbs(c.AefCA) {
+			c.AefCA = filepath.Join(dir, c.AefCA)
+		}
+	}
+	if c := s.SbiTls; c != nil {
+		for _, f := range []*string{&c.Certificate, &c.Key, &c.CA} {
 			if !filepath.IsAbs(*f) {
 				*f = filepath.Join(dir, *f)
 			}
@@ -240,6 +267,9 @@ func (c Config) Settings() (*Settings, error) {
 	case !isAPIRoot(cf.AanfURI):
 		errs = append(errs, fmt.Errorf("aanfUri: %q is not an http(s) apiRoot", cf.AanfURI))
 	}
+	if t := cf.SbiTls; t != nil && (t.Certificate == "" || t.Key == "" || t.CA == "") {
+		errs = append(errs, errors.New("sbiTls: certificate, key and ca are required"))
+	}
 	nfID := cf.NfInstanceID
 	if nfID == "" {
 		nfID = uuid.New().String()
@@ -251,7 +281,7 @@ func (c Config) Settings() (*Settings, error) {
 		AfID: id, FQDN: cf.FQDN, Profiles: profiles, Path: cf.Path, Qop: cf.Qop,
 		NonceLifetime: DefaultNonceLifetime, KafExpiry: cf.KafExpiry, AanfURI: strings.TrimRight(cf.AanfURI, "/"),
 		NefURI: strings.TrimRight(cf.NefURI, "/"), NrfURI: strings.TrimRight(cf.NrfURI, "/"),
-		NfInstanceID: nfID, Anonymous: cf.Anonymous, Logger: c.Logger,
+		NfInstanceID: nfID, Anonymous: cf.Anonymous, SbiTls: cf.SbiTls, Logger: c.Logger,
 	}
 	if cf.Capif != nil {
 		capif := *cf.Capif
@@ -376,7 +406,11 @@ func checkCapif(c *Capif) []error {
 			c.NotificationDestination))
 	}
 	switch c.APIScheme {
-	case "", "http", "https":
+	case "http":
+	case "", "https":
+		if c.AefCA == "" {
+			errs = append(errs, errors.New("capif.aefCa: a file is required with https"))
+		}
 	default:
 		errs = append(errs, fmt.Errorf("capif.apiScheme: %q is neither http nor https", c.APIScheme))
 	}

@@ -38,7 +38,8 @@ configuration:
     credential: ../build/capif/af1-external.jwt
     state: ../build/capif/af1-external.json # API invoker ID, certificate, private key and secret
     notificationDestination: https://192.168.16.129/capif/notify # mandatory; not served: the CCF sends no notification
-    apiScheme: http # scheme of the discovered apiRoot (TS 29.501 cl. 4.4.1); http while the NEF has no TLS
+    apiScheme: https # scheme of the discovered apiRoot (TS 29.501 cl. 4.4.1; TS 33.501 cl. 12.3)
+    aefCa: ../build/sba/sba-ca.pem # CA of the certificate of the NEF, pre-provisioned (TS 33.122 cl. 6.5.2.3)
     offboardOnExit: false
   # true: anonymous user access, K_AF without the SUPI (TS 33.535 cl. 6.2.2).
   anonymous: false

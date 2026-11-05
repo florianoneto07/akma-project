@@ -32,6 +32,7 @@ import (
 	"github.com/free5gc/openapi/capif/DiscoverService"
 	"github.com/free5gc/openapi/capif/Security"
 	"github.com/free5gc/openapi/models"
+	"github.com/free5gc/openapi/sbitls"
 )
 
 const (
@@ -130,6 +131,13 @@ func (i *Invoker) use(st *state) error {
 	cert, err := tls.X509KeyPair([]byte(st.Certificate), []byte(st.PrivateKey))
 	if err != nil {
 		return fmt.Errorf("state %s: %w", i.cfg.State, err)
+	}
+	if i.cfg.AefCA != "" {
+		// CAPIF-2e: the certificate of the onboarding at the AEF, and the
+		// CA of the AEF (TS 33.122 cl. 6.5.2.3 step 5).
+		if err = sbitls.Init(sbitls.Config{KeyPair: &cert, CA: i.cfg.AefCA, Logger: logger.CapifLog}); err != nil {
+			return fmt.Errorf("aefCa: %w", err)
+		}
 	}
 	i.st = st
 	i.ccf = i.httpClient(&cert)
