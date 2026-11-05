@@ -3,7 +3,8 @@
 exposing function.
 
 A second API invoker, independent of the Go code of this repository: raw
-HTTP/1.1 requests over TLS (module ssl) and the OpenSSL command line for its
+HTTP/1.1 requests over mutual TLS (module ssl), at the CAPIF core function and
+at the NEF with the certificate of the onboarding, and the OpenSSL command line for its
 key pair. It onboards with the onboarding credential, discovers the AKMA
 API, obtains the security method and an access token, requests K_AF through
 the NEF with the token, and offboards at the end. The expected answers come
@@ -12,6 +13,7 @@ and Annex C, TS 29.522 cl. 7.2 and TS 33.535 cl. 6.3.
 
 Usage: capif_api.py <CCF host:port> <CA of the CCF> <onboarding credential file>
                     <NEF host:port> <AAnF host:port> <registered A-KID> <API invoker ID of the AF>
+                    <directory of the certificates of the SBI>
 Prints one PASS or FAIL line per test; exits 1 when any fails. No key,
 secret, credential or token is printed.
 """
@@ -61,8 +63,8 @@ def split(hostport):
     return host, int(port)
 
 
-def http_request(hostport, method, path, body=b"", headers=None):
-    conn = http.client.HTTPConnection(*split(hostport), timeout=30)
+def tls_request(ctx, hostport, method, path, body=b"", headers=None):
+    conn = http.client.HTTPSConnection(*split(hostport), context=ctx, timeout=30)
     conn.request(method, path, body=body, headers=headers or {})
     rsp = conn.getresponse()
     data = rsp.read()
@@ -100,6 +102,13 @@ class Invoker:
         conn.close()
         return rsp.status, {k.lower(): v for k, v in rsp.getheaders()}, data
 
+    def nef_tls(self, sba):
+        """CAPIF-2e: the CA of the operator, and the certificate of the onboarding
+        (TS 33.122 cl. 6.5.2.3 step 5)."""
+        ctx = ssl.create_default_context(cafile=f"{sba}/sba-ca.pem")
+        ctx.load_cert_chain(self.cert, self.key)
+        return ctx
+
     def onboard(self, credential):
         headers = {"Content-Type": "application/json"}
         if credential:
@@ -109,6 +118,29 @@ class Invoker:
                 "supportedFeatures": "0"}
         return self.request("POST", "/api-invoker-management/v1/onboardedInvokers", json.dumps(body).encode(),
                             headers, cert=False)
+
+    def enrol(self, credential):
+        """Onboarding (TS 33.122 cl. 6.1): keeps the identifier, the secret and the certificate."""
+        s, h, d = self.onboard(credential)
+        rsp = as_json(d)
+        info = rsp.get("onboardingInformation", {})
+        self.id, self.secret = rsp.get("apiInvokerId", ""), info.get("onboardingSecret", "")
+        with open(self.cert, "w") as f:
+            f.write(info.get("apiInvokerCertificate", ""))
+        return s, h
+
+    def security_method(self):
+        """OAUTH at the NEF (TS 29.222 cl. 5.6.2.2)."""
+        body = {"securityInfo": [{"aefId": AEF_ID, "prefSecurityMethods": ["OAUTH"]}],
+                "notificationDestination": NOTIFY}
+        return self.request("PUT", f"/capif-security/v1/trustedInvokers/{self.id}", json.dumps(body).encode(),
+                            {"Content-Type": "application/json"})
+
+    def check_authentication(self, ctx, nef):
+        """check-authentication at the NEF (TS 29.222 cl. 6.2.2.2; TS 33.122 cl. 6.5.2.3 step 5)."""
+        return tls_request(ctx, nef, "POST", "/aef-security/v1/check-authentication",
+                           json.dumps({"apiInvokerId": self.id, "supportedFeatures": "0"}).encode(),
+                           {"Content-Type": "application/json"})
 
     def token(self, form):
         return self.request("POST", f"/capif-security/v1/securities/{self.id}/token",
@@ -126,8 +158,10 @@ class Invoker:
 
 
 def tamper(jws):
-    """The JWS with the last character of its signature changed."""
-    return jws[:-1] + ("A" if jws[-1] != "A" else "B")
+    """The JWS with a character of its signature changed: the one before the
+    last, because the low bits of the last one are padding, which decoders ignore."""
+    i = len(jws) - 2
+    return jws[:i] + ("A" if jws[i] != "A" else "B") + jws[i + 1:]
 
 
 def claims(jws):
@@ -135,23 +169,30 @@ def claims(jws):
     return json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
 
 
-def retrieve(nef, token, body):
+def aanf_tls(sba):
+    """The AF inside the operator network: the certificate of af1 (TS 33.501 cl. 13.1.0)."""
+    ctx = ssl.create_default_context(cafile=f"{sba}/sba-ca.pem")
+    ctx.load_cert_chain(f"{sba}/af1.pem", f"{sba}/af1.key")
+    return ctx
+
+
+def retrieve(ctx, nef, token, body):
     headers = {"Content-Type": "application/json"}
     if token:
         headers["Authorization"] = "Bearer " + token
-    return http_request(nef, "POST", "/3gpp-akma/v1/retrieve", json.dumps(body).encode(), headers)
+    return tls_request(ctx, nef, "POST", "/3gpp-akma/v1/retrieve", json.dumps(body).encode(), headers)
 
 
 def main():
-    if len(sys.argv) != 8:
+    if len(sys.argv) != 9:
         sys.exit(__doc__)
-    ccf, ca, cred_file, nef, aanf, akid, af_invoker = sys.argv[1:]
+    ccf, ca, cred_file, nef, aanf, akid, af_invoker, sba = sys.argv[1:]
     with open(cred_file) as f:
         credential = f.read().strip()
     workdir = tempfile.mkdtemp(prefix="capif-api-")
     inv = Invoker(ccf, ca, workdir)
     try:
-        run(inv, credential, nef, aanf, akid, af_invoker or str(uuid.uuid4()))
+        run(inv, credential, nef, aanf, akid, af_invoker or str(uuid.uuid4()), sba)
     finally:
         if inv.id and inv.secret:
             inv.offboard()
@@ -159,7 +200,7 @@ def main():
     sys.exit(1 if failures else 0)
 
 
-def run(inv, credential, nef, aanf, akid, af_invoker):
+def run(inv, credential, nef, aanf, akid, af_invoker, sba):
     # CP08: onboarding without the credential, and with a tampered one
     # (TS 29.222 cl. 5.5.2.2.2 NOTE 4; RFC 6750 cl. 3).
     s1, h1, _ = inv.onboard("")
@@ -171,12 +212,7 @@ def run(inv, credential, nef, aanf, akid, af_invoker):
 
     # CP01: onboarding (TS 33.122 cl. 6.1): the certificate of the API invoker, CN = its identifier
     # (TS 29.222 table 8.4.4.2.5-1), issued by the CA of the CCF.
-    s, h, d = inv.onboard(credential)
-    rsp = as_json(d)
-    info = rsp.get("onboardingInformation", {})
-    inv.id, inv.secret = rsp.get("apiInvokerId", ""), info.get("onboardingSecret", "")
-    with open(inv.cert, "w") as f:
-        f.write(info.get("apiInvokerCertificate", ""))
+    s, h = inv.enrol(credential)
     subject = openssl("x509", "-in", inv.cert, "-noout", "-subject", "-nameopt", "multiline").stdout
     verify = openssl("verify", "-CAfile", inv.ca, inv.cert).stdout.strip()
     ok = (s == 201 and h.get("location", "").endswith("/api-invoker-management/v1/onboardedInvokers/" + inv.id)
@@ -202,22 +238,19 @@ def run(inv, credential, nef, aanf, akid, af_invoker):
         for p in api.get("aefProfiles", []):
             if p.get("aefId") == AEF_ID and p.get("interfaceDescriptions"):
                 i = p["interfaceDescriptions"][0]
-                api_root = f"http://{i.get('ipv4Addr')}:{i.get('port')}"
+                api_root = f"https://{i.get('fqdn')}:{i.get('port')}"
                 methods = i.get("securityMethods") or p.get("securityMethods")
-    report("CP02", f"discovery: apiRoot http://{nef}, aefId {AEF_ID}, securityMethods [OAUTH]",
-           s == 200 and api_root == f"http://{nef}" and methods == ["OAUTH"], f"{s} {api_root} {methods}")
+    report("CP02", f"discovery: apiRoot https://{nef}, aefId {AEF_ID}, securityMethods [OAUTH]",
+           s == 200 and api_root == f"https://{nef}" and methods == ["OAUTH"], f"{s} {api_root} {methods}")
 
     # CP03: security method (TS 29.222 cl. 5.6.2.2).
-    body = {"securityInfo": [{"aefId": AEF_ID, "prefSecurityMethods": ["OAUTH"]}], "notificationDestination": NOTIFY}
-    s, _, d = inv.request("PUT", f"/capif-security/v1/trustedInvokers/{inv.id}", json.dumps(body).encode(),
-                          {"Content-Type": "application/json"})
+    s, _, d = inv.security_method()
     sel = [i.get("selSecurityMethod") for i in as_json(d).get("securityInfo", [])]
     report("CP03", "security method: 201, selSecurityMethod OAUTH", s == 201 and sel == ["OAUTH"], f"{s} {sel}")
 
     # CP04: check-authentication at the NEF (TS 29.222 cl. 6.2.2.2; TS 33.122 cl. 6.5.2.3 step 5).
-    s, _, d = http_request(nef, "POST", "/aef-security/v1/check-authentication",
-                           json.dumps({"apiInvokerId": inv.id, "supportedFeatures": "0"}).encode(),
-                           {"Content-Type": "application/json"})
+    ctx = inv.nef_tls(sba)
+    s, _, d = inv.check_authentication(ctx, nef)
     report("CP04", "check-authentication at the NEF: 200", s == 200 and as_json(d).get("supportedFeatures") == "0",
            f"{s}")
 
@@ -252,24 +285,24 @@ def run(inv, credential, nef, aanf, akid, af_invoker):
         return
     # CP06: K_AF through the NEF with the token of the CCF (TS 29.522 cl. 7.2), the same as the AAnF
     # gives directly, without SUPI (TS 33.535 cl. 6.3 step 5).
-    s, _, d = retrieve(nef, token, {"afId": AF_ID, "aKId": akid})
+    s, _, d = retrieve(ctx, nef, token, {"afId": AF_ID, "aKId": akid})
     rsp = as_json(d)
-    s2, _, d2 = http_request(aanf, "POST", "/naanf-akma/v1/retrieve-applicationkey",
-                             json.dumps({"afId": AF_ID, "aKId": akid}).encode(), {"Content-Type": "application/json"})
+    s2, _, d2 = tls_request(aanf_tls(sba), aanf, "POST", "/naanf-akma/v1/retrieve-applicationkey",
+                            json.dumps({"afId": AF_ID, "aKId": akid}).encode(), {"Content-Type": "application/json"})
     same = s == 200 and s2 == 200 and len(rsp.get("kaf", "")) == 64 and rsp.get("kaf") == as_json(d2).get("kaf")
     report("CP06", "K_AF through the NEF with the token of the CCF: the K_AF of the AAnF, without supi",
            same and "supi" not in rsp, "equal, no supi" if same and "supi" not in rsp else f"NEF {s}, AAnF {s2}")
 
     # CP07: the same, anonymous (TS 33.535 cl. 6.2.2).
-    s, _, d = retrieve(nef, token, {"afId": AF_ID, "aKId": akid, "anonInd": True})
+    s, _, d = retrieve(ctx, nef, token, {"afId": AF_ID, "aKId": akid, "anonInd": True})
     rsp = as_json(d)
     report("CP07", "anonymous access through the NEF with the token of the CCF: without supi and gpsi",
            s == 200 and "kaf" in rsp and "supi" not in rsp and "gpsi" not in rsp, f"{s}")
 
     # CP14, CP15: no token, and a tampered token (F12: the middleware of the NRF answers).
-    s, _, _ = retrieve(nef, "", {"afId": AF_ID, "aKId": akid})
+    s, _, _ = retrieve(ctx, nef, "", {"afId": AF_ID, "aKId": akid})
     report("CP14", "NEF without token: 401", s == 401, f"{s}")
-    s, _, _ = retrieve(nef, tamper(token), {"afId": AF_ID, "aKId": akid})
+    s, _, _ = retrieve(ctx, nef, tamper(token), {"afId": AF_ID, "aKId": akid})
     report("CP15", "NEF with a tampered token: 401", s == 401, f"{s}")
 
     # CP16, CP17: AF_ID outside the profile of the API invoker, and outside the address policy of the
@@ -280,7 +313,7 @@ def run(inv, credential, nef, aanf, akid, af_invoker):
         ("CP17", f"AF_ID {AF_ID_OUTSIDE_POLICY}, in the profile and outside the policy of the NEF: 403 without cause",
          AF_ID_OUTSIDE_POLICY),
     ]:
-        s, _, d = retrieve(nef, token, {"afId": af_id, "aKId": akid})
+        s, _, d = retrieve(ctx, nef, token, {"afId": af_id, "aKId": akid})
         pd = as_json(d)
         report(tid, desc, s == 403 and not pd.get("cause"), f"{s} {pd.get('detail', '')}")
 

@@ -1,28 +1,39 @@
 #!/usr/bin/env python3
 """Negative tests of Naanf_AKMA against the AAnF in operation.
 
-Raw HTTP/1.1 requests from the AF machine, which the local policy of the
-AAnF authorizes for af1.akma.example.FF00000001. Independent of the Go code
+Raw HTTP/1.1 requests over mutual TLS from the AF machine, with the
+certificate of the AF, which the local policy of the AAnF authorizes for
+af1.akma.example.FF00000001. Independent of the Go code
 of this repository: the expected answers come from TS 29.500 cl. 5.2.7 and
 TS 29.535 cl. 4.2.2 and 5.1.7.3.
 
-Usage: aanf_api.py <AAnF host:port> <registered A-KID>
+Usage: aanf_api.py <AAnF host:port> <registered A-KID> <directory of the certificates>
 Prints one PASS or FAIL line per test; exits 1 when any fails.
 """
 import http.client
 import json
+import os
 import socket
+import ssl
 import sys
 
 API = "/naanf-akma/v1"
 AF_ID = "af1.akma.example.FF00000001"
 
 failures = 0
+tls = None
+
+
+def client_tls(certs):
+    """TLS with the CA of the operator and the certificate of the AF (TS 33.501 cl. 13.1.0)."""
+    ctx = ssl.create_default_context(cafile=f"{certs}/sba-ca.pem")
+    ctx.load_cert_chain(f"{certs}/af1.pem", f"{certs}/af1.key")
+    return ctx
 
 
 def request(hostport, method, path, body=b"", content_type="application/json", headers=None):
     host, port = hostport.rsplit(":", 1)
-    conn = http.client.HTTPConnection(host, int(port), timeout=30)
+    conn = http.client.HTTPSConnection(host, int(port), context=tls, timeout=30)
     h = {"Content-Type": content_type} if content_type else {}
     h.update(headers or {})
     conn.request(method, path, body=body, headers=h)
@@ -63,9 +74,11 @@ def raw_post(hostport, body, declared_length):
     head = (f"POST {API}/retrieve-applicationkey HTTP/1.1\r\nHost: {hostport}\r\n"
             f"Content-Type: application/json\r\nContent-Length: {declared_length}\r\n"
             "Connection: close\r\n\r\n").encode()
-    with socket.create_connection((host, int(port)), timeout=30) as s:
+    with tls.wrap_socket(socket.create_connection((host, int(port)), timeout=30), server_hostname=host) as s:
         s.sendall(head + body)
-        s.shutdown(socket.SHUT_WR)
+        # End of the body: the TCP half close of the connection, under the TLS.
+        with socket.socket(fileno=os.dup(s.fileno())) as tcp:
+            tcp.shutdown(socket.SHUT_WR)
         raw = b""
         while chunk := s.recv(65536):
             raw += chunk
@@ -75,9 +88,11 @@ def raw_post(hostport, body, declared_length):
 
 
 def main():
-    if len(sys.argv) != 3:
+    global tls
+    if len(sys.argv) != 4:
         sys.exit(__doc__)
     aanf, akid = sys.argv[1], sys.argv[2]
+    tls = client_tls(sys.argv[3])
 
     s, d = retrieve(aanf, AF_ID, akid)
     check("N01", "retrieve with the registered A-KID", s, d, 200)
