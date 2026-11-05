@@ -97,18 +97,20 @@ type Akma struct {
 	AKid *AKidFormat `yaml:"aKid,omitempty" valid:"optional"`
 }
 
-// AuthorizedAf binds an AF identifier to the source addresses the AF uses,
-// so that an AF cannot request the K_AF of another AF_ID.
+// AuthorizedAf binds an AF identifier to the NF instances of the AF, the ones
+// of their client certificates (TS 33.501 cl. 13.1.0), so that an AF cannot
+// request the K_AF of another AF_ID.
 type AuthorizedAf struct {
-	AfId            string   `yaml:"afId" valid:"required"`
-	SourceAddresses []string `yaml:"sourceAddresses" valid:"required"`
+	AfId          string   `yaml:"afId" valid:"required"`
+	NfInstanceIds []string `yaml:"nfInstanceIds" valid:"required"`
 }
 
-// AuthorizedNef binds the source addresses of a NEF to the AF_IDs of the
-// external AFs whose K_AF the NEF may request.
+// AuthorizedNef binds the NF instances of a NEF, the ones of their client
+// certificates, to the AF_IDs of the external AFs whose K_AF the NEF may
+// request.
 type AuthorizedNef struct {
-	SourceAddresses []string `yaml:"sourceAddresses" valid:"required"`
-	AfIds           []string `yaml:"afIds" valid:"required"`
+	NfInstanceIds []string `yaml:"nfInstanceIds" valid:"required"`
+	AfIds         []string `yaml:"afIds" valid:"required"`
 }
 
 // AKidFormat configures the textual form of the A-KID.
@@ -179,22 +181,22 @@ func (a *Akma) validate() error {
 		if _, err := afid.Parse(af.AfId); err != nil {
 			return fmt.Errorf("invalid akma.authorizedAfs[%d].afId: expected \"<FQDN>.<10 hex>\"", i)
 		}
-		if len(af.SourceAddresses) == 0 {
-			return fmt.Errorf("akma.authorizedAfs[%d]: at least one source address is required", i)
+		if len(af.NfInstanceIds) == 0 {
+			return fmt.Errorf("akma.authorizedAfs[%d]: at least one NF instance ID is required", i)
 		}
-		for j, addr := range af.SourceAddresses {
-			if net.ParseIP(addr) == nil {
-				return fmt.Errorf("invalid akma.authorizedAfs[%d].sourceAddresses[%d]", i, j)
+		for j, id := range af.NfInstanceIds {
+			if err := uuid.Validate(id); err != nil {
+				return fmt.Errorf("invalid akma.authorizedAfs[%d].nfInstanceIds[%d]", i, j)
 			}
 		}
 	}
 	for i, nef := range a.AuthorizedNefs {
-		if len(nef.SourceAddresses) == 0 {
-			return fmt.Errorf("akma.authorizedNefs[%d]: at least one source address is required", i)
+		if len(nef.NfInstanceIds) == 0 {
+			return fmt.Errorf("akma.authorizedNefs[%d]: at least one NF instance ID is required", i)
 		}
-		for j, addr := range nef.SourceAddresses {
-			if net.ParseIP(addr) == nil {
-				return fmt.Errorf("invalid akma.authorizedNefs[%d].sourceAddresses[%d]", i, j)
+		for j, id := range nef.NfInstanceIds {
+			if err := uuid.Validate(id); err != nil {
+				return fmt.Errorf("invalid akma.authorizedNefs[%d].nfInstanceIds[%d]", i, j)
 			}
 		}
 		if len(nef.AfIds) == 0 {

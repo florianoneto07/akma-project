@@ -17,8 +17,9 @@
 // certificate of the role of the command, in ~/free5gc/cert/sba.
 //
 // With --nrf, register, remove and trigger-auth first obtain an OAuth2 access
-// token: the tool registers at the NRF as a temporary NF of type AF (the NRF
-// of free5GC only grants tokens to registered NFs) and deregisters on exit.
+// token: the tool registers at the NRF as a temporary NF, with the identity of
+// its certificate (the NRF of free5GC only grants tokens to registered NFs),
+// and deregisters on exit.
 // discover does the same to obtain a token for nnrf-disc.
 package main
 
@@ -56,9 +57,8 @@ import (
 // AF it registers at the NRF (TS 29.500 table 5.2.2.2-1).
 const seedUserAgent = "AF-seed"
 
-// defaultNfInstanceID is the NF instance ID of the temporary AF profile. It is
-// fixed so that the certificate the NRF signs for it (cert/af_<id>.pem) is
-// the same file on every run.
+// defaultNfInstanceID is the NF instance ID of the temporary AF profile,
+// without a TLS certificate.
 const defaultNfInstanceID = "76a7ade7-c7d6-4e09-8d66-2726fd6f2cb9"
 
 // certDir is the folder of the certificates of make-sba-certs.sh on the
@@ -215,10 +215,12 @@ func akmaClient(apiRoot string) *Naanf_AKMA.APIClient {
 	return Naanf_AKMA.NewAPIClient(cfg)
 }
 
-// tokenContext returns a context with an access token for naanf-akma when
-// --nrf is set, and a function that deregisters the temporary AF profile.
+// tokenContext returns a context with an access token for naanf-akma, with
+// the scope of storing and removing keys (TS 29.535 table 5.1.9-1), when --nrf
+// is set, and a function that deregisters the temporary AF profile.
 func tokenContext(c *cli.Context) (context.Context, func(), error) {
-	return tokenContextFor(c, models.NrfNfManagementNfType_AANF, models.ServiceName_NAANF_AKMA)
+	return tokenContextFor(c, models.NrfNfManagementNfType_AANF,
+		models.ServiceName_NAANF_AKMA+" "+oauth.ScopeNaanfAkmaAnchorKey)
 }
 
 // tokenContextFor is tokenContext for another target NF type and scope.

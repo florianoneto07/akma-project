@@ -2,9 +2,8 @@ package context
 
 import (
 	"context"
-	"errors"
+	"crypto/tls"
 	"fmt"
-	"net/netip"
 	"os"
 	"sort"
 	"strconv"
@@ -12,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 
 	"github.com/florianoneto07/akma-free5gc/free5gc/aanf/internal/logger"
 	"github.com/florianoneto07/akma-free5gc/free5gc/aanf/pkg/factory"
@@ -166,6 +165,23 @@ func (c *AANFContext) nfService() models.NrfNfManagementNfService {
 			models.NrfNfManagementNfType_NEF,
 			models.NrfNfManagementNfType_AF,
 		},
+		// The scopes of each NF type (TS 29.535 table 5.1.9-1; TS 29.510
+		// table 6.1.6.2.3-1 NOTE 11): the AUSF stores and removes, the NEF and
+		// the AF get K_AF, and the SUPI with it (TS 33.535 cl. 6.2.1 step 8
+		// and cl. 6.3 step 4).
+		AllowedOperationsPerNfType: map[string][]string{
+			string(models.NrfNfManagementNfType_AUSF): {
+				string(models.ServiceName_NAANF_AKMA), oauth.ScopeNaanfAkmaAnchorKey,
+			},
+			string(models.NrfNfManagementNfType_NEF): keyGetScopes(),
+			string(models.NrfNfManagementNfType_AF):  keyGetScopes(),
+		},
+	}
+}
+
+func keyGetScopes() []string {
+	return []string{
+		string(models.ServiceName_NAANF_AKMA), oauth.ScopeNaanfAkmaApplicationKey, oauth.ScopeNaanfAkmaSupiAccess,
 	}
 }
 
@@ -223,92 +239,64 @@ func (c *AANFContext) GetTokenCtx(serviceName models.ServiceName, targetNF model
 		c.NfId, c.NrfUri, string(serviceName))
 }
 
-// AuthorizationCheck verifies the OAuth2 access token in the Authorization
-// header value when OAuth2 is required.
-func (c *AANFContext) AuthorizationCheck(token string, serviceName models.ServiceName) error {
+// AuthorizationCheck verifies the OAuth2 access token of a request, when
+// OAuth2 is required: the checks of the NF Service Producer (TS 33.501
+// cl. 13.4.1.1.2) with the TLS client of the request, and the scopes of the
+// operation besides the one of the service (TS 29.535 table 5.1.9-1). Without
+// OAuth2, the grant is nil.
+func (c *AANFContext) AuthorizationCheck(token string, peer *tls.ConnectionState, scopes ...string) (*oauth.Grant, error) {
 	if !c.oauth2Required() {
 		logger.UtilLog.Debugf("AuthorizationCheck: OAuth2 not required")
-		return nil
+		return nil, nil
 	}
-	return VerifyAccessToken(token, string(serviceName), c.NrfCertPem, c.NfId, time.Now())
-}
-
-// VerifyAccessToken verifies an "Authorization: Bearer" value as the NF
-// Service Producer of TS 33.501 cl. 13.4.1.1.2 step 2. oauth.VerifyOAuth of
-// free5GC checks the RS512 signature with the NRF certificate and the scope;
-// the expiration time and the audience are checked here:
-//   - "exp" must be in the future;
-//   - "aud" must contain the NF instance ID of this AAnF or the NF type AANF
-//     (TS 29.510 table 6.3.5.2.4-1). The NRF of free5GC v1.4.5 issues an
-//     empty audience; patches/nrf/0003 makes it fill the claim.
-func VerifyAccessToken(authorization, serviceName, nrfCertPem, nfId string, now time.Time) error {
-	fields := strings.Fields(authorization)
-	if len(fields) != 2 || !strings.EqualFold(fields[0], "Bearer") {
-		return errors.New("authorization header is not a Bearer token")
+	grant, err := oauth.Verify(token, string(models.ServiceName_NAANF_AKMA), c.NrfCertPem, peer)
+	if err != nil {
+		return nil, err
 	}
-	if err := oauth.VerifyOAuth(authorization, serviceName, nrfCertPem); err != nil {
-		return err
-	}
-	// The signature has just been verified by oauth.VerifyOAuth.
-	claims := &models.NrfAccessTokenAccessTokenClaims{}
-	if _, _, err := jwt.NewParser().ParseUnverified(fields[1], claims); err != nil {
-		return fmt.Errorf("access token claims: %w", err)
-	}
-	if claims.Exp == 0 || now.Unix() >= int64(claims.Exp) {
-		return errors.New("access token expired or without expiration time")
-	}
-	if !audienceAccepted(claims.Aud, nfId) {
-		return errors.New("access token audience does not match this AAnF")
-	}
-	return nil
-}
-
-func audienceAccepted(aud any, nfId string) bool {
-	match := func(s string) bool {
-		return s != "" && (s == nfId || strings.EqualFold(s, string(models.NrfNfManagementNfType_AANF)))
-	}
-	switch a := aud.(type) {
-	case string:
-		return match(a)
-	case []any:
-		for _, v := range a {
-			if s, ok := v.(string); ok && match(s) {
-				return true
-			}
+	for _, scope := range scopes {
+		if !grant.Has(scope) {
+			return nil, oauth.InsufficientScope(scope)
 		}
-		return false
-	default:
-		return false
 	}
+	return grant, nil
+}
+
+// nfInstanceId normalizes an NF instance ID of the configuration.
+func nfInstanceId(s string) (string, error) {
+	id, err := uuid.Parse(strings.TrimSpace(s))
+	if err != nil {
+		return "", err
+	}
+	return id.String(), nil
 }
 
 // AfPolicy is the local policy that authorizes AFs to obtain K_AF
-// (TS 33.535 cl. 6.2.1 step 2). Each authorized AF_ID is bound to the source
-// addresses of the AF allowed to request it, so that an AF cannot obtain the
-// K_AF of another AF_ID.
+// (TS 33.535 cl. 6.2.1 step 2). Each authorized AF_ID is bound to the NF
+// instances of the AF, the ones of their client certificates (TS 33.501
+// cl. 13.1.0), so that an AF cannot obtain the K_AF of another AF_ID.
 type AfPolicy struct {
-	sources map[string]map[netip.Addr]struct{}
+	instances map[string]map[string]struct{}
 }
 
 // NewAfPolicy builds the policy from the configuration.
 func NewAfPolicy(afs []factory.AuthorizedAf) (*AfPolicy, error) {
-	p := &AfPolicy{sources: make(map[string]map[netip.Addr]struct{})}
+	p := &AfPolicy{instances: make(map[string]map[string]struct{})}
 	for i, af := range afs {
 		id, err := afid.Parse(af.AfId)
 		if err != nil {
 			return nil, fmt.Errorf("akma.authorizedAfs[%d]: %w", i, err)
 		}
-		set := p.sources[id.Transport()]
+		set := p.instances[id.Transport()]
 		if set == nil {
-			set = make(map[netip.Addr]struct{})
-			p.sources[id.Transport()] = set
+			set = make(map[string]struct{})
+			p.instances[id.Transport()] = set
 		}
-		for j, s := range af.SourceAddresses {
-			addr, err := netip.ParseAddr(strings.TrimSpace(s))
+		for j, s := range af.NfInstanceIds {
+			instance, err := nfInstanceId(s)
 			if err != nil {
-				return nil, fmt.Errorf("akma.authorizedAfs[%d].sourceAddresses[%d]: %w", i, j, err)
+				return nil, fmt.Errorf("akma.authorizedAfs[%d].nfInstanceIds[%d]: %w", i, j, err)
 			}
-			set[addr.Unmap()] = struct{}{}
+			set[instance] = struct{}{}
 		}
 	}
 	return p, nil
@@ -316,38 +304,38 @@ func NewAfPolicy(afs []factory.AuthorizedAf) (*AfPolicy, error) {
 
 // AfIds returns the authorized AF_IDs, in transport form, sorted.
 func (p *AfPolicy) AfIds() []string {
-	ids := make([]string, 0, len(p.sources))
-	for id := range p.sources {
+	ids := make([]string, 0, len(p.instances))
+	for id := range p.instances {
 		ids = append(ids, id)
 	}
 	sort.Strings(ids)
 	return ids
 }
 
-// Authorize reports whether the AF at remote may obtain K_AF for id.
-func (p *AfPolicy) Authorize(id afid.AfID, remote netip.Addr) bool {
-	set, ok := p.sources[id.Transport()]
-	if !ok {
-		return false
-	}
-	_, ok = set[remote.Unmap()]
+// Listed reports whether the policy has id, for any NF instance.
+func (p *AfPolicy) Listed(id afid.AfID) bool {
+	_, ok := p.instances[id.Transport()]
+	return ok
+}
+
+// Authorize reports whether an NF instance may obtain K_AF for id.
+func (p *AfPolicy) Authorize(id afid.AfID, instance string) bool {
+	_, ok := p.instances[id.Transport()][instance]
 	return ok
 }
 
 // NefPolicy is the local policy for the K_AF requests that a NEF relays for
 // AFs outside the operator network (TS 33.535 cl. 6.3 step 3, processed as
-// in cl. 6.2.1 step 2). The NEF is recognized by its source address, the
-// implicit authentication between NFs that TS 33.501 cl. 13.3.2.1 allows
-// when TLS is not used (this AAnF serves the SBI without TLS), together with
-// an access token when OAuth2 is required. Each NEF has the list of AF_IDs
-// accepted from it.
+// in cl. 6.2.1 step 2). The NEF is the NF instance of its client certificate
+// (TS 33.501 cl. 13.1.0), with an access token when OAuth2 is required. Each
+// NEF has the list of AF_IDs accepted from it.
 type NefPolicy struct {
-	afIds map[netip.Addr]map[string]struct{}
+	afIds map[string]map[string]struct{}
 }
 
 // NewNefPolicy builds the policy from the configuration.
 func NewNefPolicy(nefs []factory.AuthorizedNef) (*NefPolicy, error) {
-	p := &NefPolicy{afIds: make(map[netip.Addr]map[string]struct{})}
+	p := &NefPolicy{afIds: make(map[string]map[string]struct{})}
 	for i, nef := range nefs {
 		ids := make([]string, 0, len(nef.AfIds))
 		for j, s := range nef.AfIds {
@@ -357,15 +345,15 @@ func NewNefPolicy(nefs []factory.AuthorizedNef) (*NefPolicy, error) {
 			}
 			ids = append(ids, id.Transport())
 		}
-		for j, s := range nef.SourceAddresses {
-			addr, err := netip.ParseAddr(strings.TrimSpace(s))
+		for j, s := range nef.NfInstanceIds {
+			instance, err := nfInstanceId(s)
 			if err != nil {
-				return nil, fmt.Errorf("akma.authorizedNefs[%d].sourceAddresses[%d]: %w", i, j, err)
+				return nil, fmt.Errorf("akma.authorizedNefs[%d].nfInstanceIds[%d]: %w", i, j, err)
 			}
-			set := p.afIds[addr.Unmap()]
+			set := p.afIds[instance]
 			if set == nil {
 				set = make(map[string]struct{})
-				p.afIds[addr.Unmap()] = set
+				p.afIds[instance] = set
 			}
 			for _, id := range ids {
 				set[id] = struct{}{}
@@ -375,15 +363,15 @@ func NewNefPolicy(nefs []factory.AuthorizedNef) (*NefPolicy, error) {
 	return p, nil
 }
 
-// IsNef reports whether remote is the source address of an authorized NEF.
-func (p *NefPolicy) IsNef(remote netip.Addr) bool {
-	_, ok := p.afIds[remote.Unmap()]
+// IsNef reports whether an NF instance is an authorized NEF.
+func (p *NefPolicy) IsNef(instance string) bool {
+	_, ok := p.afIds[instance]
 	return ok
 }
 
-// Authorize reports whether the NEF at remote may obtain K_AF for id.
-func (p *NefPolicy) Authorize(id afid.AfID, remote netip.Addr) bool {
-	_, ok := p.afIds[remote.Unmap()][id.Transport()]
+// Authorize reports whether the NEF instance may obtain K_AF for id.
+func (p *NefPolicy) Authorize(id afid.AfID, instance string) bool {
+	_, ok := p.afIds[instance][id.Transport()]
 	return ok
 }
 

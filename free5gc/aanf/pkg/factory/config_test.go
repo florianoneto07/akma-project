@@ -30,9 +30,9 @@ configuration:
     roamingStatusSubscription: %ROAMING%
     authorizedAfs:
       - afId: %AFID%
-        sourceAddresses: [%ADDR%]
+        nfInstanceIds: [%AF%]
     authorizedNefs:
-      - sourceAddresses: [%NEFADDR%]
+      - nfInstanceIds: [%NEF%]
         afIds: [%NEFAFIDS%]
 logger:
   enable: true
@@ -49,8 +49,8 @@ func writeConfig(t *testing.T, p params) string {
 		"LIFETIME": "30m",
 		"ROAMING":  "false",
 		"AFID":     "af1.akma.example.FF00000001",
-		"ADDR":     "192.168.16.129",
-		"NEFADDR":  "192.168.16.130",
+		"AF":       "2170454b-4cfa-406a-a77c-2137042b54b4",
+		"NEF":      "8e73ad07-906c-4952-93ac-cd32bbb076ed",
 		"NEFAFIDS": "af1.akma.example.FF00000001",
 	}
 	s := baseConfig
@@ -118,10 +118,10 @@ func TestInvalidConfigs(t *testing.T) {
 		"lifetime not positive":    {"LIFETIME": "-1m"},
 		"afId without Ua* id":      {"AFID": "af1.akma.example"},
 		"afId with 9 hex digits":   {"AFID": "af1.akma.example.FF0000001"},
-		"source address not an IP": {"ADDR": "af1.akma.example"},
-		"no source address":        {"ADDR": ""},
-		"NEF address not an IP":    {"NEFADDR": "nef.example"},
-		"NEF without address":      {"NEFADDR": ""},
+		"NF instance not a UUID":   {"AF": "af1.akma.example"},
+		"no NF instance":           {"AF": ""},
+		"NEF instance not a UUID":  {"NEF": "192.168.16.130"},
+		"NEF without NF instance":  {"NEF": ""},
 		"NEF without AF_ID":        {"NEFAFIDS": ""},
 		"NEF AF_ID without Ua* id": {"NEFAFIDS": "af1.akma.example"},
 	}

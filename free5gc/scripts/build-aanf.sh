@@ -14,7 +14,8 @@ command -v go >/dev/null || { echo "go not found in PATH" >&2; exit 1; }
 
 if [ ! -f "$here/build/openapi/aanf/AKMA/client.go" ] ||
     [ ! -f "$here/build/openapi/udm/UEContextManagement/api_trigger_the_primary_re_authentication.go" ] ||
-    [ ! -f "$here/build/openapi/sbitls/sbitls.go" ]; then
+    [ ! -f "$here/build/openapi/sbitls/sbitls.go" ] ||
+    [ ! -f "$here/build/openapi/oauth/verify.go" ]; then
     "$here/scripts/prepare-openapi.sh"
 fi
 
