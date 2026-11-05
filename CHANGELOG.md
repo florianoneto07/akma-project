@@ -2,6 +2,15 @@
 
 ## [Não lançado]
 
+### MVP-11 — Identidade nos *tokens* e nas políticas, fase (b) (05/11/2026)
+- **`openapi`:** *patch* `0006`: a verificação do produtor em todas as NFs, só `ES256`, com o certificado de assinatura da CA do operador, `iss`, `aud`, `sub`, `exp` e escopo, e as respostas de TS 29.500 §6.7.3 (F5, F12, F23); `oauth.Signer`.
+- **NRF:** *patch* `nrf/0005`: o certificado da sessão TLS confere o pedido de *token*, o registro, a atualização, o descadastro e a descoberta; *tokens* em `ES256`, com `kid`, `x5t#S256` e `iss` (F23, F26); `allowedOperationsPerNfType` (F4); saem a geração de certificados e o `rootcert` (F25).
+- **AAnF:** a política pelo NF Instance ID do certificado, sem endereço de origem; escopos por operação; sem `supi-access`, a resposta vem sem `supi`.
+- **AUSF e NEF:** *patches* `ausf/0003` e `nef/0004`, com os escopos novos; o segundo fecha o F14.
+- **Configuração:** `config/0005`, com o `nrf-token.pem`; `test/0003`.
+- **Roteiro:** `af/scripts/negative/sbi_token.py`, com S10 a S15, no passo R1s. Execução de 05/11/2026: 301 verificações, nenhuma falha, nenhuma pulada.
+- **Documentos:** `tls-sbi.md` §16, `aanf.md`, `nrf.md`, `nef.md`, `openapi.md`, `logs-akma.md`, `e2e.md`, o tutorial, F4, F5, F12, F14, F23, F25 e F26, DV-1.
+
 ### MVP-11 — TLS mútuo nas SBI, fase (a) (04/11/2026)
 - **PKI:** `free5gc/scripts/make-sba-certs.sh` e `free5gc/config/sba-entities.conf`: a CA do operador, um certificado por NF no perfil de TS 33.310 §6.1.3c.3, os certificados de teste e a conferência dos perfis.
 - **CRL:** `free5gc/crl/`, um serviço HTTP só de leitura, com `run.sh -crl` (*patch* `run/0003`). A CRL é conferida nas duas pontas, com falha fechada (DV-18).

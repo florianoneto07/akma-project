@@ -39,6 +39,18 @@ O mesmo para `TestGUTIRegistration`, `TestReSynchronization` e `TestEAPAKAPrimeA
 
 Resultado em 17/10/2026: os quatro passam. Nos quatro, o AAnF subiu no processo de teste, e o AUSF não fez nenhuma ação AKMA, porque esses assinantes não têm `akmaAllowed`.
 
+Desde o MVP-11, fase (b), vale rodar também no modo `oauth`, como a CI do free5GC faz. Sem o argumento, o OAuth2 fica desligado, e o `TestOAuth2Callback` falha com `OAuth2 not enable`:
+
+```bash
+cd ~/free5gc && ./test.sh TestRegistration oauth
+```
+
+```bash
+cd ~/free5gc && ./test.sh TestOAuth2Callback oauth
+```
+
+O modo usa `cert/sba/nrf-token.pem` e `nrf-token.key`, de `make-sba-certs.sh` (`tls-sbi.md` §16.4). Resultado em 05/11/2026: os dois passam.
+
 ## 3. UERANSIM (critérios 2, 4 e 6)
 
 Assinante `imsi-208930000000001` provisionado com `routingId` `"0000"` (`assinatura-akma.md`). A sequência:

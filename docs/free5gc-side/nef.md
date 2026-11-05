@@ -276,3 +276,9 @@ Como reproduzir, na máquina do free5GC, com o free5GC parado: `patch-nf.sh nef 
 - O NEF serve em `https://nef.5gc.mnc093.mcc208.3gppnetwork.org:8000`, com TLS mútuo. Os grupos da SBI aceitam a CA do operador; os do CAPIF, `3gpp-akma` e `aef-security`, a CA do CCF (`tls-sbi.md` §15.1).
 - O AF de fora é *invoker* do CAPIF (T14). O túnel SSH da seção 2.1 e o `afcfg-external.yaml` saíram. O código de `af/af/internal/nrf` fica, com os testes Go, como o modo sem CAPIF no NEF, que o laboratório não usa.
 - A entrada `af3` da política do NEF fica para o CP16, e o E07 usa o `af5` (`tls-sbi.md` §15.3).
+
+Na fase (b):
+
+- O AAnF reconhece o NEF pelo NF Instance ID e pelo tipo do certificado de cliente, e não mais pelo endereço de origem (`tls-sbi.md` §7.5). As seções 4 e 4.1 descrevem o que valia antes disso.
+- O NEF pede ao NRF os escopos de `naanf-akma` que o AAnF passou a exigir, e o descadastro pede o *token* com o tipo certo, o que fecha o F14 (`nef/0004-token-scopes.patch`).
+- O `401` do NEF segue TS 29.500 §6.7.3, com `ProblemDetails` e `WWW-Authenticate` (F12). Um *token* do NRF para outro produtor recebe `403` `ACCESS_TOKEN_CLAIM_MISMATCH`.

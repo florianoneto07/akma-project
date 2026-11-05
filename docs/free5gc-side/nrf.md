@@ -20,7 +20,8 @@ Cada correção é um *patch* separado, com seu teste, para poder ir ao free5GC 
 | | `internal/sbi/processor/nf_discovery_aanf_test.go` (novo) | testes da validação e do filtro |
 | `free5gc/patches/nrf/0003-access-token-audience.patch` | `internal/sbi/processor/access_token.go` | `aud` do token = `targetNfInstanceId` do pedido, ou o `targetNfType` quando o consumidor não pede instância |
 | | `internal/sbi/processor/access_token_aud_test.go` (novo) | teste dos dois casos |
-| `free5gc/patches/nrf/0004-sbi-tls.patch` | `pkg/factory/`, `pkg/service/`, `internal/sbi/` | MVP-11, fase (a): `sbi.tls` com o certificado da SBI, separado do `sbi.cert` que ainda assina os *tokens* em `RS512`; o `sbitls` no servidor e no cliente (`tls-sbi.md` §6.5) |
+| `free5gc/patches/nrf/0004-sbi-tls.patch` | `pkg/factory/`, `pkg/service/`, `internal/sbi/` | MVP-11, fase (a): `sbi.tls` com o certificado da SBI, separado do `sbi.cert` que assina os *tokens*; o `sbitls` no servidor e no cliente (`tls-sbi.md` §6.5) |
+| `free5gc/patches/nrf/0005-token-identity.patch` | `internal/context/`, `internal/sbi/`, `internal/util/peer.go` (novo), `pkg/factory/` | MVP-11, fase (b): o certificado da sessão TLS confere o pedido de *token*, o registro, a atualização, o descadastro e a descoberta; *tokens* em `ES256`, com `kid`, `x5t#S256` e `iss`; `allowedOperationsPerNfType`; saem `SignNFCert` e o `rootcert` (`tls-sbi.md` §7.1 a §7.3) |
 
 ## 3. O que cada correção faz e por quê
 

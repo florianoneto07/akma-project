@@ -1,6 +1,6 @@
 # TLS nas SBI e entre o NEF e o AF — especificação
 
-**MVP:** MVP-11 · **Data:** 2 de novembro de 2026 · **Estado:** **aprovada** pelo responsável em 04/11/2026, com os pontos T18 a T39 da seção 13 como propostos; o DV-18, o F26 e os defeitos D-AJ e D-AK registrados na mesma data. O escopo foi aprovado no plano em 02/11/2026, com os pontos T1 a T17 (plano, seção 4): o T4 revisto, com os dois modos e o padrão por nome; o T14 na opção (b). **Fase (a) implementada e verificada** em 04/11/2026 (seção 15); as fases (b) e (c) estão por fazer.
+**MVP:** MVP-11 · **Data:** 2 de novembro de 2026 · **Estado:** **aprovada** pelo responsável em 04/11/2026, com os pontos T18 a T39 da seção 13 como propostos; o DV-18, o F26 e os defeitos D-AJ e D-AK registrados na mesma data. O escopo foi aprovado no plano em 02/11/2026, com os pontos T1 a T17 (plano, seção 4): o T4 revisto, com os dois modos e o padrão por nome; o T14 na opção (b). **Fases (a) e (b) implementadas e verificadas** em 04 e 05/11/2026 (seções 15 e 16); a fase (c) está por fazer.
 
 Este documento detalha o que o plano aprovou: a PKI de teste do operador, os nomes das NFs, o TLS mútuo em toda a SBI, a identidade dos certificados nos *tokens* e nas políticas, e o TLS mútuo entre o NEF e o AF de fora e entre o NEF e o CCF. Os pontos abertos continuam a numeração do plano, do T18 em diante. Neste texto, "CA do operador" é a CA de teste da SBI (T3), e "CA do CCF" é a do MVP-9, que assina os certificados dos *invokers*.
 
@@ -705,3 +705,45 @@ O AF_ID `af3` do MVP-6 estava na política do NEF e fora do perfil do CCF, de pr
 
 - O NEF guarda a CRL da CA do CCF até o `nextUpdate`. O S18 precisa de uma idade máxima menor, senão o certificado de um *invoker* que saiu ainda passa.
 - Depois de uma nova entrada, o AF continua com a conexão HTTP/2 antiga, com o certificado anterior. O AF precisa fechar as conexões ociosas ao trocar de certificado.
+
+## 16. Implementação da fase (b)
+
+Como a seção 15: o que a especificação não fixava. Nada aqui muda a leitura da norma.
+
+### 16.1 Dois *patches* a mais
+
+O T28 punha um *patch* por NF só na fase (a). Dois saíram agora, porque o consumidor tem de pedir o escopo que o AAnF passou a exigir:
+
+- `ausf/0003-token-scopes.patch`: o AUSF pede `naanf-akma naanf-akma:anchorkey`;
+- `nef/0004-token-scopes.patch`: o NEF pede `naanf-akma`, `naanf-akma:applicationkeyget` e `naanf-akma:applicationkeyget:supi-access`. Como o *patch* já mexe no consumidor do NEF, ele também corrige o F14: o descadastro pede o *token* de `nnrf-nfm` com o tipo `NRF`.
+
+Com isso, o *patch* do NEF da fase (c) passa a `nef/0005-capif-tls.patch`. Os escopos são constantes do `openapi`, em `oauth/scopes.go`. `[3GPP]` TS 29.500 §6.7.3 deixa o consumidor descobri-los no perfil do produtor; o projeto não faz essa descoberta, porque os dois consumidores têm uma operação cada.
+
+### 16.2 A verificação do *token*
+
+- **A ordem nas NFs.** O `AuthorizationCheck` de cada NF manteve a assinatura (seção 15.1): ele faz os passos 1 a 4, o `iss`, o `aud` e o escopo, e o roteador confere o `sub` depois, em `oauth.CheckTokenPeer`. Um *token* com `sub` errado e sem o escopo recebe, nas NFs, o `403` de escopo. O AAnF chama `oauth.Verify` com o estado TLS e segue a ordem exata da seção 7.4.
+- **Sem TLS.** Com `scheme: http`, como no banco de testes, `sbitls.Current()` é nulo: não há cadeia nem CRL do certificado de assinatura, nem identidade para o `aud`, nem cliente para o `sub`. Valem a assinatura, as *claims* presentes, o `exp`, o `iss` e o escopo.
+- ***Claims* vazias.** Contam como ausentes: `ACCESS_TOKEN_CLAIM_MISSING`, em `401`.
+- **O `aud` no NEF.** Um *token* do NRF para outro produtor é recusado no `aud`, com `403`, antes do escopo. Por isso, o E05 passa de `401` para `403` `ACCESS_TOKEN_CLAIM_MISMATCH`. Na fase (c), com `allowNrfTokens: false`, ele volta a `401`, como a seção 9.3 diz.
+
+### 16.3 O AAnF
+
+- **O AF com *token*.** A seção 7.5 fala do AF sem *token*. Como `allowedOperationsPerNfType` dá `applicationkeyget` ao tipo `AF`, um AF com *token* válido segue a mesma regra depois das conferências da seção 7.4: a identidade em `nfInstanceIds` do `afId`, com o tipo `AF`.
+- **Sem TLS.** Sem certificado não há identidade: em `http`, a política é só a lista de AF_ID. É o modo do banco de testes.
+- **O NEF sem *token*.** Com OAuth2 ligado, a identidade do NEF sem *token* cai na regra do AF e recebe `403`.
+
+### 16.4 O banco de testes
+
+`test/0003-access-token.patch`, que a seção 14 não trazia. O campo `rootcert` saiu do NRF, e o banco o preenchia. O *patch* tira esse campo, aponta o `cert` do NRF e o `nrfCertPem` das NFs para `cert/sba/nrf-token.*`, fixa o NF Instance ID do NRF, o do certificado, e troca a política do AAnF.
+
+### 16.5 As ferramentas
+
+- **`sbi_token.py`.** S10 a S15 estão em `af/scripts/negative/sbi_token.py`, só com a biblioteca padrão do Python 3.6. Roda na .130, no passo R1s, porque o NRF está em *loopback*. Além da tabela da seção 9.2, confere o PLMN do pedido de *token*, o tipo no registro e o tipo na descoberta. O S13 também compara o `x5t#S256` com o arquivo `nrf-token.pem`. O S15 tem um caso de controle: o mesmo pedido com `af1` passa da política e recebe `K_AKMA_NOT_PRESENT`.
+- **`seed`.** `register` e `remove` pedem `naanf-akma naanf-akma:anchorkey`.
+
+### 16.6 A verificação
+
+- **`e2e.sh`.** `301 passed, 0 failed, 0 skipped`, na execução `20261105-115322` (`docs/af-side/e2e.md` §5.11). Depois dela, só um comentário do `nrf/0005` mudou, com a citação da cláusula corrigida.
+- **Banco de testes do free5GC.** Na .130: os três `TestAkma`; `TestRegistration`, com e sem `oauth`; `TestOAuth2Callback oauth`. O modo `oauth` do banco usa `cert/sba/nrf-token.*` e roda em `http`: exercita o `ES256`, sem cadeia, `aud` nem `sub` (seção 16.2).
+- **`go vet` e `go test -race`.** Nenhum aviso e nenhuma corrida, nos módulos do projeto e nas onze NFs. Ficam as duas falhas da seção 15.4, que não vêm do projeto: no SMF, `internal/pfcp/handler`; no UDR, `TestUDR_InfluData_CreateThenGet`.
+- **Os *patches*.** A árvore original com os *patches* reconstrói as cópias testadas das onze NFs.

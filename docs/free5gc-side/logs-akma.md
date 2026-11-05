@@ -65,7 +65,8 @@ As três últimas mensagens `info` saem da *goroutine* do AKMA (D9). Por isso ap
 | `info` | `AKMA context of <SUPI> registered, A-KID <A-KID>`, com ` (previous context replaced)` quando substitui | `register-anchorkey` | TS 33.535 §6.1 passo 5 |
 | `info` | `K_AF of <SUPI> provided to AF_ID <AF_ID> for A-KID <A-KID>, expires <instante>` | `retrieve-applicationkey` atendido | TS 33.535 §6.2.1 passos 7 e 8 |
 | `info` | `K_AKMA not present for A-KID <A-KID>, requested by AF_ID <AF_ID>` | A-KID desconhecido (403) | TS 33.535 §6.2.1 passo 2; TS 29.535 Tab. 5.1.7.3-1 |
-| `warn` | `AF at <endereço> not authorized for AF_ID <AF_ID>` | AF fora da política local (403) | TS 33.535 §6.2.1 passo 2 |
+| `warn` | `NF <NF Instance ID> at <endereço> not authorized for AF_ID <AF_ID>` | consumidor fora da política local (403); desde o MVP-11, a política é pelo certificado, e o endereço só fica no log | TS 33.535 §6.2.1 passo 2 |
+| `warn` | `NEF <NF Instance ID> at <endereço> not authorized for AF_ID <AF_ID>` | AF_ID não aceito daquele NEF (403) | TS 33.535 §6.3 passo 3 |
 | `info` | `AKMA context of <SUPI> removed` ou `AKMA context of <SUPI> to remove not found` | `remove-context` | TS 33.535 §6.6.1 |
 | `error` | `K_AF derivation failed: <motivo>` | falha interna | — |
 | `info` | `K_AKMA refresh requested from the UDM when a K_AF is asked for a K_AKMA older than <duração> (TS 33.535 cl. 6.4.4)` | partida, com `akma.kakmaRefresh` (MVP-12, `aanf.md` §11) | TS 33.535 §6.4.4 |

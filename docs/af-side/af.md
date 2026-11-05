@@ -38,7 +38,7 @@ Nos perfis PSK:
 - **Expiração:** encerra a sessão TLS (`close_notify`) quando a K_AF vence. O *handshake* seguinte segue a política: `refetch` pede a K_AF de novo; `reject` recusa.
 - **Retomada:** por *tickets*, válidos até a expiração da K_AF e no máximo 24 horas (TS 33.222 §5.4.1.4). No K.2, os *tickets* valem 24 horas (§5.3.1.5).
 
-`[MVP]` O AF roda na VM do AF (192.168.16.129, ADR-0001-R2). Desde o MVP-11, fala com o AAnF por TLS mútuo. O AAnF ainda o autoriza pelo endereço de origem e pelo AF_ID, até a fase (b) (DV-1).
+`[MVP]` O AF roda na VM do AF (192.168.16.129, ADR-0001-R2). Desde o MVP-11, fala com o AAnF por TLS mútuo, e o AAnF o autoriza pelo NF Instance ID do certificado e pelo AF_ID (`docs/free5gc-side/tls-sbi.md` §7.5).
 
 ## 2. Arquivos
 
@@ -81,7 +81,7 @@ Os campos e os padrões estão em `ua-star.md` §11; os perfis, em `ua-star-norm
 
 Sem `profiles`, o `listen` de antes vale como um perfil `digest-http`. Com `profiles`, `listen` não pode aparecer.
 
-Cada AF_ID dos perfis precisa estar em `akma.authorizedAfs` do `aanfcfg.yaml`, com o endereço do AF (`docs/free5gc-side/aanf.md` §2): `af1.akma.example.` mais `0100011301`, `0100011302`, `0100011303`, `010001C02B` e `010001C02C` (K.2 com certificado ECDSA), `0100000007`, `010001D001`, `0100000009`, `0100000008` e `FF00000001`. O mesmo vale para a política do NEF e para a do UE.
+Cada AF_ID dos perfis precisa estar em `akma.authorizedAfs` do `aanfcfg.yaml`, com o NF Instance ID do certificado do AF (`docs/free5gc-side/aanf.md` §2): `af1.akma.example.` mais `0100011301`, `0100011302`, `0100011303`, `010001C02B` e `010001C02C` (K.2 com certificado ECDSA), `0100000007`, `010001D001`, `0100000009`, `0100000008` e `FF00000001`. O mesmo vale para a política do NEF e para a do UE.
 
 **AF fora da rede do operador (MVP-6).** Desde o MVP-11, o laboratório usa o modo CAPIF abaixo. O modo do NRF continua no código e nos testes Go, sem configuração de exemplo. Com `nefUri` no lugar de `aanfUri`, o AF pede a K_AF ao NEF (`POST {nefUri}/3gpp-akma/v1/retrieve`, TS 29.522 §4.4.23.2; TS 33.535 §6.3). Especificação: `docs/free5gc-side/nef.md`.
 

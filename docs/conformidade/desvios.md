@@ -59,6 +59,8 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 
 **MVP-11 (02/11/2026).** Achado na proposta do MVP-11: `[3GPP]` TS 33.501 V19.7.0 §13.3.2.1: *"If the PLMN uses token-based authorization, the network shall use protection at the transport layer as described in clause 13.1."* O laboratório usa *tokens* do NRF e, desde o MVP-9, do CCF: a NOTA 2 de §13.1.0, base deste desvio, não cobre esse caso. O MVP-11, aprovado em 02/11/2026, encerra o desvio: TLS mútuo em toda a SBI (pontos T2 a T8), em CAPIF-3/4 (T15) e a política do AAnF pelo certificado, no lugar do endereço (T13).
 
+
+**MVP-11, fases (a) e (b) (04 e 05/11/2026).** A SBI passou a TLS mútuo, com os certificados de `make-sba-certs.sh` (`docs/free5gc-side/tls-sbi.md` §6). A política do AAnF saiu do endereço de origem para o NF Instance ID do certificado (§7.5), o que fecha o risco de um AF apresentar o AF_ID de outro. Falta o CAPIF-3/4, na fase (c), que encerra este desvio.
 ---
 
 ## DV-2 — Subscrição de `ROAMING_STATUS` desabilitada

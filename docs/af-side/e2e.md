@@ -20,7 +20,7 @@ As duas máquinas se sincronizam por arquivos-marcadores em três pontos (A, B, 
 |---|---|---|
 | S1 | AF, antes da execução | autoteste do ME (`nr-akma-selftest`) com os vetores do MVP-0 |
 | R1 | free5GC | NAT do N6, *namespace* do UE, `linkIp` do gNB, assinatura AKMA; free5GC com `-aanf` e, no MVP-9, `-ccf`, gNB e UE no ar. MVP-9: o CCF no ar, `3gpp-akma` publicado pelo NEF no CCF e a credencial de entrada do AF emitida. MVP-11: a CRL assinada de novo e o serviço da CRL no ar, com `-crl` |
-| R1s | free5GC | MVP-11: o TLS mútuo da SBI (seção 4.3): cada porta, o perfil dos certificados e o `seed` contra um `openssl s_server` |
+| R1s | free5GC | MVP-11: o TLS mútuo da SBI (seção 4.3): cada porta, a identidade nos *tokens* e nas políticas, o perfil dos certificados e o `seed` contra um `openssl s_server` |
 | R2 | free5GC | registro; A-KID do UE = do AUSF = do AAnF; Ua\* do UE pelo plano de usuário, 3 requisições |
 | N (ponto A) | AF | testes negativos da API do AAnF, do `register-anchorkey`, do RID e do AF (seção 4); acesso anônimo direto ao AAnF (N01c, MVP-6) |
 | S (ponto A) | AF | MVP-11: o TLS mútuo da SBI da máquina do AF, no AAnF e no NEF (seção 4.3) |
@@ -188,8 +188,8 @@ Os testes da API do AAnF (N01 a N16) estão em `af/scripts/negative/aanf_api.py`
 | E01 | K_AF via NEF | 200 com `kaf` e `expiry`, sem `supi` e sem `gpsi` (TS 33.535 §6.3 passo 5) |
 | E02 | a mesma K_AF via NEF e direto do AAnF, para o mesmo A-KID e AF_ID | iguais; nenhuma das duas é impressa |
 | E03 | acesso anônimo via NEF | 200 sem `supi` e sem `gpsi` (§6.2.2; TS 29.522 tab. 5.14.5.3.3-1 NOTA 3) |
-| E04 | sem *token* | 401 (*middleware* do free5GC, sem `ProblemDetails`: F12) |
-| E05 | *token* do NRF para outro serviço (`naanf-akma`), pedido pelo `seed` na máquina do free5GC | 401 |
+| E04 | sem *token* | 401 com `ProblemDetails` (TS 29.500 §6.7.3) |
+| E05 | *token* do NRF para outro produtor (`naanf-akma`), pedido pelo `seed` na máquina do free5GC | 403 `ACCESS_TOKEN_CLAIM_MISMATCH` |
 | E06 | AF_ID fora da política do NEF | 403 sem causa (§6.3 passo 2) |
 | E07 | AF_ID aceito pelo NEF e pelo CCF e não pelo AAnF (`af5`, entrada de teste do `nefcfg.yaml` e do `ccfcfg.yaml`) | 403 sem causa, repassado (P11) |
 | E08 | A-KID desconhecido | 403 `K_AKMA_NOT_PRESENT`, repassado (TS 29.522 §4.4.23.2); nunca 204 |
@@ -221,7 +221,7 @@ Os testes da API do AAnF (N01 a N16) estão em `af/scripts/negative/aanf_api.py`
 
 ### 4.3 TLS da SBI (MVP-11)
 
-`af/scripts/negative/sbi_tls.py` usa só o módulo `ssl` do Python, sem o código Go do projeto. A máquina do free5GC o roda no passo R1s, em cada porta da SBI: NRF, AMF, SMF, UDR, PCF, UDM, NSSF, AUSF, CHF, NEF e AAnF. A do AF o roda no ponto A, no AAnF e no NEF. Os identificadores dizem a porta e a máquina: `S02.nrf.free5gc`, `S02.nef.af`. Especificação: `docs/free5gc-side/tls-sbi.md` §9.2 e §15.2.
+`af/scripts/negative/sbi_tls.py` usa só o módulo `ssl` do Python, sem o código Go do projeto. A máquina do free5GC o roda no passo R1s, em cada porta da SBI: NRF, AMF, SMF, UDR, PCF, UDM, NSSF, AUSF, CHF, NEF e AAnF. A do AF o roda no ponto A, no AAnF e no NEF. Os identificadores dizem a porta e a máquina: `S02.nrf.free5gc`, `S02.nef.af`. `af/scripts/negative/sbi_token.py`, também no R1s, confere a identidade dos certificados nos *tokens* e nas políticas. Especificação: `docs/free5gc-side/tls-sbi.md` §9.2, §15.2 e §16.5.
 
 | Verificação | Caso | Esperado |
 |---|---|---|
@@ -230,6 +230,12 @@ Os testes da API do AAnF (N01 a N16) estão em `af/scripts/negative/aanf_api.py`
 | S03 | certificado `other-ca` | alerta |
 | S04 | o certificado do servidor, com o SNI do nome | o DNS-ID, o URI do NF Instance ID e o IP da entidade; onde o arquivo existe, o certificado instalado |
 | S05 | `make-sba-certs.sh check` | nenhuma recusa |
+| S10 | na `sbi_token.py`: *token* com o NF Instance ID, o tipo ou o PLMN de outro certificado; registro com o UUID ou o tipo de outro certificado; descoberta com o tipo de outro certificado | `400` `invalid_client`, com `no-store`; `403` sem causa |
+| S11 | *token* de `seed-ausf` com o certificado `seed-af` no AAnF | `403` `ACCESS_TOKEN_CLAIM_MISMATCH` de `sub` |
+| S12 | *token* para outro produtor no AAnF | `403` `ACCESS_TOKEN_CLAIM_MISMATCH` de `aud` |
+| S13 | cabeçalho e *claims* de um *token* do NRF | `ES256`, `kid`, `x5t#S256` do `nrf-token.pem`; `iss`, o UUID do NRF |
+| S14 | o AUSF pede `naanf-akma:applicationkeyget`; `retrieve` com *token* só de `naanf-akma` | `400` `invalid_scope`; `403` `insufficient_scope` |
+| S15 | `retrieve` com o certificado `af2` e o AF_ID de `af1`; o mesmo com `af1` | `403` sem causa; `403` `K_AKMA_NOT_PRESENT` |
 | S06, S07 | certificado `revoked`; `no-crldp` | alerta |
 | S08.name | o `seed` contra um `openssl s_server` com o certificado do UDM, no nome do AAnF | o cliente recusa pelo nome |
 | S08.ca | o mesmo, com um certificado do nome do AAnF emitido por outra CA | o cliente recusa pela CA |
@@ -368,6 +374,14 @@ O teste com o UERANSIM em outra máquina (critério 6) está em `docs/af-side/te
 - **O banco de testes da máquina estava defasado.** O `akma_test.go` instalado era anterior a uma revisão dos comentários do `test/0001`, e o `patch-nf.sh` o dava como não aplicado. Os outros arquivos foram revertidos com o *patch*, e o `akma_test.go` foi apagado, com cópia no *backup*, antes de aplicar a série.
 - **Um defeito do teste corrigido.** O `tamper` do `capif_api.py` trocava o último caractere da assinatura. Numa assinatura `ES256`, em *base64url*, os quatro bits baixos desse caractere são enchimento, e o decodificador os ignora. Com assinaturas terminadas em `A`, a credencial "adulterada" era a mesma, e o CP08 falhava. A chance é de uma em quatro. O MVP-9 passou por sorte. Agora muda o caractere anterior.
 - **Compatibilidade com a máquina do free5GC.** Ela tem o Python 3.6.9 e o OpenSSL 1.1.1. O `sbi_tls.py` trata a recusa do cliente nos dois jeitos, porque `ssl.SSLCertVerificationError` só existe a partir do Python 3.7.
+
+### 5.11 MVP-11, fase (b), em 05/11/2026
+
+`301 passed, 0 failed, 0 skipped` na execução `20261105-115322`, em quatro minutos: 184 verificações na máquina do free5GC e 117 na do AF.
+
+- **Verificações novas.** São 13, do `sbi_token.py`: S10 (seis casos), S11, S12, S13, S14 (dois casos) e S15 (dois casos).
+- **Verificação mudada.** O E05 passou de `401` a `403` `ACCESS_TOKEN_CLAIM_MISMATCH`, pela conferência do `aud` (`docs/free5gc-side/tls-sbi.md` §16.2).
+- **Antes da execução, na máquina do free5GC.** Os *patches* em uso foram guardados em `~/akma-mvp11b-old-patches`. NRF, AUSF, NEF, configuração e banco de testes foram revertidos, o repositório sincronizado, as duas cópias do `openapi` refeitas e as onze NFs recompiladas, porque o `openapi` mudou. O `config/0005` passou o `nrfCertPem` a `cert/sba/nrf-token.pem`. O `aanfcfg.yaml` foi trocado pela política por certificado, e o `bin/aanf`, o `bin/crl` e o `seed`, reimplantados. Nada mudou no `/etc/hosts` nem na PKI.
 
 ## 6. Limitações
 

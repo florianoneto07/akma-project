@@ -164,7 +164,7 @@ Content-Type: application/json
 | `403` com `K_AKMA_NOT_PRESENT` | `403`, causa `AKMA_KEY_NOT_AVAILABLE` |
 | `403` sem causa (AF fora da política do AAnF), outro erro HTTP, falha de rede | `503`, causa `AANF_UNAVAILABLE` |
 
-- **Seleção do AAnF:** `[MVP]` o endereço do AAnF é configurado no AF (TS 33.535 §6.7, *"locally configured"*). Sem *token* OAuth2: o AAnF autoriza o AF pelo endereço de origem (DV-1).
+- **Seleção do AAnF:** `[MVP]` o endereço do AAnF é configurado no AF (TS 33.535 §6.7, *"locally configured"*). Sem *token* OAuth2: o AAnF autoriza o AF pelo NF Instance ID do certificado de cliente, desde o MVP-11 (`docs/free5gc-side/tls-sbi.md` §7.5).
 - **Contexto ativo:** a K_AF guardada vale até `expiry`. `[3GPP]` O AF nunca a usa depois disso (§4.4.0: tempo de vida máximo). A K_AF fica em memória e nunca aparece em log.
 
 ## 7. Expiração da K_AF

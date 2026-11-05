@@ -31,6 +31,8 @@ O registro do AAnF não exige configuração nova no NRF do free5GC v4.2.3 (`nrf
 
 ## 4. Estado que o NRF grava
 
+Desde o MVP-11, fase (b), o NRF não gera mais certificados: os dois arquivos em `cert/` desta tabela valem só para o NRF sem o *patch* `nrf/0005` (`tls-sbi.md` §7.1).
+
 | Onde | O quê | Quando some |
 |---|---|---|
 | MongoDB, base `free5gc`, coleção `NfProfile` | o perfil do AAnF | no `NFDeregister`; o NRF descarta a coleção inteira ao encerrar |
@@ -51,7 +53,7 @@ Nos três casos o AAnF segue a norma; quem não segue é o NRF. Em 17/10/2026, o
 
 ## 6. Como reproduzir numa instalação limpa
 
-Nada a fazer no NRF além de iniciá-lo: o AAnF se registra sozinho ao partir (`aanf.md` §8). O `nrfCertPem` do `aanfcfg.yaml` deve apontar para o mesmo `cert/nrf.pem` usado pelas outras NFs.
+Nada a fazer no NRF além de iniciá-lo: o AAnF se registra sozinho ao partir (`aanf.md` §8). O `nrfCertPem` do `aanfcfg.yaml` deve apontar para o mesmo certificado de assinatura usado pelas outras NFs, `cert/sba/nrf-token.pem` desde o MVP-11.
 
 ## 7. Como verificar
 

@@ -28,7 +28,7 @@
 | `~/free5gc/bin/aanf` | arquivo novo (binário estático) |
 | `~/free5gc/config/aanfcfg.yaml` | arquivo novo |
 | `~/free5gc/log/aanf/` | criado pelo `run-aanf.sh` (log, saída, pid). Com `./run.sh -aanf` (MVP-3a, `logs-akma.md` §5), o log vai para o `free5gc.log` das outras NFs |
-| `~/free5gc/cert/aanf.pem`, `cert/aanf_<id>.pem` | criados pelo NRF (`registro-nrf.md` §4) |
+| `~/free5gc/cert/sba/aanf.pem`, `aanf.key` | de `make-sba-certs.sh`, desde o MVP-11 (`tls-sbi.md` §4); o NRF não gera mais certificados |
 
 Dependências: `free5gc/openapi` v1.2.4 com os *patches* do projeto (`openapi.md`), `free5gc/util` v1.3.2, `shared/akma` (MVP-0).
 
@@ -38,7 +38,7 @@ Além dos campos comuns às NFs do free5GC (`sbi`, `serviceNameList`, `nrfUri`, 
 
 | Campo | Exemplo | Regra | Marcação |
 |---|---|---|---|
-| `nfInstanceId` | UUID v4 fixo | opcional; sem ele, gerado a cada partida. No TLS mútuo, é o do certificado | `[MVP]` fixo para não acumular certificados no NRF; `[3GPP]` TS 33.310 §6.1.3c.3 |
+| `nfInstanceId` | UUID v4 fixo | opcional; sem ele, gerado a cada partida. No TLS mútuo, é o do certificado | `[3GPP]` TS 33.310 §6.1.3c.3 |
 | `sbi.fqdn` | `aanf.5gc.mnc093.mcc208.3gppnetwork.org` | MVP-11: modo por nome; sem ela, por IP | `[3GPP]` TS 29.510 §6.1.6.2.2 NOTA 1; DV-17 |
 | `sbi.tls.pem`, `key`, `ca` | `cert/sba/aanf.pem`, `aanf.key`, `sba-ca.pem` | MVP-11: obrigatórios com `scheme: https`; `tls-sbi.md` §4 | `[3GPP]` TS 33.501 §13.1.0 |
 | `serviceNameList` | `[naanf-akma]` | só esse valor é aceito | `[3GPP]` TS 29.535 §5.1.1 |
@@ -46,8 +46,8 @@ Além dos campos comuns às NFs do free5GC (`sbi`, `serviceNameList`, `nrfUri`, 
 | `akma.kafLifetime` | `1h` | duração Go positiva; padrão `1h` | `[3GPP]` política do operador (TS 33.535 §5.2); `[MVP]` o valor |
 | `akma.kakmaRefresh` | `0` | duração Go; `0` ou ausente desliga, e é o padrão. Com valor, o AAnF pede a renovação da K_AKMA mais velha que isso (seção 11) | `[3GPP]` política local do operador (TS 33.535 §6.4.4); `[MVP]` o critério e o valor (K3 de `renovacao-kakma.md`) |
 | `akma.authorizedAfs[].afId` | `af1.akma.example.FF00000001` | forma de transporte `<FQDN>.<10 hex>` | `[3GPP]` TS 29.522 `AfId` |
-| `akma.authorizedAfs[].sourceAddresses` | `[192.168.16.129]` | ao menos um endereço IP | `[MVP]` política local (seção 5) |
-| `akma.authorizedNefs[].sourceAddresses` | `[192.168.16.130]` | ao menos um endereço IP: os do NEF | `[MVP]` MVP-6; `nef.md` §4 |
+| `akma.authorizedAfs[].nfInstanceIds` | `[2170454b-…]` | ao menos um UUID: as instâncias do AF, as dos certificados de cliente | `[3GPP]` TS 33.501 §13.1.0; MVP-11, T13 e T33 (seção 5) |
+| `akma.authorizedNefs[].nfInstanceIds` | `[8e73ad07-…]` | ao menos um UUID: as instâncias do NEF | `[3GPP]` TS 33.501 §13.1.0; MVP-11, T13 e T33 |
 | `akma.authorizedNefs[].afIds` | `[af1.akma.example.FF00000001]` | ao menos um AF_ID na forma de transporte: os AF externos aceitos daquele NEF | `[3GPP]` TS 33.535 §6.3 passo 3; `[MVP]` política local (P11) |
 | `akma.roamingStatusSubscription` | `false` | `true` impede a partida | DV-2 |
 | `akma.aKid` | `atidEncoding`, `atidLabel`, `acceptLabels` | padrão: base64, escreve `atid`, aceita `atid` e `akid` | ADR-0002 §4; defeito D-A |
@@ -108,14 +108,14 @@ Em memória (`internal/context/akma_context.go`); `[MVP]` perdido ao reiniciar o
 | Verificação | Quem faz |
 |---|---|
 | esquema `Bearer` | AAnF |
-| assinatura RS512 com o certificado do NRF | `oauth.VerifyOAuth` do free5GC |
-| `scope` contém `naanf-akma` | `oauth.VerifyOAuth`; os escopos finos de TS 29.535 Tab. 5.1.9-1 não são exigidos (`[MVP]`; TS 33.501 §13.4.1.0 torna os adicionais opcionais) |
-| `exp` no futuro | AAnF (o `VerifyOAuth` do free5GC não verifica) |
-| `aud` igual ao `nfInstanceId` do AAnF ou a `AANF`; ausente ou vazio → recusado | AAnF. Exige o NRF corrigido (`nrf.md`, N3); até o MVP-1b, `aud` vazio era tolerado (DV-8, encerrado) |
+| assinatura `ES256` com o certificado de assinatura do NRF, da CA do operador e não revogado | `oauth.Verify` (`openapi/0006`; `tls-sbi.md` §7.4) |
+| `iss`, `sub`, `aud`, `scope` e `exp` presentes; `exp` no futuro | `oauth.Verify` |
+| `iss` igual ao URI do certificado de assinatura; `aud` igual ao NF Instance ID do AAnF ou a `AANF`; `sub` igual ao URI do certificado de cliente | `oauth.Verify` |
+| `scope` com `naanf-akma` e `naanf-akma:anchorkey` em `register-anchorkey` e `remove-context`; com `naanf-akma` e `naanf-akma:applicationkeyget` em `retrieve-applicationkey` | `oauth.Verify` e `AuthorizationCheck` do AAnF (TS 29.535 Tab. 5.1.9-1) |
 
-Token ausente ou inválido → 401 com `WWW-Authenticate: Bearer` (ou `Bearer error="invalid_token"`, RFC 6750 §3) e `ProblemDetails`.
+As recusas seguem TS 29.500 §6.7.3: `401` sem *token* ou com *token* inválido; `403` `ACCESS_TOKEN_CLAIM_MISMATCH` com `iss`, `aud` ou `sub` diferentes; `403` `insufficient_scope` sem o escopo. O AAnF registra no NRF os escopos de cada tipo, em `allowedOperationsPerNfType` (`tls-sbi.md` §7.3).
 
-**`retrieve-applicationkey` — política local.** `[3GPP]` TS 33.535 §6.2.1 passo 2: o AAnF verifica *"based on the configured local policy or based on the authorization information available in the signalling (i.e., Oauth2.0 token)"*. `[MVP]` O AF não alcança o NRF, então vale a política local. Cada AF_ID autorizado fica associado aos endereços de origem dos quais pode ser pedido. Isso atende à recomendação contra a falsificação de AF (`docs/literatura/`), com o risco residual do DV-1. O endereço vem da conexão, nunca de `X-Forwarded-For`. O FQDN é comparado com exatidão, porque entra na KDF. AF fora da política, ou AF_ID pedido de outro endereço → 403 sem `cause`, por falta de causa definida (P3 do plano).
+**`retrieve-applicationkey` — política local.** `[3GPP]` TS 33.535 §6.2.1 passo 2: o AAnF verifica *"based on the configured local policy or based on the authorization information available in the signalling (i.e., Oauth2.0 token)"*. `[MVP]` O AF não alcança o NRF, então vale a política local. Cada AF_ID autorizado fica associado às instâncias do AF, as dos certificados de cliente (`tls-sbi.md` §7.5). Isso atende à recomendação contra a falsificação de AF (`docs/literatura/`). O endereço de origem fica só no log. O FQDN é comparado com exatidão, porque entra na KDF. AF fora da política, ou AF_ID pedido com o certificado de outro AF → 403 sem `cause`, por falta de causa definida (P3 do plano). Com um *token*, valem as conferências acima e o escopo `naanf-akma:applicationkeyget`; sem `naanf-akma:applicationkeyget:supi-access`, a resposta vem sem `supi`. No banco de testes do free5GC, em `http`, não há certificado, e a política fica só na lista de AF_ID.
 
 ## 6. Erros: os 11 códigos obrigatórios para POST
 
@@ -200,7 +200,7 @@ Resultado em 17/10/2026, todos conforme o esperado:
 | K_AF pedida da máquina do AF | 200; K_AF igual à do vetor; `expiry` em UTC |
 | pedido anônimo (`--anon`) | 200, sem `supi` |
 | AF_ID fora da política | 403 sem causa |
-| AF_ID autorizado pedido da máquina do free5GC (outro endereço) | 403 sem causa |
+| AF_ID autorizado pedido com o certificado de outro AF (S15, `docs/af-side/e2e.md` §4.3) | 403 sem causa |
 | A-KID desconhecido | 403 `K_AKMA_NOT_PRESENT` |
 | remoção, remoção repetida, novo pedido | 204, 404 `AKMA_CONTEXT_NOT_FOUND`, 403 `K_AKMA_NOT_PRESENT` |
 
@@ -208,7 +208,7 @@ Os erros de protocolo (411, 413, 415, 501…) não foram repetidos pela rede: a 
 
 ## 10. Limitações
 
-- TLS mútuo desde o MVP-11, fase (a); a política continua por endereço até a fase (b) (DV-1; `tls-sbi.md`). Sem subscrição de *roaming* (DV-2).
+- TLS mútuo e política pelo certificado desde o MVP-11, fases (a) e (b) (DV-1; `tls-sbi.md`). Sem subscrição de *roaming* (DV-2).
 - Contexto em memória, perdido ao reiniciar.
 - Exige o NRF corrigido (`nrf.md`): sem o *patch* 0003, os tokens chegam sem `aud` e `register-anchorkey` e `remove-context` respondem 401. Sem os *patches* 0001 e 0002, o perfil fica sem `aanfInfoList` e o AAnF não pode ser descoberto.
 - O AAnF não entra no `run.sh` do free5GC: alterar esse arquivo fica para quando o AAnF for proposto *upstream*.

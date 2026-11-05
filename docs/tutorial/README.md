@@ -147,11 +147,11 @@ cd free5gc/aanf && go test ./...
 O `deploy.sh` (seção 3.4) instala o `free5gc/config/aanfcfg.yaml` do repositório quando a máquina do free5GC ainda não tem um, e depois não o sobrescreve. Ajuste esse arquivo antes do *deploy*, ou ajuste depois a cópia instalada, `~/free5gc/config/aanfcfg.yaml`, na máquina do free5GC. O arquivo do repositório tem os endereços do laboratório. Os campos:
 
 - `sbi.registerIPv4` e `sbi.bindingIPv4`: um endereço da máquina do free5GC que a máquina do AF alcance. Não use um *loopback* `127.0.0.x`, a menos que o AF rode na mesma máquina. Porta 8010: a 8000 é a das NFs do free5GC, e o NEF passa a usá-la no endereço da máquina (parte 9).
-- `nrfUri` e `nrfCertPem`: os mesmos das outras NFs (`https://nrf.5gc.mnc093.mcc208.3gppnetwork.org:8000`, `cert/nrf.pem`).
+- `nrfUri` e `nrfCertPem`: os mesmos das outras NFs (`https://nrf.5gc.mnc093.mcc208.3gppnetwork.org:8000`, `cert/sba/nrf-token.pem`).
 - `plmnSupportList`: a PLMN da sua rede.
 - `routingIndicators`: os RIDs dos assinantes, **entre aspas** (`"0000"`). Com a lista vazia, o AAnF atende qualquer RID.
-- `akma.authorizedAfs`: cada AF que pode pedir K_AF, com o AF_ID (`<FQDN>.<identificador Ua* em 10 hexadecimais>`) e o endereço de origem do AF.
-- `nfInstanceId`: mantenha um UUID fixo. Com OAuth2 ligado no NRF, cada ID novo faz o NRF criar um certificado `cert/aanf_<ID>.pem`.
+- `akma.authorizedAfs`: cada AF que pode pedir K_AF, com o AF_ID (`<FQDN>.<identificador Ua* em 10 hexadecimais>`) e o NF Instance ID do certificado do AF.
+- `nfInstanceId`: o do certificado do AAnF, em `free5gc/config/sba-entities.conf`.
 
 ### 3.3 Corrigir o NRF
 
@@ -238,7 +238,7 @@ Respostas que indicam configuração errada:
 | Resposta | Causa provável |
 |---|---|
 | `401` no `register` | sem `--nrf`; o NRF sem a correção da seção 3.3 (token sem `aud`); ou o `nrfCertPem` do AAnF não é o certificado do NRF em uso |
-| `403` sem causa no `retrieve` | o AF_ID não está em `authorizedAfs`, ou o pedido saiu de um endereço que não está na lista daquele AF_ID |
+| `403` sem causa no `retrieve` | o AF_ID não está em `authorizedAfs`, ou o certificado do cliente não é de uma instância da lista daquele AF_ID |
 | `403 (K_AKMA_NOT_PRESENT)` | o A-KID não foi registrado, foi substituído por um registro mais novo do mesmo SUPI ou o AAnF reiniciou (o contexto fica só em memória) |
 | `connection refused` | `--aanf` ausente ou com o endereço de outra máquina |
 
@@ -450,21 +450,21 @@ O AF está em `docs/af-side/af.md`.
 
 ### 6.1 Autorizar o AF no AAnF
 
-O AAnF só entrega K_AF a um AF_ID autorizado, a partir do endereço do AF. Cada perfil, e no K.2 cada *cipher suite*, tem o seu AF_ID (TS 33.220 H.3). No `aanfcfg.yaml` da parte 3 já estão os dez AF_IDs de `af1.akma.example`:
+O AAnF só entrega K_AF a um AF_ID autorizado, ao AF do certificado da política. Cada perfil, e no K.2 cada *cipher suite*, tem o seu AF_ID (TS 33.220 H.3). No `aanfcfg.yaml` da parte 3 já estão os dez AF_IDs de `af1.akma.example`:
 
 ```yaml
 configuration:
   akma:
     authorizedAfs:
       - afId: af1.akma.example.0100011301   # K.2 em TLS 1.3, TLS_AES_128_GCM_SHA256
-        sourceAddresses:
-          - 192.168.16.129
+        nfInstanceIds:
+          - 2170454b-4cfa-406a-a77c-2137042b54b4
       # ... 0100011302, 0100011303, 010001C02B, 010001C02C (K.2),
       #     0100000007 (PSK TLS 1.3), 010001D001 (PSK TLS e DTLS 1.2),
       #     0100000009 (PSK DTLS 1.3), 0100000008 (OSCORE), FF00000001 (teste)
 ```
 
-O AF_ID é o FQDN do AF seguido do identificador Ua\* (TS 33.535 A.4). Se mudar o FQDN ou a máquina do AF, mude em todas as entradas.
+O AF_ID é o FQDN do AF seguido do identificador Ua\* (TS 33.535 A.4). Se mudar o FQDN ou o certificado do AF, mude em todas as entradas.
 
 ### 6.2 Compilar e configurar o AF
 
@@ -1074,7 +1074,7 @@ Para desfazer: `./run.sh -crl -aanf`, sem `-ccf`, deixa o CCF parado. O AF de fo
 
 Até o MVP-9, as NFs falavam em HTTP/2 sem TLS. TS 33.501 §13.1.0 pede TLS mútuo na SBI, com os certificados de TS 33.310. Esta parte põe no laboratório uma CA do operador, um certificado por NF, com o nome e o NF Instance ID, os nomes da SBI no lugar dos endereços e a CRL. O AF de fora passa a falar com o NEF por TLS mútuo. A especificação é `docs/free5gc-side/tls-sbi.md`.
 
-Esta parte corresponde à fase (a) do MVP-11. Os *tokens* e as políticas ainda não usam a identidade do certificado, e o NEF ainda fala em `http` com o CCF: isso vem nas fases (b) e (c).
+Esta parte corresponde às fases (a) e (b) do MVP-11. O NEF ainda fala em `http` com o CCF: isso vem na fase (c).
 
 **Ordem.** As configurações do repositório já usam TLS e nomes. Numa instalação nova, faça as seções 12.1 a 12.4 antes da parte 3, depois de instalar o free5GC. As partes 3 a 11 continuam valendo, com os URIs da seção 12.6.
 
@@ -1203,12 +1203,12 @@ Suba o free5GC como na seção 12.4. Na tela devem aparecer:
 
 Um cliente com um certificado revogado é recusado no *handshake*, e o servidor registra o motivo. Nenhuma NF grava mais `log/<nf>sslkey.log`.
 
+Os *tokens* do NRF saem em `ES256`, com o `sub` preso ao certificado de quem os pediu. O NRF confere o pedido contra esse certificado, e o AAnF confere o `aud`, o `sub` e os escopos de cada operação. A política do AAnF é pelo NF Instance ID do certificado do AF e do NEF, sem endereço de origem (`docs/free5gc-side/tls-sbi.md` §7).
+
 O `e2e.sh` (parte 8) confere tudo isso. O passo R1s testa cada porta da SBI, sem o código Go do projeto, e o `seed` contra um `openssl s_server` (`docs/af-side/e2e.md` §4.3).
 
 ### 12.8 Limitações
 
-- Os *tokens* do NRF continuam em `RS512`, sem o vínculo com o certificado de quem os pede. Isso muda na fase (b).
-- O AAnF continua autorizando pelo endereço de origem até a fase (b).
 - O NEF fala em `http` com o CCF, e os certificados dos *invokers* não têm CRL, até a fase (c).
 - A *webconsole* do free5GC não fala com o NRF em TLS mútuo. O laboratório não a usa: a assinatura sai do `mongosh`.
 - O BSF tem o *patch* e o certificado, mas o `run.sh` só o sobe com `-bsf`, que o laboratório não usa.
