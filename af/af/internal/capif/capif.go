@@ -58,6 +58,7 @@ type Invoker struct {
 	cfg  config.Capif
 	info string
 	pool *x509.CertPool
+	crl  *sbitls.CrlChecker
 
 	mu      sync.Mutex
 	st      *state
@@ -85,7 +86,7 @@ func Start(ctx context.Context, cfg config.Capif, info string) (*Invoker, error)
 	if !pool.AppendCertsFromPEM(ca) {
 		return nil, fmt.Errorf("ccfCa: no PEM certificate in %s", cfg.CcfCA)
 	}
-	i := &Invoker{cfg: cfg, info: info, pool: pool, now: time.Now}
+	i := &Invoker{cfg: cfg, info: info, pool: pool, crl: sbitls.NewCrlChecker(logger.CapifLog), now: time.Now}
 	st, err := loadState(cfg.State)
 	if err != nil {
 		return nil, err
@@ -138,6 +139,9 @@ func (i *Invoker) use(st *state) error {
 		if err = sbitls.Init(sbitls.Config{KeyPair: &cert, CA: i.cfg.AefCA, Logger: logger.CapifLog}); err != nil {
 			return fmt.Errorf("aefCa: %w", err)
 		}
+		// A session with the certificate of an earlier onboarding is of
+		// another API invoker.
+		openapi.CloseIdleConnections()
 	}
 	i.st = st
 	i.ccf = i.httpClient(&cert)
@@ -154,12 +158,13 @@ func (i *Invoker) forget() {
 
 // httpClient returns a client of CAPIF-1e: TLS 1.3, or TLS 1.2 with only
 // ECDHE and AEAD cipher suites (TS 33.210 cl. 6.2), the CA of the CAPIF core
-// function and, after onboarding, the client certificate (TS 33.122
-// cl. 6.3.1.1).
+// function and its CRL (TS 33.310 cl. 6.3.1) and, after onboarding, the client
+// certificate (TS 33.122 cl. 6.3.1.1).
 func (i *Invoker) httpClient(cert *tls.Certificate) *http.Client {
 	tc := &tls.Config{
-		RootCAs:    i.pool,
-		MinVersion: tls.VersionTLS12,
+		RootCAs:          i.pool,
+		VerifyConnection: i.crl.VerifyConnection,
+		MinVersion:       tls.VersionTLS12,
 		CipherSuites: []uint16{
 			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,

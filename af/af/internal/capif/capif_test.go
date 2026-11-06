@@ -29,7 +29,11 @@ import (
 	"github.com/free5gc/openapi/models"
 )
 
-const testCredential = "credential-of-af1-external"
+const (
+	testCredential = "credential-of-af1-external"
+	// fakeServerSerial is the serial number of the certificate of the fake CCF.
+	fakeServerSerial = 2
+)
 
 // fakeCCF is a CAPIF core function on CAPIF-1e: TLS with its own CA, the
 // client certificate issued at onboarding, and the operations of the AF.
@@ -42,6 +46,7 @@ type fakeCCF struct {
 	nef    *fakeNEF
 
 	mu         sync.Mutex
+	crl        []byte
 	secrets    map[string]string
 	next       int
 	onboarded  int
@@ -98,7 +103,7 @@ func newFakeCCF(t *testing.T) *fakeCCF {
 	tmpl := &x509.Certificate{
 		SerialNumber: big.NewInt(1), Subject: pkix.Name{Organization: []string{"AKMA test"}, CommonName: "CCF CA"},
 		NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour),
-		IsCA: true, BasicConstraintsValid: true, KeyUsage: x509.KeyUsageCertSign,
+		IsCA: true, BasicConstraintsValid: true, KeyUsage: x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
 	}
 	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &f.caKey.PublicKey, f.caKey)
 	if err != nil {
@@ -109,12 +114,20 @@ func newFakeCCF(t *testing.T) *fakeCCF {
 	if err := os.WriteFile(f.caFile, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	f.signCrl()
+	crl := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		_, _ = w.Write(f.crl)
+	}))
+	t.Cleanup(crl.Close)
 	srvKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	srvDER, err := x509.CreateCertificate(rand.Reader, &x509.Certificate{
-		SerialNumber: big.NewInt(2), Subject: pkix.Name{CommonName: "ccf"},
+		SerialNumber: big.NewInt(fakeServerSerial), Subject: pkix.Name{CommonName: "ccf"},
 		NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour),
 		KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
+		CRLDistributionPoints: []string{crl.URL + "/ccf-ca.crl"},
 	}, f.caCert, &srvKey.PublicKey, f.caKey)
 	if err != nil {
 		t.Fatal(err)
@@ -138,6 +151,27 @@ func newFakeCCF(t *testing.T) *fakeCCF {
 	f.srv.StartTLS()
 	t.Cleanup(f.srv.Close)
 	return f
+}
+
+// signCrl makes the CRL of the CA of the CCF, with the given serials revoked.
+func (f *fakeCCF) signCrl(revoked ...int64) {
+	f.t.Helper()
+	list := &x509.RevocationList{
+		Number: big.NewInt(int64(1 + len(revoked))), ThisUpdate: time.Now().Add(-time.Minute),
+		NextUpdate: time.Now().Add(time.Hour),
+	}
+	for _, serial := range revoked {
+		list.RevokedCertificateEntries = append(list.RevokedCertificateEntries, x509.RevocationListEntry{
+			SerialNumber: big.NewInt(serial), RevocationTime: time.Now(),
+		})
+	}
+	der, err := x509.CreateRevocationList(rand.Reader, list, f.caCert, f.caKey)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.crl = der
 }
 
 func (f *fakeCCF) setNoOAuth(v bool) {
@@ -440,6 +474,21 @@ func TestRestartedCCF(t *testing.T) {
 	}
 	if on, _, _ := f.counts(); on != 3 || i.ID() != "invoker-3" || len(f.nef.checks()) != 3 {
 		t.Fatalf("onboarded %d, invoker %q, checked %v", on, i.ID(), f.nef.checks())
+	}
+}
+
+// TestRevokedCCF: the AF does not talk to a CAPIF core function with a revoked
+// certificate (TS 33.310 cl. 6.3.1).
+func TestRevokedCCF(t *testing.T) {
+	captureLog(t)
+	f := newFakeCCF(t)
+	f.signCrl(fakeServerSerial)
+	_, err := Start(context.Background(), f.settings(t, t.TempDir()), "AKMA AF")
+	if err == nil || !strings.Contains(err.Error(), "revoked") {
+		t.Fatalf("start with a revoked certificate of the CCF: %v", err)
+	}
+	if on, _, _ := f.counts(); on != 0 {
+		t.Fatalf("onboarded %d", on)
 	}
 }
 
