@@ -19,6 +19,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -271,10 +272,9 @@ func checkInvokerCertificate(t *testing.T, cert *x509.Certificate) {
 		cert.KeyUsage&x509.KeyUsageDigitalSignature == 0 || cert.SignatureAlgorithm != x509.ECDSAWithSHA384 {
 		t.Fatalf("certificate: key usage %v, extensions %v, signature %v", cert.KeyUsage, seen, cert.SignatureAlgorithm)
 	}
-	// No CRL distribution point and no OCSP responder: the lab has no
-	// revocation service.
-	if len(cert.CRLDistributionPoints) != 0 || len(cert.OCSPServer) != 0 {
-		t.Fatalf("certificate with revocation data: %v %v", cert.CRLDistributionPoints, cert.OCSPServer)
+	// The CRL of the CA of the CCF, and no OCSP responder (TS 33.310 cl. 6.1.3a).
+	if !slices.Equal(cert.CRLDistributionPoints, []string{testCrlUri}) || len(cert.OCSPServer) != 0 {
+		t.Fatalf("certificate with other revocation data: %v %v", cert.CRLDistributionPoints, cert.OCSPServer)
 	}
 }
 
@@ -404,21 +404,22 @@ func TestCapifFlow(t *testing.T) {
 		t.Fatalf("invoker information: %+v", item)
 	}
 
-	// Offboarding: the token endpoint and the security information no
-	// longer know the API invoker.
+	// Offboarding: the certificate is revoked and no longer opens a session,
+	// and the security information no longer knows the API invoker.
 	if _, err := tc.invokerAPI(&inv.cert).IndividualOnboardedAPIInvokerDocumentApi.DeleteIndOnboardedAPIInvoker(
 		context.Background(), &APIInvokerManagement.DeleteIndOnboardedAPIInvokerRequest{OnboardingId: &id}); err != nil {
 		t.Fatalf("offboard: %v", err)
 	}
 	_, err = tc.invokerAPI(&inv.cert).IndividualOnboardedAPIInvokerDocumentApi.DeleteIndOnboardedAPIInvoker(
 		context.Background(), &APIInvokerManagement.DeleteIndOnboardedAPIInvokerRequest{OnboardingId: &id})
-	if code, _ := status(t, err); code != http.StatusNotFound {
-		t.Fatalf("offboard again: %d", code)
+	var apiErr openapi.GenericOpenAPIError
+	if err == nil || errors.As(err, &apiErr) {
+		t.Fatalf("offboard again: %v", err)
 	}
 	_, err = tc.token(inv, &inv.cert, models.CapifAccessTokenReq{GrantType: "client_credentials", ClientId: id,
 		ClientSecret: secret}, context.Background())
-	if code, e := tokenErr(t, err); code != http.StatusBadRequest || e != "invalid_client" {
-		t.Fatalf("token after offboarding: %d %s", code, e)
+	if err == nil || errors.As(err, &apiErr) {
+		t.Fatalf("token after offboarding: %v", err)
 	}
 	_, err = tc.internalSecurityAPI().IndividualTrustedAPIInvokerStoreApi.GetSecIndTrustedAPIInv(
 		context.Background(), &Security.GetSecIndTrustedAPIInvRequest{ApiInvokerId: &id})

@@ -4,7 +4,7 @@
 # Usage: free5gc/scripts/build-ccf.sh
 #   Output: free5gc/build/bin/ccf (static binary).
 #   Prepares the patched free5gc/openapi first when it is missing or lacks the
-#   CAPIF models and clients.
+#   CAPIF models and clients or the sbitls package.
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")/.." && pwd)"
@@ -12,7 +12,7 @@ repo="$(cd "$here/.." && pwd)"
 
 command -v go >/dev/null || { echo "go not found in PATH" >&2; exit 1; }
 
-if [ ! -f "$here/build/openapi/capif/Security/client.go" ]; then
+if [ ! -f "$here/build/openapi/capif/Security/client.go" ] || [ ! -f "$here/build/openapi/sbitls/sbitls.go" ]; then
     "$here/scripts/prepare-openapi.sh"
 fi
 

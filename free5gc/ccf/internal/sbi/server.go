@@ -3,6 +3,7 @@ package sbi
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"log"
 	"net/http"
 	"runtime/debug"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/florianoneto07/akma-free5gc/free5gc/ccf/internal/logger"
 	"github.com/florianoneto07/akma-free5gc/free5gc/ccf/pkg/app"
+	"github.com/free5gc/openapi/sbitls"
 )
 
 // API URIs of the CAPIF core function (TS 29.222 table 5.1-2): CAPIF-1e
@@ -51,6 +53,15 @@ func NewServer(ccf ServerCcf) (*Server, error) {
 		return nil, err
 	}
 	conf := s.Config().Configuration
+	if conf.Internal.Tls() {
+		// CAPIF-3/4 with the certificates of the operator (TS 33.122 cl. 6.6).
+		if err = sbitls.Init(sbitls.Config{
+			Certificate: conf.Internal.Certificate, Key: conf.Internal.Key, CA: conf.Internal.Ca, Logger: logger.SBILog,
+		}); err != nil {
+			logger.InitLog.Errorf("Load the certificate of the internal interface failed: %v", err)
+			return nil, err
+		}
+	}
 	s.external = &http.Server{
 		Addr:              conf.Capif1e.Addr(),
 		Handler:           s.externalRouter,
@@ -64,6 +75,9 @@ func NewServer(ccf ServerCcf) (*Server, error) {
 		ReadHeaderTimeout: 10 * time.Second,
 		ErrorLog:          log.New(logger.SBILog.WriterLevel(logrus.ErrorLevel), "internal: ", 0),
 	}
+	if conf.Internal.Tls() {
+		sbitls.ConfigureServer(s.internal)
+	}
 	return s, nil
 }
 
@@ -72,7 +86,9 @@ func NewServer(ccf ServerCcf) (*Server, error) {
 // cipher suites in TLS 1.2 (TS 33.210 cl. 6.2, the profile of TS 33.310
 // Annex E), and HTTP/1.1 or HTTP/2 negotiated by ALPN (RFC 9113 cl. 3.2). The
 // client certificate is verified when given: onboarding uses server-side TLS
-// only, the other operations need the certificate issued at onboarding.
+// only, the other operations need the certificate issued at onboarding, and a
+// certificate that the CCF revoked no longer opens a session (TS 33.310
+// cl. 6.3.1).
 func (s *Server) TLSConfig() (*tls.Config, error) {
 	conf := s.Config().Configuration.Capif1e
 	cert, err := tls.LoadX509KeyPair(conf.Certificate, conf.Key)
@@ -93,6 +109,12 @@ func (s *Server) TLSConfig() (*tls.Config, error) {
 			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
 		},
 		NextProtos: []string{"h2", "http/1.1"},
+		VerifyConnection: func(state tls.ConnectionState) error {
+			if len(state.PeerCertificates) > 0 && s.Context().Revoked(state.PeerCertificates[0].SerialNumber) {
+				return errors.New("revoked client certificate")
+			}
+			return nil
+		},
 	}, nil
 }
 
@@ -133,17 +155,17 @@ func (s *Server) externalRoot() string {
 
 // internalRoot is the apiRoot of the internal interface.
 func (s *Server) internalRoot() string {
-	return "http://" + s.Config().Configuration.Internal.Addr()
+	return s.Config().Configuration.Internal.ApiRoot()
 }
 
 func (s *Server) Run(_ context.Context, wg *sync.WaitGroup) error {
 	wg.Add(2)
-	go s.serve(wg, s.external, true)
-	go s.serve(wg, s.internal, false)
+	go s.serve(wg, s.external, "CAPIF-1e", true)
+	go s.serve(wg, s.internal, "internal", s.Config().Configuration.Internal.Tls())
 	return nil
 }
 
-func (s *Server) serve(wg *sync.WaitGroup, srv *http.Server, tls bool) {
+func (s *Server) serve(wg *sync.WaitGroup, srv *http.Server, name string, tls bool) {
 	defer func() {
 		if p := recover(); p != nil {
 			// Print stack for panic to log. Fatalf() will let program exit.
@@ -155,10 +177,10 @@ func (s *Server) serve(wg *sync.WaitGroup, srv *http.Server, tls bool) {
 
 	var err error
 	if tls {
-		logger.SBILog.Infof("Start CAPIF-1e server (https, listen on %s)", srv.Addr)
+		logger.SBILog.Infof("Start %s server (https, listen on %s)", name, srv.Addr)
 		err = srv.ListenAndServeTLS("", "")
 	} else {
-		logger.SBILog.Infof("Start internal server (http, listen on %s)", srv.Addr)
+		logger.SBILog.Infof("Start %s server (http, listen on %s)", name, srv.Addr)
 		err = srv.ListenAndServe()
 	}
 	if err != nil && err != http.ErrServerClosed {

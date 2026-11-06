@@ -243,10 +243,20 @@ func boolQuery(q url.Values, name string) (bool, bool) {
 
 // HTTPObtainAPIInvokerInfo is Obtain_API_Invoker_Info: GET .../
 // trustedInvokers/{apiInvokerId} (TS 29.222 cl. 5.6.2.4 and 8.5.2.3.3.1), on
-// the internal interface. Without TLS on CAPIF-3, the CCF does not know which
-// AEF asks and gives every item of the security context.
+// the internal interface. Only the items of the AEFs of the client (TS 33.122
+// cl. 6.6). Without TLS on CAPIF-3, the CCF does not know which AEF asks and
+// gives every item of the security context.
 func (s *Server) HTTPObtainAPIInvokerInfo(c *gin.Context) {
 	ctx := s.Context()
+	var aefIds []string
+	if c.Request.TLS != nil {
+		p, known := s.clientProvider(c)
+		if !known {
+			util.WriteProblem(c, util.Problem(http.StatusForbidden, "", "the client certificate is of no API provider"))
+			return
+		}
+		aefIds = p.AefIds
+	}
 	q := c.Request.URL.Query()
 	authn, ok1 := boolQuery(q, "authenticationInfo")
 	authz, ok2 := boolQuery(q, "authorizationInfo")
@@ -275,22 +285,30 @@ func (s *Server) HTTPObtainAPIInvokerInfo(c *gin.Context) {
 		}
 		info = string(b)
 	}
-	items := slices.Clone(inv.Security.Items)
-	for i := range items {
+	items := make([]models.CapifSecurityInformation, 0, len(inv.Security.Items))
+	for i, item := range inv.Security.Items {
 		if inv.Security.Aefs[i] != "" {
 			// The AEF resolved from interfaceDetails replaces it: only one of
 			// the two is present (table 8.5.4.2.3-1).
-			items[i].AefId = inv.Security.Aefs[i]
-			items[i].InterfaceDetails = nil
+			item.AefId = inv.Security.Aefs[i]
+			item.InterfaceDetails = nil
+		}
+		if aefIds != nil && !slices.Contains(aefIds, item.AefId) {
+			continue
 		}
 		if authn {
 			// The CA of the CCF, for the AEF to validate the certificate of
 			// the API invoker (TS 33.122 cl. 6.5.2.3 step 5).
-			items[i].AuthenticationInfo = ctx.CaPEM()
+			item.AuthenticationInfo = ctx.CaPEM()
 		}
 		if authz {
-			items[i].AuthorizationInfo = info
+			item.AuthorizationInfo = info
 		}
+		items = append(items, item)
+	}
+	if len(items) == 0 {
+		util.WriteProblem(c, util.Problem(http.StatusNotFound, "", "no security context for this AEF"))
+		return
 	}
 	util.WriteJSON(c, http.StatusOK, models.CapifServiceSecurity{
 		SecurityInfo:            items,

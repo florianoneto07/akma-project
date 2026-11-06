@@ -126,7 +126,8 @@ func (s *Server) apiList(profile factory.InvokerProfile) *models.CapifApiList {
 // HTTPOffboard is Offboard_API_Invoker: DELETE .../onboardedInvokers/
 // {onboardingId} (TS 29.222 cl. 5.5.2.3 and 8.4.2.3.3.1), with the client
 // certificate of the API invoker. The CCF deletes the profile, the security
-// context and the onboarding secret (TS 33.122 cl. 6.8 step 3).
+// context and the onboarding secret (TS 33.122 cl. 6.8 step 3), and revokes
+// the certificate.
 func (s *Server) HTTPOffboard(c *gin.Context) {
 	id := c.Param("onboardingId")
 	if !requireInvoker(c, id) {

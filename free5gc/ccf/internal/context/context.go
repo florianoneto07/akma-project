@@ -40,6 +40,11 @@ type CCFContext struct {
 	invokers map[string]*Invoker
 	apis     map[string]*PublishedAPI
 
+	// The CRL of the CA of the CCF (TS 33.310 cl. 6.1a).
+	crlEntries []x509.RevocationListEntry
+	crlNumber  *big.Int
+	crlNext    time.Time
+
 	// Now returns the current time; tests replace it.
 	Now func() time.Time
 }
@@ -53,6 +58,7 @@ type Invoker struct {
 	Profile                 string
 	PublicKey               string
 	Certificate             string
+	Serial                  *big.Int
 	Secret                  string
 	NotificationDestination string
 	Information             string
@@ -78,13 +84,34 @@ type PublishedAPI struct {
 
 var self *CCFContext
 
-// Init builds the context of the running CCF.
+// Init builds the context of the running CCF and signs its CRL.
 func Init(cfg *factory.Config) error {
 	c, err := New(cfg)
 	if err != nil {
 		return err
 	}
+	if err = c.StartCrl(); err != nil {
+		return err
+	}
 	self = c
+	return nil
+}
+
+// StartCrl takes the revocations of a previous run and signs the CRL. The
+// certificates of the API invokers name it (TS 33.310 cl. 6.1.3a).
+func (c *CCFContext) StartCrl() error {
+	path := c.cfg.Configuration.Ca.CrlFile
+	if path == "" {
+		return nil
+	}
+	if err := c.loadCrl(path); err != nil {
+		return fmt.Errorf("ca.crlFile: %w", err)
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err := c.signCrl(); err != nil {
+		return fmt.Errorf("ca.crlFile: %w", err)
+	}
 	return nil
 }
 
@@ -203,7 +230,8 @@ func randomSecret() (string, error) {
 // onboarding secret. The certificate follows the TLS entity certificate
 // profile of TS 33.310 cl. 6.1.3a, which TS 33.122 cl. 6.3.1.1 requires on
 // CAPIF-1e: key usage digitalSignature, critical; extended key usage
-// id-kp-clientAuth, not critical; no other critical extension (cl. 6.1.1).
+// id-kp-clientAuth, not critical; the CRL distribution point of the CA of the
+// CCF; no other critical extension (cl. 6.1.1).
 func (c *CCFContext) Onboard(profile, publicKeyPEM string, pub crypto.PublicKey,
 	notificationDestination, information string,
 ) (Invoker, error) {
@@ -225,6 +253,9 @@ func (c *CCFContext) Onboard(profile, publicKeyPEM string, pub crypto.PublicKey,
 		KeyUsage:     x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	}
+	if uri := c.cfg.Configuration.Ca.CrlUri; uri != "" {
+		tmpl.CRLDistributionPoints = []string{uri}
+	}
 	if _, ok := pub.(*rsa.PublicKey); ok {
 		tmpl.KeyUsage |= x509.KeyUsageKeyEncipherment
 	}
@@ -241,6 +272,7 @@ func (c *CCFContext) Onboard(profile, publicKeyPEM string, pub crypto.PublicKey,
 		Profile:                 profile,
 		PublicKey:               publicKeyPEM,
 		Certificate:             string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})),
+		Serial:                  serial,
 		Secret:                  secret,
 		NotificationDestination: notificationDestination,
 		Information:             information,
@@ -274,14 +306,17 @@ func (c *CCFContext) Invoker(id string) (Invoker, bool) {
 }
 
 // Offboard deletes the profile of an API invoker with its certificate, its
-// security context and its onboarding secret (TS 33.122 cl. 6.8 step 3).
+// security context and its onboarding secret (TS 33.122 cl. 6.8 step 3), and
+// revokes the certificate.
 func (c *CCFContext) Offboard(id string) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if _, ok := c.invokers[id]; !ok {
+	inv, ok := c.invokers[id]
+	if !ok {
 		return false
 	}
 	delete(c.invokers, id)
+	c.revoke(inv.Serial)
 	return true
 }
 

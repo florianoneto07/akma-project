@@ -10,10 +10,12 @@ import (
 	"net"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/asaskevich/govalidator"
+	"github.com/google/uuid"
 
 	"github.com/florianoneto07/akma-free5gc/shared/akma/afid"
 )
@@ -61,8 +63,8 @@ type Configuration struct {
 	// served over HTTPS (TS 29.222 cl. 7.3; TS 33.122 cl. 6.1, 6.3.1.1).
 	Capif1e *Capif1e `yaml:"capif1e" valid:"required"`
 	// Internal is the interface of the API provider functions, CAPIF-3/4
-	// (TS 23.222 cl. 6.4.6, 6.4.7), served over http on an internal address.
-	Internal *Listener `yaml:"internal" valid:"required"`
+	// (TS 23.222 cl. 6.4.6, 6.4.7), with mutual TLS (TS 33.122 cl. 6.6).
+	Internal *Internal `yaml:"internal" valid:"required"`
 	// Ca signs the certificates of the API invokers (TS 33.122 cl. 6.1 step 4).
 	Ca *Ca `yaml:"ca" valid:"required"`
 	// Token signs the access tokens (TS 29.222 cl. 5.6.2.3.2; TS 33.122
@@ -90,6 +92,33 @@ type Capif1e struct {
 	Key         string `yaml:"key" valid:"required"`
 }
 
+// Internal is the listener of CAPIF-3/4. With Certificate, its server has
+// mutual TLS with the CA of the operator in Ca; without it, it is http.
+type Internal struct {
+	Listener    `yaml:",inline"`
+	Fqdn        string `yaml:"fqdn,omitempty" valid:"optional"`
+	Certificate string `yaml:"certificate,omitempty" valid:"optional"`
+	Key         string `yaml:"key,omitempty" valid:"optional"`
+	Ca          string `yaml:"ca,omitempty" valid:"optional"`
+}
+
+// Tls tells whether the interface has TLS.
+func (i *Internal) Tls() bool {
+	return i.Certificate != ""
+}
+
+// ApiRoot returns the apiRoot of the interface.
+func (i *Internal) ApiRoot() string {
+	if !i.Tls() {
+		return "http://" + i.Addr()
+	}
+	host := i.Fqdn
+	if host == "" {
+		host = i.BindingIPv4
+	}
+	return "https://" + net.JoinHostPort(host, strconv.Itoa(i.Port))
+}
+
 type Ca struct {
 	Certificate string `yaml:"certificate" valid:"required"`
 	// Key is an ECDSA P-384 or P-521 private key: the CA signs P-384 keys
@@ -97,6 +126,11 @@ type Ca struct {
 	Key string `yaml:"key" valid:"required"`
 	// InvokerCertLifetime is a Go duration ("8760h").
 	InvokerCertLifetime string `yaml:"invokerCertLifetime,omitempty" valid:"optional"`
+	// CrlUri is the CRL distribution point of the certificates of the API
+	// invokers (TS 33.310 cl. 6.1.3a).
+	CrlUri string `yaml:"crlUri,omitempty" valid:"optional"`
+	// CrlFile is where the CCF writes the CRL of this CA, in DER.
+	CrlFile string `yaml:"crlFile,omitempty" valid:"optional"`
 }
 
 type Token struct {
@@ -113,6 +147,9 @@ type Provider struct {
 	Name   string   `yaml:"name" valid:"required"`
 	ApfId  string   `yaml:"apfId" valid:"required"`
 	AefIds []string `yaml:"aefIds" valid:"required"`
+	// NfInstanceId is the NF instance of the client certificate of the
+	// provider on CAPIF-3/4, with TLS.
+	NfInstanceId string `yaml:"nfInstanceId,omitempty" valid:"optional"`
 }
 
 // InvokerProfile lists the APIs an AF may use and the AF_IDs the NEF accepts
@@ -140,7 +177,7 @@ func (c *Configuration) validate() error {
 		}
 	}
 	if c.Internal != nil {
-		if err := c.Internal.validate("internal"); err != nil {
+		if err := c.Internal.validate(); err != nil {
 			return err
 		}
 	}
@@ -176,6 +213,12 @@ func (c *Configuration) validate() error {
 			}
 			aefOwner[aef] = p.Name
 		}
+		if c.Internal != nil && c.Internal.Tls() {
+			if err := uuid.Validate(p.NfInstanceId); err != nil {
+				return fmt.Errorf("invalid providers[%d].nfInstanceId: with TLS on the internal interface, "+
+					"the NF instance of the certificate of the provider", i)
+			}
+		}
 	}
 	names := map[string]bool{}
 	for i, p := range c.InvokerProfiles {
@@ -196,6 +239,16 @@ func (c *Configuration) validate() error {
 				return fmt.Errorf("invalid invokerProfiles[%d].afIds[%d]: expected \"<FQDN>.<10 hex>\"", i, j)
 			}
 		}
+	}
+	return nil
+}
+
+func (i *Internal) validate() error {
+	if err := i.Listener.validate("internal"); err != nil {
+		return err
+	}
+	if (i.Certificate == "") != (i.Key == "") || (i.Certificate == "") != (i.Ca == "") {
+		return errors.New("invalid internal: certificate, key and ca go together")
 	}
 	return nil
 }
@@ -251,6 +304,18 @@ func (c *Config) Profile(name string) (InvokerProfile, bool) {
 		}
 	}
 	return InvokerProfile{}, false
+}
+
+// ProviderOf returns the API provider domain of an NF instance.
+func (c *Config) ProviderOf(nfInstanceId string) (Provider, bool) {
+	c.RLock()
+	defer c.RUnlock()
+	for _, p := range c.Configuration.Providers {
+		if strings.EqualFold(p.NfInstanceId, nfInstanceId) {
+			return p, true
+		}
+	}
+	return Provider{}, false
 }
 
 // Provider returns the API provider domain of the API publishing function

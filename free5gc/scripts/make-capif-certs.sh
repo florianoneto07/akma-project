@@ -18,8 +18,9 @@
 #   ccf-credential.key        ECDSA P-256, signs the onboarding credentials
 #
 #   The subjects are O=AKMA test, CN=<name>, in UTF8String (TS 33.310
-#   cl. 6.1.1). The certificates have no CRL distribution point and there is
-#   no CRL: the lab has no revocation service.
+#   cl. 6.1.1). The server certificate has the CRL distribution point of the
+#   CA of the CCF, at the CRL service on port 8030 of the address given; the
+#   CCF itself signs that CRL.
 #
 #   Files that exist are kept when their key is of the type above, except the
 #   server certificate, made again for the address given. Test only: the
@@ -64,6 +65,7 @@ openssl x509 -req -in "$dir/ccf.csr" -CA "$dir/ccf-ca.pem" -CAkey "$dir/ccf-ca.k
     -days 365 -out "$dir/ccf.pem" -extfile <(printf '%s\n' \
         "keyUsage=critical,digitalSignature" \
         "extendedKeyUsage=serverAuth" \
+        "crlDistributionPoints=URI:http://$ip:8030/ccf-ca.crl" \
         "subjectAltName=IP:$ip") 2>/dev/null
 rm -f "$dir/ccf.csr"
 echo "made the server certificate of CAPIF-1e $dir/ccf.pem for $ip"

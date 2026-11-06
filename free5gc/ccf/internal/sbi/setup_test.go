@@ -49,6 +49,7 @@ type testCCF struct {
 const (
 	testAfId      = "af1.akma.example.FF00000001"
 	testOtherAfId = "af4.akma.example.FF00000001"
+	testCrlUri    = "http://192.0.2.1:8030/ccf-ca.crl"
 )
 
 func writePEM(t *testing.T, path, typ string, der []byte) {
@@ -120,8 +121,11 @@ func newTestCCF(t *testing.T) *testCCF {
 				Certificate: filepath.Join(dir, "ccf.pem"),
 				Key:         filepath.Join(dir, "ccf.key"),
 			},
-			Internal:      &factory.Listener{BindingIPv4: "127.0.0.1", Port: 8021},
-			Ca:            &factory.Ca{Certificate: filepath.Join(dir, "ccf-ca.pem"), Key: filepath.Join(dir, "ccf-ca.key")},
+			Internal: &factory.Internal{Listener: factory.Listener{BindingIPv4: "127.0.0.1", Port: 8021}},
+			Ca: &factory.Ca{
+				Certificate: filepath.Join(dir, "ccf-ca.pem"), Key: filepath.Join(dir, "ccf-ca.key"),
+				CrlUri: testCrlUri, CrlFile: filepath.Join(dir, "crl", "ccf-ca.crl"),
+			},
 			Token:         &factory.Token{Key: filepath.Join(dir, "ccf-token.key"), Lifetime: "10m"},
 			CredentialKey: filepath.Join(dir, "ccf-credential.key"),
 			Providers:     []factory.Provider{{Name: "nef", ApfId: "nef-apf", AefIds: []string{"nef-aef"}}},
@@ -137,6 +141,9 @@ func newTestCCF(t *testing.T) *testCCF {
 	}
 	ctx, err := ccf_context.New(cfg)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err = ctx.StartCrl(); err != nil {
 		t.Fatal(err)
 	}
 	server, err := NewServer(&testApp{ctx: ctx, cfg: cfg})

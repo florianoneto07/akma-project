@@ -12,18 +12,41 @@ import (
 	"github.com/florianoneto07/akma-free5gc/free5gc/ccf/internal/util"
 	"github.com/florianoneto07/akma-free5gc/free5gc/ccf/pkg/factory"
 	"github.com/free5gc/openapi/models"
+	"github.com/free5gc/openapi/sbitls"
 )
 
 // provider answers 403 unless {apfId} is an API publishing function of the
-// configuration: its authorization details are with the CCF (TS 23.222
-// cl. 8.3.3, pre-condition 1). Until TLS on CAPIF-3/4, the CCF recognizes the
-// API provider by the internal interface.
+// configuration, its authorization details are with the CCF (TS 23.222
+// cl. 8.3.3, pre-condition 1), and the client is that API provider: the NF
+// instance of its certificate (TS 33.122 cl. 6.6). Without TLS on CAPIF-3/4,
+// the CCF recognizes it by the internal interface.
 func (s *Server) provider(c *gin.Context) (factory.Provider, bool) {
 	p, ok := s.Config().Provider(c.Param("apfId"))
 	if !ok {
 		util.WriteProblem(c, util.Problem(http.StatusForbidden, "", "unknown API publishing function"))
+		return p, false
 	}
-	return p, ok
+	if c.Request.TLS != nil {
+		if client, known := s.clientProvider(c); !known || client.ApfId != p.ApfId {
+			util.WriteProblem(c, util.Problem(http.StatusForbidden, "", "the client certificate is of another API provider"))
+			return p, false
+		}
+	}
+	return p, true
+}
+
+// clientProvider returns the API provider of the client certificate of a
+// request on the internal interface.
+func (s *Server) clientProvider(c *gin.Context) (factory.Provider, bool) {
+	cert := sbitls.PeerCertificate(c.Request.TLS)
+	if cert == nil {
+		return factory.Provider{}, false
+	}
+	id, err := sbitls.NfInstanceId(cert)
+	if err != nil {
+		return factory.Provider{}, false
+	}
+	return s.Config().ProviderOf(id)
 }
 
 // HTTPPublish is Publish_Service_API: POST .../{apfId}/service-apis

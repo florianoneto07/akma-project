@@ -88,6 +88,30 @@ func TestConfig(t *testing.T) {
 			t.Fatalf("%s: accepted", name)
 		}
 	}
+	withTls := strings.Replace(sample, "    bindingIPv4: 127.0.0.1\n    port: 8020\n",
+		"    bindingIPv4: 127.0.0.1\n    port: 8020\n    fqdn: ccf.example\n"+
+			"    certificate: cert/sba/ccf-internal.pem\n    key: cert/sba/ccf-internal.key\n    ca: cert/sba/sba-ca.pem\n", 1)
+	if _, err := readSample(t, withTls); err == nil {
+		t.Fatal("TLS on the internal interface without the NF instance of the provider: accepted")
+	}
+	withInstance := strings.Replace(withTls, "      apfId: nef-apf\n",
+		"      apfId: nef-apf\n      nfInstanceId: 8e73ad07-906c-4952-93ac-cd32bbb076ed\n", 1)
+	tlsCfg, err := readSample(t, withInstance)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := tlsCfg.Configuration.Internal.ApiRoot(); got != "https://ccf.example:8020" {
+		t.Fatalf("apiRoot with TLS: %s", got)
+	}
+	if got := cfg.Configuration.Internal.ApiRoot(); got != "http://127.0.0.1:8020" {
+		t.Fatalf("apiRoot without TLS: %s", got)
+	}
+	if p, ok := tlsCfg.ProviderOf("8E73AD07-906C-4952-93AC-CD32BBB076ED"); !ok || p.ApfId != "nef-apf" {
+		t.Fatalf("provider of an NF instance: %+v", p)
+	}
+	if _, err := readSample(t, strings.Replace(withInstance, "    ca: cert/sba/sba-ca.pem\n", "", 1)); err == nil {
+		t.Fatal("internal.certificate without internal.ca: accepted")
+	}
 	twoProviders := strings.Replace(sample, "  invokerProfiles:",
 		"    - name: other\n      apfId: other-apf\n      aefIds:\n        - nef-aef\n  invokerProfiles:", 1)
 	if _, err := readSample(t, twoProviders); err == nil {

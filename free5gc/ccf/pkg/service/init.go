@@ -110,6 +110,7 @@ func (a *CcfApp) Start() {
 
 	a.wg.Add(1)
 	go a.listenShutdownEvent()
+	go a.ccfCtx.RunCrl(a.ctx)
 
 	if err := a.sbiServer.Run(a.ctx, &a.wg); err != nil {
 		logger.MainLog.Fatalf("Run servers failed: %+v", err)
