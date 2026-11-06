@@ -9,8 +9,9 @@
 #   R1  CRL signed again; free5GC (run.sh -crl -aanf -ccf), gNB, UE in its
 #       namespace, subscriber provisioned; the onboarding credential of the
 #       CAPIF core function (CCF) issued for the AF machine
-#   R1s mutual TLS of the SBI: each port of the SBI, the identity of the
-#       certificates in the access tokens and in the policies, the profiles
+#   R1s mutual TLS of the SBI: each port of the SBI and the internal server
+#       of the CCF, the identity of the certificates in the access tokens and
+#       in the policies, the profiles
 #       of the certificates, and the seed tool against a server of OpenSSL
 #   R2  registration; A-KID of the UE = AUSF = AAnF; Ua* from the UE
 #   R2k AKMA key service of the ME: K_AF only to the application of the AF_ID
@@ -197,6 +198,15 @@ check R1.subscriber "AKMA subscription of $supi provisioned (akmaAllowed, routin
     grep -q "routingId: '0000'" "$run/provision.out"
 check R1.crl-signed "CRL of the operator signed for this run (TS 33.310 cl. 6.1a)" sba_pki crl
 
+# Only the NFs of this run at the NRF. A test bench that stops without
+# deregistering leaves its profiles in MongoDB, and the NRF looks at one
+# profile of the target type when it grants a token (F27).
+no_old_profiles() {
+    [ "$(mongosh --quiet mongodb://127.0.0.1:27017/free5gc \
+        --eval 'db.NfProfile.deleteMany({}); db.NfProfile.countDocuments({})')" = 0 ]
+}
+check R1.profiles "no NF profile of an earlier run at the NRF" no_old_profiles
+
 # free5GC in a process group of its own, which the stop at the end signals;
 # in the same terminal, for the sudo of run.sh.
 set -m
@@ -229,12 +239,11 @@ check R1.ue "UE registered with a PDU session, in its namespace" start_ue
 # ---------------------------------------------------------------- R1s
 # The mutual TLS of the SBI (TS 33.501 cl. 13.1.0), with tools independent of
 # the Go code of the repository: the Python of sbi_tls.py at each port of the
-# SBI and of sbi_token.py at the NRF and at the AAnF, and OpenSSL as the server
-# of the seed tool. BSF: not started in this laboratory; the internal server of
-# the CCF: http until the TLS of CAPIF-3/4.
+# SBI and of sbi_token.py at the NRF, at the AAnF and at the CCF, and OpenSSL as
+# the server of the seed tool. BSF: not started in this laboratory.
 step "R1s TLS of the SBI"
 python3 -I "$repo/af/scripts/negative/sbi_tls.py" "$entities" "$sba" seed-af free5gc \
-    nrf amf smf udr pcf udm nssf ausf chf nef aanf | tee -a "$results"
+    nrf amf smf udr pcf udm nssf ausf chf nef aanf ccf-internal | tee -a "$results"
 python3 -I "$repo/af/scripts/negative/sbi_token.py" "$entities" "$sba" | tee -a "$results"
 check S05 "every certificate matches its profile (TS 33.310 cl. 6.1.3c.3, 6.1.4a, 6.1.3a)" sba_pki check
 seed_against "$sba/udm.pem" "$sba/udm.key" udm

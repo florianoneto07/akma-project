@@ -7,9 +7,11 @@ HTTP/1.1 requests over mutual TLS (module ssl), at the CAPIF core function and
 at the NEF with the certificate of the onboarding, and the OpenSSL command line for its
 key pair. It onboards with the onboarding credential, discovers the AKMA
 API, obtains the security method and an access token, requests K_AF through
-the NEF with the token, and offboards at the end. The expected answers come
-from TS 29.222 cl. 5.2, 5.5, 5.6 and 6.2.2.2, TS 33.122 cl. 6.1, 6.3, 6.5.2.3
-and Annex C, TS 29.522 cl. 7.2 and TS 33.535 cl. 6.3.
+the NEF with the token, and offboards at the end. A third API invoker checks
+that the access token and the certificate are of the same API invoker. The
+expected answers come from TS 29.222 cl. 5.2, 5.5, 5.6 and 6.2.2.2, TS 33.122
+cl. 6.1, 6.3, 6.5.2.3, 6.8 and Annex C, TS 33.310 cl. 6.3.1, TS 29.522 cl. 7.2
+and TS 33.535 cl. 6.3.
 
 Usage: capif_api.py <CCF host:port> <CA of the CCF> <onboarding credential file>
                     <NEF host:port> <AAnF host:port> <registered A-KID> <API invoker ID of the AF>
@@ -31,13 +33,16 @@ import urllib.parse
 import uuid
 
 AF_ID = "af1.akma.example.FF00000001"
-# In the address policy of the NEF, outside the profile of the API invoker.
+# In the policy of the NEF, outside the profile of the API invoker.
 AF_ID_OUTSIDE_PROFILE = "af3.akma.example.FF00000001"
-# In the profile of the API invoker, outside the address policy of the NEF.
+# In the profile of the API invoker, outside the policy of the NEF.
 AF_ID_OUTSIDE_POLICY = "af4.akma.example.FF00000001"
 AEF_ID = "nef-aef"
 SCOPE = "3gpp#nef-aef:3gpp-akma"
 NOTIFY = "https://192.168.16.129/capif/notify"
+# capif.invokerCrlMaxAge of nefcfg.yaml, plus a margin: how long the NEF may
+# still use the CRL it fetched before an API invoker offboarded.
+CRL_WAIT = 7
 
 failures = 0
 
@@ -70,6 +75,15 @@ def tls_request(ctx, hostport, method, path, body=b"", headers=None):
     data = rsp.read()
     conn.close()
     return rsp.status, {k.lower(): v for k, v in rsp.getheaders()}, data
+
+
+def refused(call):
+    """Whether a request is refused in TLS: an alert, and no HTTP answer."""
+    try:
+        s = call()[0]
+    except (ssl.SSLError, OSError, http.client.HTTPException) as e:
+        return True, type(e).__name__
+    return False, f"HTTP {s}"
 
 
 def openssl(*args, data=None):
@@ -190,17 +204,21 @@ def main():
     with open(cred_file) as f:
         credential = f.read().strip()
     workdir = tempfile.mkdtemp(prefix="capif-api-")
+    otherdir = tempfile.mkdtemp(prefix="capif-api-")
     inv = Invoker(ccf, ca, workdir)
+    other = Invoker(ccf, ca, otherdir)
     try:
-        run(inv, credential, nef, aanf, akid, af_invoker or str(uuid.uuid4()), sba)
+        run(inv, other, credential, nef, aanf, akid, af_invoker or str(uuid.uuid4()), sba)
     finally:
-        if inv.id and inv.secret:
-            inv.offboard()
+        for i in (inv, other):
+            if i.id and i.secret:
+                i.offboard()
         shutil.rmtree(workdir, ignore_errors=True)
+        shutil.rmtree(otherdir, ignore_errors=True)
     sys.exit(1 if failures else 0)
 
 
-def run(inv, credential, nef, aanf, akid, af_invoker, sba):
+def run(inv, other, credential, nef, aanf, akid, af_invoker, sba):
     # CP08: onboarding without the credential, and with a tampered one
     # (TS 29.222 cl. 5.5.2.2.2 NOTE 4; RFC 6750 cl. 3).
     s1, h1, _ = inv.onboard("")
@@ -305,8 +323,8 @@ def run(inv, credential, nef, aanf, akid, af_invoker, sba):
     s, _, _ = retrieve(ctx, nef, tamper(token), {"afId": AF_ID, "aKId": akid})
     report("CP15", "NEF with a tampered token: 401", s == 401, f"{s}")
 
-    # CP16, CP17: AF_ID outside the profile of the API invoker, and outside the address policy of the
-    # NEF: 403 without cause (TS 29.522 cl. 7.2; TS 33.535 cl. 6.3 step 2).
+    # CP16, CP17: AF_ID outside the profile of the API invoker, and outside the policy of the NEF:
+    # 403 without cause (TS 29.522 cl. 7.2; TS 33.535 cl. 6.3 step 2).
     for tid, desc, af_id in [
         ("CP16", f"AF_ID {AF_ID_OUTSIDE_PROFILE}, in the policy of the NEF and outside the profile: 403 without cause",
          AF_ID_OUTSIDE_PROFILE),
@@ -317,14 +335,38 @@ def run(inv, credential, nef, aanf, akid, af_invoker, sba):
         pd = as_json(d)
         report(tid, desc, s == 403 and not pd.get("cause"), f"{s} {pd.get('detail', '')}")
 
-    # CP18: offboarding (TS 33.122 cl. 6.8); the token endpoint no longer knows the API invoker.
+    # S16: the access token and the certificate on CAPIF-2e are of the same API invoker
+    # (TS 33.122 cl. 6.5.2.3 step 5; TS 33.501 cl. 13.3.1.3), and the groups of the SBI of the NEF
+    # are not for the certificates of the CA of the CCF. The token of the NRF is S16.nrf, in nef_api.py.
+    s, _ = other.enrol(credential)
+    if s == 201:
+        other_ctx = other.nef_tls(sba)
+        s, h, _ = retrieve(other_ctx, nef, token, {"afId": AF_ID, "aKId": akid})
+        challenge = h.get("www-authenticate", "")
+        report("S16.token", "token of an API invoker with the certificate of another: 401 invalid_token",
+               s == 401 and 'error="invalid_token"' in challenge, f"{s} {challenge}")
+        s, _, _ = inv.check_authentication(other_ctx, nef)
+        report("S16.check", "check-authentication of an API invoker with the certificate of another: 403",
+               s == 403, f"{s}")
+    else:
+        report("S16.token", "onboarding of the third API invoker", False, f"{s}")
+    s, _, d = tls_request(ctx, nef, "GET", "/nnef-pfdmanagement/v1/applications")
+    got = as_json(d).get("cause")
+    report("S16.sbi", "certificate of an API invoker on a group of the SBI of the NEF: 403 without cause",
+           s == 403 and not got, f"{s} {got}")
+
+    # CP18: offboarding (TS 33.122 cl. 6.8): the CCF revokes the certificate and refuses it on CAPIF-1e.
     s, _, _ = inv.offboard()
-    s2, _, d2 = inv.token(inv.token_form())
-    got = as_json(d2).get("error")
-    report("CP18", "offboarding: 204; token requested after: 400 invalid_client",
-           s == 204 and s2 == 400 and got == "invalid_client", f"{s}, {s2} {got}")
     if s == 204:
         inv.secret = ""
+    gone, got = refused(lambda: inv.token(inv.token_form()))
+    report("CP18", "offboarding: 204; token requested after: the certificate is refused in TLS", s == 204 and gone,
+           f"{s}, {got}")
+
+    # S18: the NEF sees it in the CRL of the CA of the CCF (TS 33.310 cl. 6.3.1).
+    time.sleep(CRL_WAIT)
+    gone, got = refused(lambda: inv.check_authentication(ctx, nef))
+    report("S18", "certificate of an API invoker that offboarded, at the NEF: refused in TLS", gone, got)
 
 
 if __name__ == "__main__":

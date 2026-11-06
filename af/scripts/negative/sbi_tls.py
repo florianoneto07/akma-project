@@ -42,7 +42,7 @@ def entities(path):
     with open(path) as f:
         for line in f:
             fields = line.split()
-            if len(fields) == 7 and fields[0] == "nf":
+            if len(fields) == 7 and fields[0] in ("nf", "ccf"):
                 found[fields[1]] = {"fqdn": fields[3], "address": fields[4], "port": int(fields[5]), "id": fields[6]}
     return found
 
@@ -128,8 +128,10 @@ def main():
         try:
             der, alt, answer = https(context(certs, client), entity)
             want = installed(certs, name)
-            ok = (("DNS", entity["fqdn"]) in alt and ("URI", "urn:uuid:" + entity["id"]) in alt
-                  and ("IP Address", entity["address"]) in alt and answer.startswith(b"HTTP/")
+            # The internal server of the CCF is no NF: it has no NF instance.
+            ok = (("DNS", entity["fqdn"]) in alt and ("IP Address", entity["address"]) in alt
+                  and (entity["id"] == "-" or ("URI", "urn:uuid:" + entity["id"]) in alt)
+                  and answer.startswith(b"HTTP/")
                   and want in (None, der))
             got = f"{len(alt)} names, {'file not here' if want is None else 'the installed certificate'}, {answer[:12]!r}"
         except (ssl.SSLError, OSError) as e:

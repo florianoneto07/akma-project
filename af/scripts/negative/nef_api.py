@@ -11,7 +11,7 @@ cl. 5.2.6 and TS 33.535 cl. 6.2.2 and 6.3.
 Usage: nef_api.py <CCF host:port> <CA of the CCF> <onboarding credential file>
                   <NEF host:port> <AAnF host:port> <registered A-KID>
                   <directory of the certificates of the SBI>
-                  <file with an access token of the NRF for another service>
+                  <file with an access token of the NRF for 3gpp-akma>
 Prints one PASS or FAIL line per test; exits 1 when any fails. No key,
 secret, credential or token is printed.
 """
@@ -48,15 +48,15 @@ def problem(status, ctype, data):
 def main():
     if len(sys.argv) != 9:
         sys.exit(__doc__)
-    ccf, ca, cred_file, nef, aanf, akid, sba, other_file = sys.argv[1:]
+    ccf, ca, cred_file, nef, aanf, akid, sba, nrf_file = sys.argv[1:]
     with open(cred_file) as f:
         credential = f.read().strip()
-    with open(other_file) as f:
-        other = f.read().strip()
+    with open(nrf_file) as f:
+        nrf_token = f.read().strip()
     workdir = tempfile.mkdtemp(prefix="nef-api-")
     inv = Invoker(ccf, ca, workdir)
     try:
-        run(inv, credential, nef, aanf, akid, sba, other)
+        run(inv, credential, nef, aanf, akid, sba, nrf_token)
     finally:
         if inv.id and inv.secret:
             inv.offboard()
@@ -64,7 +64,7 @@ def main():
     sys.exit(1 if capif_api.failures else 0)
 
 
-def run(inv, credential, nef, aanf, akid, sba, other):
+def run(inv, credential, nef, aanf, akid, sba, nrf_token):
     s, _ = inv.enrol(credential)
     if s != 201:
         report("E00.onboarding", "onboarding of the API invoker of the test", False, f"{s}")
@@ -103,13 +103,17 @@ def run(inv, credential, nef, aanf, akid, sba, other):
     report("E04", "no access token: 401 with ProblemDetails",
            s == 401 and ct.startswith("application/problem+json"), f"{s} {ct.split(';')[0]}")
 
-    # E05: token of the NRF for another producer (naanf-akma for the AAnF): 403 of aud (TS 29.500 cl. 6.7.3).
-    desc = "access token of another producer: 403 ACCESS_TOKEN_CLAIM_MISMATCH"
-    if not other:
-        report("E05", desc, False, "no naanf-akma token of the NRF")
+    # E05, S16.nrf: token of the NRF for this API: with CAPIF, only the tokens of the CCF count
+    # (TS 29.522 cl. 7.2; RFC 6750 cl. 3.1).
+    desc = "access token of the NRF for 3gpp-akma: 401 invalid_token"
+    if not nrf_token:
+        report("E05", desc, False, "no 3gpp-akma token of the NRF")
     else:
-        s, ct, d = retrieve(ctx, nef, other, {"afId": AF_ID, "aKId": akid})
-        report("E05", desc, s == 403 and as_json(d).get("cause") == "ACCESS_TOKEN_CLAIM_MISMATCH", problem(s, ct, d))
+        s, h, _ = capif_api.retrieve(ctx, nef, nrf_token, {"afId": AF_ID, "aKId": akid})
+        challenge = h.get("www-authenticate", "")
+        ok = s == 401 and 'error="invalid_token"' in challenge
+        report("E05", desc, ok, f"{s} {challenge}")
+        report("S16.nrf", desc, ok, f"{s} {challenge}")
 
     # E06: AF_ID not authorized by the NEF (TS 33.535 cl. 6.3 step 2): 403 without cause.
     s, ct, d = retrieve(ctx, nef, token, {"afId": "af2.akma.example.FF00000001", "aKId": akid})

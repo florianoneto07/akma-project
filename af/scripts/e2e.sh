@@ -356,8 +356,8 @@ group_T() {
 # The AF outside the operator network, through the NEF (TS 33.535 cl. 6.3),
 # as API invoker of CAPIF (TS 29.522 cl. 7.2), and anonymous access
 # (cl. 6.2.2). The extra AFs stay up for the Ua* of the UE (R2n) and are
-# stopped in group B. The access token of the NRF for another producer, for
-# E05, comes from the seed tool on the free5GC host.
+# stopped in group B. The access token of the NRF for 3gpp-akma, for E05, comes
+# from the seed tool on the free5GC host.
 group_nef() {
     local akid1="$1" name
     echo "== A (NEF): AF outside the operator network and anonymous access"
@@ -370,7 +370,7 @@ group_nef() {
     done
     expect E00 "AFs outside the operator network onboarded at the CCF, with the NEF discovered there" \
         "$(cat "$L/af-nef.log" "$L/af-nef-anon.log" "$L/af-nef-psk.log" | grep -ac 'The NEF has the authentication data')" "^3$"
-    (umask 077 && ssh_b "~/akma-tools/seed token --nrf $nrf --target AANF --scope naanf-akma" >"$L/.nrf-token" 2>/dev/null)
+    (umask 077 && ssh_b "~/akma-tools/seed token --nrf $nrf --target NEF --scope 3gpp-akma" >"$L/.nrf-token" 2>/dev/null)
     python3 -I "$here/scripts/negative/nef_api.py" "$ccf" "$capif/ccf-ca.pem" "$capif/af1-external.jwt" \
         "$nef" "$aanf" "$akid1" "$sba" "$L/.nrf-token" >>"$results" 2>&1
     rm -f "$L/.nrf-token"

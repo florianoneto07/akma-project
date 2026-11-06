@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Checks of the identity of the certificates in the access tokens and in the
 policies, in operation (TS 33.501 cl. 13.4.1.1.2 and 13.3.1.3; TS 29.500
-cl. 6.7.3; TS 33.535 cl. 6.2.1 step 2).
+cl. 6.7.3; TS 33.535 cl. 6.2.1 step 2; TS 33.122 cl. 6.6).
 
-At the NRF and at the AAnF, with the test certificates of make-sba-certs.sh, on
-the free5GC host: the NRF is on a loopback address. Raw HTTP/1.1 requests over
+At the NRF, at the AAnF and at the internal server of the CCF, with the test
+certificates of make-sba-certs.sh, on the free5GC host: the NRF and the CCF are
+on loopback addresses. Raw HTTP/1.1 requests over
 mutual TLS, independent of the Go code of this repository, on the Python of that
 machine (3.6). The script registers the NFs of the seed tool at the NRF and
 deregisters them at the end.
@@ -26,6 +27,7 @@ AF_ID = "af1.akma.example.FF00000001"
 AKID = "rid0000.atid" + "A" * 43 + "=@5gc.mnc093.mcc208.3gppnetwork.org"
 RETRIEVE = "/naanf-akma/v1/retrieve-applicationkey"
 ANCHOR_KEY_SCOPES = "naanf-akma naanf-akma:anchorkey"
+UNKNOWN_INVOKER = "0b4a3c2d-1e0f-4a5b-8c7d-6e5f4a3b2c1d"
 
 failures = 0
 
@@ -44,7 +46,7 @@ def entities(path):
     with open(path) as f:
         for line in f:
             fields = line.split()
-            if len(fields) == 7 and fields[0] in ("nf", "client"):
+            if len(fields) == 7 and fields[0] in ("nf", "client", "ccf"):
                 found[fields[1]] = {"type": fields[2], "fqdn": fields[3], "port": fields[5], "id": fields[6]}
     return found
 
@@ -218,6 +220,30 @@ def run(all_entities, certs, nrf, ausf, af):
     got = as_json(d).get("cause")
     report("S15.af1", "the same with the certificate af1: past the policy, 403 K_AKMA_NOT_PRESENT",
            s == 403 and got == "K_AKMA_NOT_PRESENT", f"{s} {got}")
+
+    # S17: the internal server of the CCF, CAPIF-3/4 (TS 33.122 cl. 6.6): only the API provider of the
+    # certificate publishes and asks for the data of an API invoker.
+    ccf = all_entities["ccf-internal"]
+    published = "/published-apis/v1/nef-apf/service-apis"
+    invoker = "/capif-security/v1/trustedInvokers/" + UNKNOWN_INVOKER + "?authenticationInfo=true"
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.load_verify_locations(f"{certs}/sba-ca.pem")
+    try:
+        conn = http.client.HTTPSConnection(ccf["fqdn"], int(ccf["port"]), context=ctx, timeout=30)
+        conn.request("POST", published, body=b"{}", headers=json_type)
+        s = conn.getresponse().status
+        conn.close()
+        ok, got = False, f"HTTP {s}"
+    except (ssl.SSLError, OSError, http.client.HTTPException) as e:
+        ok, got = True, type(e).__name__
+    report("S17.none", "internal server of the CCF without a client certificate: refused in TLS", ok, got)
+    s, _, d = af.request(ccf, "POST", published, b"{}", json_type)
+    s2, _, _ = af.request(ccf, "GET", invoker)
+    report("S17.other", "publication and data of an API invoker with the certificate of another NF: 403",
+           s == 403 and s2 == 403, f"{s} {s2} {as_json(d).get('detail', '')}")
+    nef = Client(all_entities, certs, "nef")
+    s, _, _ = nef.request(ccf, "GET", invoker)
+    report("S17.nef", "data of an API invoker with the certificate of the NEF: past the certificate, 404", s == 404, f"{s}")
 
 
 if __name__ == "__main__":
