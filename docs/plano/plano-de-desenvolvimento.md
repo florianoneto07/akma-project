@@ -1,6 +1,6 @@
 # Plano de desenvolvimento por MVPs
 
-**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) implementado e verificado, com 83 verificações e nenhuma falha (19/10/2026). MVP-7 (repositório público) concluído: publicado no GitHub e instalado numa VM limpa só pelo guia, com 83 verificações e nenhuma falha (20/10/2026). MVP-8 (Ua\* da norma e autorização por aplicação no UE): organização e especificação das fases (a) e (b) aprovadas; fase (a), o serviço de chaves do ME, implementada e verificada, com 88 verificações e nenhuma falha (20/10/2026); fase (b), os perfis TLS (K.2, PSK TLS 1.3 e PSK TLS 1.2), implementada e verificada, com 115 verificações e nenhuma falha (21/10/2026); fase (c), os perfis DTLS 1.3 e DTLS 1.2 com CoAP, implementada e verificada, com 126 verificações e nenhuma falha (22/10/2026); fase (d), o perfil OSCORE, implementada e verificada, com 141 verificações e nenhuma falha (22/10/2026); o CAPIF passou a MVP-9. MVP-12 (renovação da K_AKMA pelo AAnF) com a especificação aprovada (`docs/free5gc-side/renovacao-kakma.md`, pontos K1 a K12), implementado e verificado, com 161 verificações e nenhuma falha (28/10/2026). MVP-13 (V2 do repositório público) concluído: aprovado em 28/10/2026, com os pontos L1 a L13; exportado, instalado numa VM limpa só pelo guia público, com 161 verificações e nenhuma falha, e publicado no GitHub com as *tags* `v1.0.0` e `v2.0.0` e o *release* V2 (29/10/2026). MVP-9 (CAPIF no free5GC) aprovado em 29/10/2026, com os pontos C1 a C16 como propostos; especificação `docs/free5gc-side/capif.md` aprovada na mesma data, com os pontos C17 a C30 como propostos; **concluído** em 02/11/2026: CCF, NEF e AF implementados, com o C9, o C18 e o C19 revistos e o DV-16, e `e2e.sh` com 185 verificações, nenhuma falha e 3 puladas fora do MVP-9. MVP-11 (TLS nas SBI e entre o NEF e o AF) aprovado em 02/11/2026, com os pontos T1 a T17 (T4 revisto; T14 na opção b); especificação `docs/free5gc-side/tls-sbi.md` aprovada em 04/11/2026; fases (a), (b) e (c) implementadas e verificadas em 04, 05 e 06/11/2026: MVP-11 concluído. MVP-14 (revisão dos desvios e das normas) pedido pelo responsável em 02/11/2026, para logo depois do MVP-11.
+**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) implementado e verificado, com 83 verificações e nenhuma falha (19/10/2026). MVP-7 (repositório público) concluído: publicado no GitHub e instalado numa VM limpa só pelo guia, com 83 verificações e nenhuma falha (20/10/2026). MVP-8 (Ua\* da norma e autorização por aplicação no UE): organização e especificação das fases (a) e (b) aprovadas; fase (a), o serviço de chaves do ME, implementada e verificada, com 88 verificações e nenhuma falha (20/10/2026); fase (b), os perfis TLS (K.2, PSK TLS 1.3 e PSK TLS 1.2), implementada e verificada, com 115 verificações e nenhuma falha (21/10/2026); fase (c), os perfis DTLS 1.3 e DTLS 1.2 com CoAP, implementada e verificada, com 126 verificações e nenhuma falha (22/10/2026); fase (d), o perfil OSCORE, implementada e verificada, com 141 verificações e nenhuma falha (22/10/2026); o CAPIF passou a MVP-9. MVP-12 (renovação da K_AKMA pelo AAnF) com a especificação aprovada (`docs/free5gc-side/renovacao-kakma.md`, pontos K1 a K12), implementado e verificado, com 161 verificações e nenhuma falha (28/10/2026). MVP-13 (V2 do repositório público) concluído: aprovado em 28/10/2026, com os pontos L1 a L13; exportado, instalado numa VM limpa só pelo guia público, com 161 verificações e nenhuma falha, e publicado no GitHub com as *tags* `v1.0.0` e `v2.0.0` e o *release* V2 (29/10/2026). MVP-9 (CAPIF no free5GC) aprovado em 29/10/2026, com os pontos C1 a C16 como propostos; especificação `docs/free5gc-side/capif.md` aprovada na mesma data, com os pontos C17 a C30 como propostos; **concluído** em 02/11/2026: CCF, NEF e AF implementados, com o C9, o C18 e o C19 revistos e o DV-16, e `e2e.sh` com 185 verificações, nenhuma falha e 3 puladas fora do MVP-9. MVP-11 (TLS nas SBI e entre o NEF e o AF) aprovado em 02/11/2026, com os pontos T1 a T17 (T4 revisto; T14 na opção b); especificação `docs/free5gc-side/tls-sbi.md` aprovada em 04/11/2026; fases (a), (b) e (c) implementadas e verificadas em 04, 05 e 06/11/2026: MVP-11 concluído. MVP-14 (revisão dos desvios e das normas) pedido pelo responsável em 02/11/2026, para logo depois do MVP-11; proposto em 06/11/2026, com os pontos Q1 a Q15, a aprovar.
 **Data:** 15 de outubro de 2026; revisão 3 em 16 de outubro de 2026; aprovação em 16 de outubro de 2026
 **Base:** documentos `00` a `04`, Adendo E, ADR-0001-R2, ADR-0002, ADR-0003, `docs/baseline/ambiente-verificado.md`, `docs/baseline/conferencia-normativa.md`, `docs/literatura/analise-dos-artigos.md`, `docs/conformidade/desvios.md`
 **Revisão 2 (15/10/2026):** conferido contra as normas do acervo (hoje em `specs/`).
@@ -1292,6 +1292,208 @@ Os achados 1 a 5 foram confirmados nas fontes e registrados como F21 a F25 em `c
 
 **O tutorial ganha.** Parte 12: a PKI do laboratório, os nomes das NFs e o TLS mútuo na SBI e entre o NEF e o AF.
 
+### MVP-14 — Revisão dos desvios e das normas
+
+**Estado (06/11/2026):** **proposto**, com os pontos Q1 a Q15, a aprovar. A proposta já traz a primeira passada da revisão, feita por leitura das normas e do código; nada foi executado no laboratório. Nada implementado; nenhuma VM alterada. `desvios.md`, `correcoes-free5gc.md`, o registro de defeitos e a matriz não mudaram: os registros novos esperam a decisão do responsável.
+
+**Objetivo.** Responder, para cada desvio, o que falta para ficar de acordo com a norma, e listar o que o projeto ainda deixa de lado em TS 33.535 e nas normas que ela chama. Pedido do responsável em 02/11/2026: logo depois do MVP-11, antes do MVP-10 (seção 5). O MVP-14 não muda código nem VM. O resultado é uma lista priorizada de correções e de MVPs seguintes e a revisão 12 da matriz. Cada correção aprovada vira um MVP, com a sua proposta.
+
+**Resumo da primeira passada.**
+
+- **Release 20.** Não muda o que o AKMA usa. TS 33.535, TS 24.109, TS 33.220, TS 33.222, TS 33.122 e TS 33.310 não têm versão nova. Nas outras, as cláusulas do AKMA ficaram iguais, salvo duas frases de TS 33.210 §6.3.3.1.
+- **Os 18 desvios.** Três seguem encerrados (DV-1, DV-8, DV-9). Sete ficam como estão e vão à 3GPP, porque o defeito é da norma (DV-5, DV-6, DV-7, DV-11, DV-12, DV-13, DV-15). Três ficam, com motivo (DV-3, DV-4, DV-17). Cinco têm correção proposta, no todo ou em parte (DV-2, DV-10, DV-14, DV-16, DV-18).
+- **O que mais pesa.** O único *shall* sem condição ainda aberto no fluxo principal é a subscrição do estado de *roaming* (DV-2), e ela não precisa de uma VPLMN (achado 7). Depois vêm o GPSI (MVP-10) e o aviso ao AEF na saída do *invoker* (TS 33.122 §6.8, DV-14).
+- **Achados novos.** Dez pontos sem registro até hoje. Os principais: um UE com o Routing Indicator padrão fica sem AAnF (achado 1), o NRF não tem a operação de chave dos *tokens* (achado 5) e o OCSP *stapling* falta também na SBI, sem desvio que o diga (achado 3). O achado 8 traz quatro defeitos novos da norma.
+
+**Como a primeira passada foi feita.**
+
+- **Normas.** TS 33.535 e TS 29.535 foram lidas por inteiro; as outras, nas cláusulas que o projeto usa. A lista do arquivo da 3GPP foi lida em 06/11/2026, e cada norma com versão nova foi comparada com a baseline, parágrafo a parágrafo, salvo TS 23.222 e TS 23.502 (tabela abaixo).
+- **Código.** Cada desvio foi conferido nas fontes do repositório e nas cópias do free5GC v4.2.3 e do UERANSIM em `free5gc/build` e `af/build`. Os achados vêm dessa leitura; nenhum foi exercitado.
+- **Custo e risco.** São estimativas do projeto (`[MVP]`). *Pequeno*: um módulo ou um *patch* que já existe, com testes Go. *Médio*: um ou dois *patches* novos e um grupo novo no `e2e.sh`. *Grande*: várias NFs, o lado UE ou uma peça nova no laboratório, com especificação própria antes do código.
+
+**Versões (lista do arquivo da 3GPP em 06/11/2026).**
+
+| Norma | Baseline | Mais recente | O que muda para o projeto |
+|---|---|---|---|
+| TS 33.535 | V19.0.0 | V19.0.0 | não há Release 20 |
+| TS 33.501 | V19.7.0 | V20.3.0 (09/2026) | §6.1, §12, §13.4.1.0 a §13.4.1.1.3, §14.1 e §14.2 iguais. §13.1.0: só a NOTA 1. §13.3.8.3 (CCA, fora do escopo): uma frase nova |
+| TS 29.535 | V19.5.0 | V20.1.0 (09/2026) | só redação (tabelas de redirecionamento, tab. 5.1.6.1-2). O YAML muda só na versão, `1.3.0-alpha.1` |
+| TS 29.522 | V19.7.0 | V20.1.0 (09/2026) | no AKMA, só remissões corrigidas (D-H, em parte) |
+| TS 29.503 | V19.7.0 | V20.1.0 (09/2026) | nenhum parágrafo sobre AKMA, `routingId`, `trigger-auth`, `ROAMING_STATUS` ou GPSI mudou; o YAML do `trigger-auth` segue com `get` |
+| TS 29.222 | V19.8.0 | V20.1.0 (09/2026) | `Disenroll_Service_APIs` e as *features* `CAPIF_4` e `CAPIF_Ext2`, fora do caminho do AKMA |
+| TS 23.222 | V19.10.0 | V20.1.0 (09/2026) | cláusulas novas §8.39 a §8.42 e acréscimos em §6.3, fora do caminho do AKMA. A baseline é um `.doc`: a comparação foi pela presença de cada parágrafo, e a linha a linha fica para a segunda passada (Q1) |
+| TS 24.109 | V19.0.0 | V19.0.0 | sem versão nova |
+| TS 33.220 | V19.1.0 | V19.1.0 | sem versão nova |
+| TS 33.222 | V19.0.0 | V19.0.0 | sem versão nova |
+| TS 33.122 | V19.4.0 | V19.4.0 | sem versão nova |
+| TS 33.210 | V19.3.0 | V20.0.0 (09/2026) | §6.3.3.1 ganha duas frases: `RS256`, `RS384` e `RS512` *"not recommended"*, e as orientações de RFC 8725 §3.10 (*should*). O projeto usa `ES256`; a RFC 8725 fica para a segunda passada (Q1) |
+| TS 33.310 | V19.5.0 | V19.5.0 | sem versão nova |
+| TS 29.510, TS 29.500, TS 23.003 | V19.7.0 | V20.1.0, V20.0.0, V20.1.0 | nada sobre o AAnF, os *tokens* ou o A-KID |
+| TS 23.502 | V19.8.0 | V20.3.0 | não comparada nesta passada: o arquivo passa do limite de 10 MB da ferramenta de download. As enumerações do AKMA foram conferidas nessa versão em 28/10/2026 (registro de defeitos) |
+
+**1. Revisão dos desvios.** A recomendação de cada um, com o ponto que a decide.
+
+| Desvio | Cláusula | O que o projeto faz hoje | O que a norma pede | O que seria preciso mudar | Custo e risco | Recomendação |
+|---|---|---|---|---|---|---|
+| DV-1 — SBI sem TLS | TS 33.535 §4.4.0; TS 33.501 §13.1.0, §13.3.2.1; TS 33.122 §6.6 | encerrado em 06/11/2026: TLS mútuo em toda a SBI e em CAPIF-3/4 | interfaces do AAnF protegidas; com *tokens*, TLS na rede | nada. Fora da SBI, sem desvio: os servidores de métricas e o banco de testes em `http`, o CGF e o ABMF do CHF (`tls-sbi.md` §11 e §12) | — | **Manter encerrado** (Q3) |
+| DV-2 — Subscrição de `ROAMING_STATUS` | TS 33.535 §6.2.1 passos 5 a 8, §6.3 passo 4; TS 29.535 tab. 5.1.8-1; TS 29.503 §5.5.2.2.2, tab. 6.4.3.2.2-1 e 6.4.6.2.8-1 | `roamingStatusSubscription: true` impede a partida do AAnF. Sem subscrição; `notifUri` ignorado; `ROAMING_AKMA_SERVICE_DENIED` nunca sai | `[3GPP]` *"the AAnF shall send a Nudm_EventExposure_Subscribe request to UDM"*, e a política local decide se dá o serviço. `[DIVERGÊNCIA]` O Stage 3 põe a reação na *feature* opcional `RoamingRestriction` | **UDM:** `udm/0004`, novo: `imsi-` em `ee-subscriptions`, o evento `ROAMING_STATUS`, o estado corrente na resposta e a notificação na troca de PLMN (achado 7). **AAnF:** consumidor do `Nudm_EE` (cliente e modelos já estão no `openapi`), *callback*, política, *feature* e o erro. **NEF e AF:** repassar o erro e recusar com causa. **Laboratório:** uma ferramenta no papel do AMF de outra PLMN | grande; risco médio: toca o caminho da K_AF | **Corrigir**, sem VPLMN real (Q5). Levar o conflito à 3GPP (D-AL) |
+| DV-3 — Só SUPI IMSI | TS 33.501 A.7.0; TS 33.535 A.2, A.3 | `shared/akma/supi` recusa `nai-`, `gci-` e `gli-`; o ME exige IMSI | P0 para IMSI, NAI, GLI e GCI | a biblioteca e os vetores; para valer de ponta a ponta, também o free5GC e o UERANSIM: `[FREE5GC]` nas fontes do AUSF, do UDM e do AMF não há tratamento desses tipos, e o `Supi::Parse` do UERANSIM só aceita `imsi-` | só a biblioteca: pequeno, sem caminho que a exercite. De ponta a ponta: grande, fora do AKMA | **Manter**: nenhum SUPI desses tipos chega ao AUSF nesta pilha. Rever no *rebase* (Q6) |
+| DV-4 — Sem NFKC no UE | TS 33.220 B.2.1.2; TS 33.535 A.4 | o ME recusa FQDN não ASCII; o AAnF e a biblioteca Go aplicam NFKC | cadeias em UTF-8 com NFKC | `af/ue/ueransim/patches/0003`, com uma biblioteca de normalização no `nr-ue` | médio: dependência nova na máquina do UE; risco baixo; nenhum ganho hoje | **Manter**. `[INTERPRETAÇÃO]` O NFKC não muda ASCII, e o FQDN do AF vai no `server_name` (TS 24.109 K.3.2 b) e K.3.3 1)b)), que RFC 6066 §3 só aceita em ASCII, com A-labels (Q6) |
+| DV-5 — Digest conforme RFC 7616 | TS 24.109 K.2 c); TS 33.222 §5.3.0; TS 33.535 B.1.2.2 | RFC 7616, SHA-256, `rspauth` obrigatório | K.2 c) cita a RFC 3310, o Digest AKA, mas a senha é a K_AF | nada no projeto; a RFC 3310 não faz sentido com senha base64(K_AF). Na norma, trocar a referência | — | **Manter; levar à 3GPP** (D-F; Q4) |
+| DV-6 — `realm` do Digest | TS 33.535 B.1.2.2; TS 24.109 K.2 b)2), K.2 c)3), §5.2.2.1 | `3GPP-bootstrapping-akma@<FQDN>`, com a primeira parte configurável | três textos contra K.2 c)3), que diz `3gpp-akma@<FQDN>` | nada no projeto; na norma, alinhar K.2 c)3) | — | **Manter; levar à 3GPP** (D-C; Q4) |
+| DV-7 — Nunca emitir 204 | TS 29.535 §4.2.2.3.2, tab. 5.1.4.3.2-2; TS 33.535 §6.2.1 passo 7 | sem K_AKMA, 403; com K_AKMA, 200 | o 204 não tem condição alcançável, igual na V20.1.0 | nada: o NEF e o AF já tratam o 204 | — | **Manter; levar à 3GPP** (D-G; Q4) |
+| DV-8 — `aud` vazio | TS 33.501 §13.4.1.1.2 | encerrado em 17/10/2026 (MVP-1b) | o produtor confere `aud` | nada | — | **Manter encerrado** (Q3) |
+| DV-9 — NEF–AF sem TLS | TS 33.501 §12.2 a §12.5; TS 29.522 §6, §7.2 | encerrado em 06/11/2026: só o modo CAPIF, com TLS mútuo. O modo sem CAPIF fica no código, desligado | `[LACUNA]` sem CAPIF, OAuth2 *"based on local configuration"*, sem dizer quem emite o *token* (D-Y) | nada para ficar encerrado. Um servidor de autorização próprio seria peça nova, sem base na norma | grande, sem ganho para o AKMA | **Manter encerrado; não fazer o servidor de autorização** (Q3). D-Y segue para a 3GPP |
+| DV-10 — Ua\* sem `D0 02` e sem OCSP *stapling* | TS 33.210 §6.2.2, §6.2.3 (*should*); TS 33.222 §5.3.1.0 | `psk-tls12` só com `D0 01`; o AF do K.2 não grampeia resposta OCSP | as duas são recomendações; `D0 01`, a suíte obrigatória, está | **`D0 02`:** *patch* no wolfSSL 5.9.4 (`internal.h`, `internal.c` e `keys.c`), `build-wolfssl.sh`, as listas do `af/wolftls` e o AF_ID `…010001D002` nas políticas. **OCSP:** o respondedor do DV-16 e `OCSPStaple` no AF | `D0 02`: médio; risco médio: cópia alterada da biblioteca, sem conferência independente, porque o OpenSSL 3.0.13 e o 4.1 *beta* não têm `ECDHE_PSK` com GCM. OCSP: ver o DV-16 | `D0 02`: **manter** até o wolfSSL a ter (Q6). OCSP: **corrigir** com o DV-16 (Q9) |
+| DV-11 — DTLS sem `TLS_PSK_WITH_AES_128_CCM_8` | TS 33.535 C.2.1; TS 33.210 §6.2.3; RFC 7252 §9.1.3.1 | só suítes com ECDHE e AEAD | TS 33.210 proíbe o que RFC 7252 exige do CoAP, e o Anexo C não diz o protocolo de aplicação | nada: aceitar a suíte contrariaria TS 33.210 | — | **Manter; levar à 3GPP** (D-U, D-W; Q4) |
+| DV-12 — `trigger-auth` com POST | TS 29.503 tab. 6.2.3.13.4.1-1, §5.3.2.16.2, Anexo A.1 | POST; GET recebe 405 | a tabela e o procedimento dizem POST; o YAML, que prevalece, diz `get`, igual na v1.5.0-alpha.2 | nada: se a 3GPP corrigir o YAML, o desvio se encerra sem código | — | **Manter; levar à 3GPP** (D-B; Q4) |
+| DV-13 — *Claims* do *token* do CCF | TS 29.222 tab. 8.5.4.2.8-1; TS 33.122 C.2.2, C.6; RFC 7519 | `iss` e `client_id` com o identificador do *invoker*; `exp` como instante | as duas normas divergem, igual na V20.1.0 | nada: as duas ficam atendidas | — | **Manter; levar à 3GPP** (D-AA, D-AB; Q4) |
+| DV-14 — CAPIF parcial | TS 33.122 §6.8 passos 7 a 10; TS 29.522 §7.1; TS 23.222 §6.3.3, §6.3.4; TS 29.222 §5.4, §5.6.2.5, §5.8, §5.9 | só o caminho do AKMA. O NEF sabe da saída do *invoker* pelo `404` do CCF ou pela CRL, depois de `invokerCrlMaxAge` | `[3GPP]` *"The CAPIF core function shall send Event notification message to the API exposing function"*; o AEF apaga os dados e fecha o TLS (passos 7 a 10). TS 29.522 §7.1: o NEF com CAPIF-5/5e, salvo na implantação centralizada | **Saída:** `CAPIF_Events_API` no CCF, com `API_INVOKER_OFFBOARDED`, subscrição e *callback* no NEF. **Revogação:** `Revoke_Authorization`. **Logs:** `Log_API_Invocation` e `Query_API_Invocation_Log`. O resto, sem mudança: `[INTERPRETAÇÃO]` o CCF e o NEF estão no mesmo domínio, e o registro do provedor fica na configuração; dos métodos, TS 29.522 §7.1 pede *"at least one"* | saída: médio, risco baixo. Revogação: médio, risco baixo. Logs: médio, sem efeito na K_AF | **Corrigir em parte**: saída e revogação; o resto fica (Q7) |
+| DV-15 — HTTP/2 por ALPN | TS 29.222 §7.3; TS 29.122 §5.2.2; RFC 9113 §3.1, §3.2 | CCF e NEF negociam por ALPN | o *upgrade* do HTTP, que RFC 9113 deprecou e não admite sobre TLS, igual na V20.1.0 | nada no código; ampliar o registro ao NEF (achado 4) | — | **Manter; levar à 3GPP** (D-AE, ampliado; Q4) |
+| DV-16 — OCSP e `x5t#S256` | TS 33.210 §6.2.2, §6.2.3, §6.3.3.4; TS 33.310 §6.1.1, §6.1b | CAPIF-1e sem OCSP *stapling*; *token* do CCF só com `kid`; a chave do *token* sem certificado | *"should be supported"*, nos dois | **`x5t#S256`:** um certificado para a chave do *token* em `make-capif-certs.sh`, o cabeçalho em `free5gc/ccf/internal/jws` e a conferência no NEF, como o `nrf/0005` faz. **OCSP:** um respondedor em `free5gc/crl`, `authorityInfoAccess` nos certificados e a busca da resposta em cada servidor TLS | `x5t#S256`: pequeno, risco baixo. OCSP: médio; risco médio: certificados novos e `sbitls` em todas as NFs | **Corrigir**: `x5t#S256` no MVP-15 (Q8); OCSP no MVP-18 (Q9) |
+| DV-17 — SBI por IP, opcional | TS 29.510 §6.1.6.2.2 NOTA 1; TS 33.501 §13.1.0; TS 33.310 §6.1.3c.3 | dois modos; o padrão e todas as configurações do projeto são por nome | com `https`, o FQDN no perfil, o SNI e o DNS-ID | para fechar: tirar o modo por IP dos *patches* `*-sbi-tls` | pequeno a médio; risco baixo; tira a opção decidida no T4 | **Manter**: o modo da norma é o padrão, e o outro existe por escolha do responsável (Q6) |
+| DV-18 — CRL só por HTTP | TS 33.310 §6.1a, §6.1.1, tab. 6.1.3c.3-1 | CRL em `http://192.168.16.130:8030`; ponto de distribuição `ldap://` recusado | LDAPv3 *"shall be supported as the primary method"*; *"HTTP may be used"* para certificados TLS e NE | um leitor LDAPv3 em `sbitls`, um diretório na máquina do free5GC e o URI `ldap://` nos certificados | médio; risco médio: recompila todas as NFs, refaz os certificados e instala um serviço na .130 | **Corrigir**, por último, no MVP-18 (Q10) |
+
+**2. Revisão das normas.** O que o projeto cobre e o que deixa de lado. Estados: **feito**, **em parte**, **não feito**.
+
+TS 33.535, cláusula por cláusula:
+
+| Cláusula | Assunto | Estado | O que fica de lado |
+|---|---|---|---|
+| §3.1, §4.2.1 | contexto AKMA; o AAnF obtém o GPSI no UDM | em parte | o GPSI (MVP-10) |
+| §4.1 | modelo; cenários sem *roaming* e três com *roaming* | em parte | só o cenário sem *roaming* |
+| §4.2.2 a §4.2.5, §4.3, §4.5 | papéis do AF, do NEF, do AUSF e do UDM; interfaces | feito | — |
+| §4.4.0 | reuso da autenticação; interfaces protegidas; vida máxima da K_AF | feito | — |
+| §4.4.1, §4.4.2 | Ua\*; A-KID | feito | colisão do A-TID: a norma não trata (§6.1 NOTA 2) |
+| §4.4.3 | aplicações do UE | feito | `[INTERPRETAÇÃO]` o *uid* como fronteira (U3) |
+| §4.6 | *roaming* | não feito | DV-2; UE em *roaming* de ponta a ponta |
+| §4.7 | *Authentication Proxy* | não feito | opcional (*may*); sob demanda |
+| §5.1, §5.2 | hierarquia e vida das chaves | feito | — |
+| §6.1 | K_AKMA depois da autenticação primária | feito | 5G-AKA e EAP-AKA'; o UERANSIM só exercita 5G-AKA |
+| §6.2.1 passos 1, 2, 7 a 9 | K_AF para o AF de dentro | feito | `notifUri` ignorado; sem a falha por *roaming* |
+| §6.2.1 passos 3 e 4 | GPSI pelo UDM | não feito | por política local; MVP-10 |
+| §6.2.1 passos 5 e 6 | subscrição do estado de *roaming* | não feito | DV-2 |
+| §6.2.2 | acesso anônimo | feito | — |
+| §6.3 | K_AF via NEF | em parte | GPSI (F10); *roaming* (DV-2); `anonInd` (achado 2); o AF acha a HPLMN pelo A-KID só com um operador configurado |
+| §6.4.1 a §6.4.4 | troca de chaves; renovação da K_AKMA | feito | — |
+| §6.5 | iniciação pelo AF | feito | — |
+| §6.6, §7.1.4 | remoção do contexto | feito | o OAM é o `seed remove` |
+| §6.7 | descoberta do AAnF | em parte | Routing Indicator padrão (achado 1); SCP; vários conjuntos de AAnF. O AF de dentro por configuração é permitido |
+| §6.8, §7.1.6, §7.3.3 | aviso de serviço desligado | não feito | opcional (*may*); depende do DV-2 |
+| §7.1.2, §7.1.3, §7.1.5 | serviços do AAnF | feito | a *Service Disable URI* é ignorada |
+| §7.3.2 | `Nnef_AKMA_ApplicationKey_Get` | em parte | GPSI; *Service Disable URI* |
+| §7.4 | serviços do UDM | em parte | feitos `Nudm_UEAuthentication_Get` e `Nudm_UECM_AuthTrigger`; faltam `Nudm_SDM_Get` (MVP-10) e `Nudm_EventExposure_Subscribe` (DV-2) |
+| Anexo A | derivações | feito | DV-3, DV-4 |
+| Anexo B | TLS | feito | DV-5, DV-6, DV-10 |
+| Anexo C | DTLS | feito | DV-11 |
+| Anexo D | OSCORE | feito | lacunas decididas nos pontos U24 a U30 (D-J a D-N) |
+
+As normas que ela chama:
+
+| Norma | O que o projeto cobre | O que deixa de lado |
+|---|---|---|
+| TS 33.501 §6.1 | 5G-AKA e EAP-AKA' com a indicação AKMA; autenticação pedida pela rede doméstica (§6.1.5) | EAP-TLS (Anexo B), que o AUSF do free5GC não tem; §6.1.5 no acesso não 3GPP; a troca das chaves AS (§6.9.4.4, *may*) |
+| TS 33.501 §12 | §12.1 a §12.5, com o método 3 de CAPIF-2e | métodos 1 e 2 (DV-14) |
+| TS 33.501 §13 | §13.1.0, §13.3.0 a §13.3.2.1, §13.4.1.0 a §13.4.1.1.2 | SEPP e N32 (§13.1.1, §13.1.2, §13.2); SCP e CCA (§13.3.1.2, §13.3.2.2, §13.3.5 a §13.3.8, §13.4.1.3); *tokens* em *roaming* (§13.4.1.2); vários NRF (§13.4.1.1.3); `allowedOperationsPerNfInstance`; F27 |
+| TS 33.501 §14 | §14.2.2, §14.2.6, §14.2.7, §14.3.2 | §14.3.3 (achado 5) |
+| TS 29.535 | as três operações, os erros, os escopos, `anonInd` | `Naanf_AKMA_Notify` (§4.2.2.5, §5.1.5); `AKMA_GPSI_Support` e `RoamingRestriction` (tab. 5.1.8-1); 307 e 308, que vêm do SCP |
+| TS 29.522 | §4.4.23.2, §5.14, §7.2 pelo método 3 | §4.4.23.3 e §5.14.4; `notifUri`; `gpsi`; §6 sem CAPIF, desligado; CAPIF-5 (§7.1) |
+| TS 29.503 | `akmaInd`, `routingId`, `trigger-auth`, a notificação ao AMF | `id-translation-result` de SUPI para GPSI (F10); `ROAMING_STATUS` (achado 7) |
+| TS 24.109 | Anexo K | só o DV-5 e o DV-6; o GBA não se aplica |
+| TS 33.220 | Anexo B, Anexo H, a parte do Anexo P que TS 33.535 Anexo D usa | DV-4; o GBA não se aplica |
+| TS 33.122 | §6.1, §6.3, §6.5.2.3, §6.6, §6.8 passos 1 a 6, Anexo C | métodos 1 e 2 (§6.5.2.1, §6.5.2.2); RNAA (§6.5.3); troca do método (§6.7); §6.8 passos 7 a 10; §6.9 a §6.11 |
+| TS 23.222 | §8.1 a §8.5, §8.7, §8.10, §8.11, §8.14 a §8.16 | a lista do DV-14: §8.6, §8.8, §8.9, §8.12, §8.13, §8.17 a §8.38 e, na Release 20, §8.39 a §8.42 |
+| TS 33.210 | §6.2 e §6.3.3 | OCSP *stapling* (DV-10, DV-16, achado 3); `D0 02`; §6.3.3.4 no CCF; NDS/IP fora do escopo |
+| TS 33.310 | §6.1.1, §6.1.3a, §6.1.3c, §6.1.4a, §6.1a por HTTP, §6.3.1, §7.1 | LDAPv3 (DV-18); OCSP (§6.1b); a inscrição automática (§10.2, §10.3 e Anexo J); §10.6 |
+
+**Achados.** A conferir na segunda passada antes de entrar nos registros (Q11):
+
+1. `[3GPP]` TS 33.535 §6.7: *"When the UE's Routing Indicator is set to its default value as defined in TS 23.003 [9], the AAnF NF consumer can select any AAnF instance within the home network of the UE."* O AUSF e o NEF sempre mandam `routing-indicator` ao NRF (`ausf/0001`, `nef/0001`), e o `aanfcfg.yaml` publica só `"0000"`. Um UE com o valor padrão, `"0"` (TS 23.003 §2.2B), fica sem AAnF e sem AKMA. O laboratório não chega nesse caso: o UE usa `"0000"`. Correção: não mandar o parâmetro quando o RID for `akid.DefaultRID`, que `shared/akma` já define.
+2. `[INTERPRETAÇÃO]` TS 33.535 §6.3 passos 3 a 5: o NEF usa `Naanf_AKMA_ApplicationKey_Get`, recebe o SUPI e, com a indicação *UE Id not needed*, não dá o GPSI ao AF. TS 29.535 tab. 4.2.2.1-1 só põe o AF como quem inicia `ApplicationKey_AnonUser_Get`. O NEF do projeto repassa o `anonInd` ao AAnF (`nef/0001`; `nef.md` §3.4), que responde sem SUPI. O AF recebe o mesmo, e o NEF nem vê o SUPI, mas esse não é o texto, e `desvios.md` não o registra.
+3. `[3GPP]` O OCSP *stapling* de TS 33.210 §6.2.2 e §6.2.3 (*should*) vale para todo TLS do projeto, pelas remissões de TS 33.501 §13.1.0 e §12.3 e de TS 33.122 §6.6. O DV-10 cobre só o Ua\*, e o DV-16, só CAPIF-1e. A SBI, CAPIF-2e e CAPIF-3/4 também não grampeiam, sem desvio que o diga. Registro proposto: ampliar o DV-16.
+4. `[DIVERGÊNCIA]` TS 29.522 §5.2 aplica ao NEF o uso do HTTP de TS 29.122 §5.2.2, com a mesma frase do *upgrade* do HTTP que o DV-15 registra para o CCF. O NEF negocia por ALPN. Registro proposto: ampliar o DV-15 e o D-AE.
+5. `[FREE5GC]` TS 29.510 §6.3.4.1: *"The "Retrieve Key Request" custom operation shall be supported."* TS 33.501 §14.3.3 define a operação, `Nnrf_AccessToken_RetrieveKey`. O NRF só serve `/oauth2/token`. As NFs leem o certificado de assinatura na configuração, o que TS 33.501 §13.4.1.0 permite; o que falta é a operação no NRF. Registro proposto: F28.
+6. `[FREE5GC]` TS 29.510 §5.2.2.3.2: *"Each NF that has previously registered in NRF shall contact the NRF periodically (heart-beat)"*. As NFs do free5GC não fazem isso, e o AAnF, código do projeto, copiou o padrão. Registro proposto: F29, com o AAnF corrigido no MVP-15.
+7. `[FREE5GC]` O UDM v4.2.3 não atende o passo 5 de §6.2.1. `CreateEeSubscriptionProcedure` só aceita `msisdn-`, `extid-`, `extgroupid-` e `anyUE`, e responde 400 a `imsi-`, que TS 29.503 tab. 6.4.3.2.2-1 admite para esse procedimento. A subscrição é guardada, mas nenhum código gera o relatório do evento. Registro proposto: F30. `[INTERPRETAÇÃO]` A seção 5 diz que o *roaming* exige uma VPLMN, e isso só vale para o UE em *roaming* de ponta a ponta, que depende do SEPP e do N32, ausentes do free5GC v4.2.3. Os passos 5 a 8 e §6.8 acontecem na HPLMN, entre o AAnF e o UDM: `roaming: false` sai do registro do AMF da própria rede, e `roaming: true` pode vir de uma ferramenta no papel do AMF de outra PLMN, por `Nudm_UECM_Registration`.
+8. Defeitos novos da norma, para o registro:
+   - **D-AL** `[DIVERGÊNCIA]`: TS 33.535 §6.2.1 passo 5 e §6.3 passo 4 (*shall*, sem condição) contra TS 29.535 tab. 5.1.8-1, em que `RoamingRestriction` é opcional. É a questão 1 do README, sem item no registro até hoje.
+   - **D-AM** `[DIVERGÊNCIA]`: TS 33.535 §6.8.2 passo 5: a notificação *"includes the A-KID and the AF_ID"*. §7.1.6 e `ServiceDisableNotif` (TS 29.522 tab. 5.14.5.3.4-1) só têm o A-KID. No mesmo passo, *"determined at step 5"* deveria ser o passo 4.
+   - **D-AN** `[DIVERGÊNCIA]`: TS 29.535 tab. 5.1.4.3.2-2 NOTA 2 diz que `gpsi` não se aplica e que `supi` é obrigatório; §4.2.2.3.2 e tab. 5.1.8-1 admitem o GPSI. §4.2.2.2.2 admite `gpsi` no lugar de `supi` no `AkmaKeyInfo`; TS 33.535 §6.1 passo 4 e §7.1.2 exigem o SUPI. Pesa no MVP-10.
+   - **D-AO** (editorial): `Naanf_AKMA_ServiceDisableNotification` contra `Naanf_AKMA_Notify`; `Naanf_AKMA_Context_Remove` contra `Naanf_AKMA_ContextRemove`; TS 33.535 tab. 7.3.1-1 (*Request/Response*) contra tab. 7.1.1-1 (*Notification/Response*), que também não lista o NEF; "RoamingRestiction" em TS 29.522 §4.4.23.2.
+9. As listas públicas estão atrás do projeto. `public/docs/3gpp-recommendations.md` vai até D-Z; `public/docs/free5gc-fixes.md`, até F20. F21 a F27 não foram conferidos no free5GC v4.3.0.
+10. A matriz tem linhas vencidas pelo MVP-11: o risco residual do DV-1 em `AfPolicy`, a linha "Segurança NEF–AF" como **Desvio DV-9** e a nota de 16/10/2026 sobre os caminhos.
+
+**3. Resultado previsto.** Lista priorizada, a fechar depois da segunda passada:
+
+| Ordem | Unidade | O que faz | O que fecha | Custo e risco |
+|---|---|---|---|---|
+| 1 | MVP-15 — Correções curtas | Routing Indicator padrão no AUSF e no NEF; `anonInd`; escopo conferido nos perfis do tipo; `x5t#S256` do CCF; *heart-beat* do AAnF; `retrieve-key` no NRF | achados 1, 2, 5 e 6; F27; o `x5t#S256` do DV-16 | cada item pequeno, o conjunto médio; risco baixo |
+| 2 | MVP-10 — GPSI | a tradução de SUPI para GPSI no UDM; o GPSI ao AF de fora pelo NEF e, com `AKMA_GPSI_Support`, ao AF de dentro | F10; TS 33.535 §6.2.1 passos 3 e 4, §6.3 passo 5 | médio a grande; risco médio; o D-AN pede decisão na proposta |
+| 3 | MVP-16 — *Roaming* sem VPLMN e aviso de serviço desligado | o DV-2 e §6.8, com `Naanf_AKMA_Notify` e a notificação do NEF ao AF | DV-2; F30; TS 33.535 §6.8, §7.1.6, §7.3.3 | grande; risco médio |
+| 4 | MVP-17 — CAPIF: saída e revogação | `CAPIF_Events_API` com `API_INVOKER_OFFBOARDED`; `Revoke_Authorization` | parte do DV-14 | médio; risco baixo |
+| 5 | MVP-18 — Revogação completa | OCSP e OCSP *stapling*; LDAPv3 | DV-18; o OCSP do DV-10 e do DV-16; achado 3 | médio a grande; risco médio |
+| 6 | V3 e *upstream* | as listas públicas em dia; o *rebase* para a versão corrente (D4) | achado 9 | a propor |
+
+Ficam sob demanda, como na seção 5: o *Authentication Proxy*; várias instâncias de AAnF e a persistência do contexto; o SCP e a comunicação indireta; o EAP-TLS e o acesso não 3GPP; o UE em *roaming* de ponta a ponta, com SEPP e N32; a inscrição automática de certificados; F9, F15, F20 e a parte aberta do F24.
+
+**Revisão 12 da matriz.** Uma seção nova com as duas tabelas acima, já na forma final; cada linha **em parte** ou **não feito** ligada ao DV, ao F, ao defeito ou ao MVP que a trata; as linhas vencidas do achado 10 acertadas.
+
+**Pontos para aprovação.**
+
+| Nº | Ponto | Proposta | Base e alternativas |
+|---|---|---|---|
+| Q1 | Forma do MVP-14 | só documentos, em duas etapas. Esta primeira passada é aprovada aqui. A segunda percorre cada *shall* e *should* das cláusulas da lista que tocam o projeto, numa tabela nova, `docs/conformidade/revisao-das-normas.md`, com o estado e a evidência de cada linha. Os textos da Release 20 vão para `specs/`, fora do controle de versão | a primeira passada não percorreu uma a uma as tabelas de TS 29.503, TS 29.222 e TS 33.310, nem TS 33.220 Anexo P. Alternativa: parar aqui, com a matriz recebendo só as tabelas desta proposta |
+| Q2 | Versão de referência | a baseline continua na Release 19; as versões mais recentes ficam anotadas em `especificacoes.md` | `[3GPP]` TS 33.535 §2: *"a non-specific reference implicitly refers to the latest version of that document in the same Release as the present document"*. A Release 20 não muda o que o AKMA usa, e os YAML dela ainda são `alpha`. Alternativa: subir a baseline, sem ganho hoje |
+| Q3 | Encerrados e modo sem CAPIF | DV-1, DV-8 e DV-9 ficam encerrados. Sem servidor de autorização próprio; o modo sem CAPIF continua no código, desligado | o DV-9 deixou essa decisão para o MVP-14. `[LACUNA]` TS 29.522 §6 (D-Y). Alternativas: tirar o modo do código; fazer o servidor |
+| Q4 | Defeitos da norma | DV-5, DV-6, DV-7, DV-11, DV-12, DV-13 e DV-15 ficam como estão, sem código, e vão à 3GPP pela lista de recomendações | em todos, seguir um texto contraria outro; a Release 20 não resolveu nenhum. O envio fica com o responsável. Alternativa: nenhuma que não troque um desvio por outro |
+| Q5 | DV-2 | corrigir sem VPLMN real, num MVP próprio (MVP-16), com §6.8 | achado 7. Alternativas: (b) só a subscrição e a política, sem §6.8; (c) manter até haver uma VPLMN, como a seção 5 previa |
+| Q6 | Mantidos com motivo | DV-3, DV-4, DV-17 e a `D0 02` do DV-10 | motivos na tabela. Alternativas: no DV-3, só a biblioteca; no DV-4, ICU no `nr-ue`; no DV-17, tirar o modo por IP; no DV-10, *patch* no wolfSSL |
+| Q7 | DV-14 | corrigir a saída (TS 33.122 §6.8 passos 7 a 10) e a revogação, no MVP-17; o resto fica | os passos 7 a 10 são *shall* e fecham a janela de `invokerCrlMaxAge`. Alternativas: acrescentar os logs e a auditoria; deixar tudo como está |
+| Q8 | Correções curtas | uma unidade, o MVP-15, com os achados 1, 2, 5 e 6, o F27 e o `x5t#S256` do CCF. No achado 2, o NEF deixa de repassar o `anonInd` | tocam `ausf/0001`, `nef/0001`, `nrf/0005`, o CCF e o AAnF, que os MVPs seguintes também tocam. Alternativas: cada item com o MVP que mexe no mesmo *patch*; no achado 2, manter e registrar um DV-19; no F27, `[INTERPRETAÇÃO]` qual perfil conferir fica para a proposta do MVP-15 |
+| Q9 | OCSP | corrigir no MVP-18, em todos os servidores TLS do projeto | *should* em TS 33.210 e TS 33.310; a CRL já atende §6.3.1. Alternativas: (b) só CAPIF-1e e K.2, o que fecha o DV-10 e o DV-16 como estão escritos; (c) manter, e só ampliar o DV-16 (achado 3) |
+| Q10 | DV-18 | corrigir no MVP-18, com o LDAPv3 ao lado do HTTP | o *shall* de §6.1a fica sem atender. Alternativa: manter, pelo *"HTTP may be used"*, e pedir à 3GPP que esclareça §6.1a para certificados TLS |
+| Q11 | Registros novos | na segunda passada: F28 a F30; D-AL a D-AO e a ampliação do D-AE; a ampliação do DV-15 e do DV-16; o DV-19, se o Q8 pedir | a regra do registro: nada entra antes da decisão |
+| Q12 | Ordem dos MVPs | MVP-15, MVP-10, MVP-16, MVP-17, MVP-18; depois, a V3 e o *upstream* | o MVP-15 é curto e toca os *patches* que os outros usam. Alternativa: manter o MVP-10 logo depois do MVP-14, como em 02/11/2026, e o MVP-15 em seguida |
+| Q13 | free5GC v4.3.0 e listas públicas | no MVP-14, conferir F21 a F30 na v4.3.0, por leitura, como no L6. As listas públicas só mudam na V3 | achado 9. Alternativa: deixar a conferência para o *rebase* |
+| Q14 | Matriz | a revisão 12 como descrita acima | o pedido da seção 5. Alternativa: a matriz só aponta para `revisao-das-normas.md` |
+| Q15 | Normas fora da lista | a segunda passada inclui TS 29.510, TS 29.500, TS 33.222 e TS 23.003, só no que o projeto usa, e TS 23.502 V20.3.0, quando houver o arquivo | os achados 5 e 6 vêm de TS 29.510, que o pedido não lista. Alternativa: só as normas da lista |
+
+**Fora do escopo.**
+
+- Código, *patches*, configuração e VMs.
+- O envio à 3GPP, ao free5GC e ao UERANSIM, que fica com o responsável.
+- A V3 do repositório público e o *rebase* para a v4.3.0.
+- Testes no laboratório: os achados são exercitados nos MVPs que os corrigem.
+
+**Pré-requisitos.** MVP-11 concluído (06/11/2026). Os pontos Q1 a Q15 aprovados antes da segunda passada.
+
+**Arquivos.**
+
+- `docs/plano/plano-de-desenvolvimento.md`: a lista final, na seção 5;
+- `docs/conformidade/revisao-das-normas.md` (nova, Q1) e `docs/conformidade/desvios.md`;
+- `docs/free5gc-side/correcoes-free5gc.md`;
+- `docs/defects/registro-de-defeitos-3gpp.md` e a cópia em `~/akma`;
+- `docs/traceability/matriz-de-rastreabilidade.md`, revisão 12;
+- `docs/baseline/especificacoes.md` e `CHANGELOG.md`.
+
+**Critérios de aceitação.**
+
+1. Os 18 desvios têm a decisão do responsável registrada em `desvios.md`.
+2. Toda cláusula de TS 33.535 tem estado na matriz, revisão 12.
+3. `revisao-das-normas.md` cobre cada *shall* e *should* que toca o projeto, nas cláusulas das normas da lista, com o estado e a evidência (Q1, Q15).
+4. Os achados estão nos registros, como o Q11 decidir.
+5. A lista priorizada está aprovada pelo responsável, com os MVPs seguintes na seção 5.
+6. O `git diff --stat` do MVP-14 só mostra `docs/` e `CHANGELOG.md`.
+
+**Riscos.**
+
+- A revisão é de leitura: um achado pode mudar ou cair quando for exercitado.
+- A segunda passada pode achar mais pontos; cada um entra na lista, sem código.
+- Os custos são estimativas, a refazer na proposta de cada MVP.
+- A Release 20 ainda muda: os YAML de TS 29.535 e TS 29.522 estão em `alpha`, e a conferência vale para 06/11/2026.
+
+**O tutorial ganha.** Nada: o MVP-14 não muda o que se instala.
+
 ---
 
 ## 5. Depois do MVP-6
@@ -1323,7 +1525,7 @@ Os achados 1 a 5 foram confirmados nas fontes e registrados como F21 a F25 em `c
 
 **MVP-11 — TLS nas SBI e entre o NEF e o AF** (ordem decidida pelo responsável em 29/10/2026: logo depois do MVP-9). Aprovado em 02/11/2026, com os pontos T1 a T17; está na seção 4.
 
-**MVP-14 — Revisão dos desvios e das normas** (pedido do responsável em 02/11/2026: logo depois do MVP-11, antes do MVP-10). Dois trabalhos, com o escopo detalhado na proposta:
+**MVP-14 — Revisão dos desvios e das normas** (pedido do responsável em 02/11/2026: logo depois do MVP-11, antes do MVP-10). Proposto em 06/11/2026, com os pontos Q1 a Q15; está na seção 4. Dois trabalhos, com o escopo detalhado na proposta:
 
 - **Revisão dos desvios.** Cada desvio de `docs/conformidade/desvios.md`, do DV-1 ao DV-16 e os que o MVP-11 deixar, é revisto com a pergunta: o que falta para deixar de ser desvio e ficar de acordo com a norma? Para cada um: a cláusula, o que o projeto faz hoje, o que a norma pede, o que seria preciso mudar (no código do projeto, no free5GC, no UERANSIM ou no laboratório), o custo e o risco, e a recomendação: corrigir; manter, com o motivo; ou levar à 3GPP, quando o desvio vem de um defeito da norma, como o DV-5, o DV-6, o DV-7, o DV-11 e o DV-12.
 - **Revisão das normas.** TS 33.535 cláusula por cláusula e as normas que ela chama (TS 33.501 §6.1, §12, §13 e §14; TS 29.535, TS 29.522, TS 29.503, TS 24.109, TS 33.220, TS 33.122, TS 23.222, TS 33.210 e TS 33.310), nas versões mais recentes, para listar o que o projeto ainda deixa de lado: o que não foi feito, o que foi feito em parte e o que ficou fora do escopo de cada MVP. A matriz de rastreabilidade ganha uma revisão com essa lista.
