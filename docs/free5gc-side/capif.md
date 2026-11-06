@@ -41,15 +41,15 @@ O plano (MVP-9, "Situação normativa") resume as normas. As operações que o M
                  VM do AF (.129)                             VM do free5GC (.130)
   AF externo ──(CAPIF-1e) HTTPS, TLS mútuo ───────────► CCF 192.168.16.130:8020
   AF externo ──(CAPIF-2e) HTTPS, TLS mútuo ───────────► NEF nef.5gc...:8000
-                                                        NEF ──(CAPIF-3/4) http (DV-1) ──► CCF 127.0.0.1:8020
+                                                        NEF ──(CAPIF-3/4) HTTPS, TLS mútuo ─► CCF ccf.5gc...:8020
                                                         NEF ──(SBI, sem mudança) ───────► NRF e AAnF 192.168.16.130:8010
 ```
 
 | Caminho | Endereço | Segurança | Base |
 |---|---|---|---|
 | AF → CCF (CAPIF-1e) | `https://192.168.16.130:8020` | TLS 1.3 e 1.2; só de servidor na entrada, mútuo depois | C3; TS 33.122 §6.1 e §6.3.1.1 |
-| NEF → CCF (CAPIF-3/4) | `http://127.0.0.1:8020` | sem TLS até o MVP-11 | C3; DV-1 |
-| AF → NEF (CAPIF-2e) | `https://nef.5gc.mnc093.mcc208.3gppnetwork.org:8000`, descoberto no CCF | TLS mútuo desde a fase (a) do MVP-11: o AF apresenta o certificado do CCF e confere o do NEF com o `aefCa` | C3; `tls-sbi.md` §6.7 |
+| NEF → CCF (CAPIF-3/4) | `https://ccf.5gc.mnc093.mcc208.3gppnetwork.org:8020`, em 127.0.0.1 | TLS mútuo desde a fase (c) do MVP-11, com a CA do operador: o CCF reconhece o provedor pelo NF Instance ID do certificado | C3; `tls-sbi.md` §8.2 |
+| AF → NEF (CAPIF-2e) | `https://nef.5gc.mnc093.mcc208.3gppnetwork.org:8000`, descoberto no CCF | TLS mútuo desde a fase (a) do MVP-11: o AF apresenta o certificado do CCF e confere o do NEF com o `aefCa`. Desde a fase (c), o *token* e o certificado têm de ser do mesmo *invoker* | C3; `tls-sbi.md` §6.7 e §8.1 |
 
 As duas portas 8020 ficam em endereços diferentes. O servidor externo só serve as APIs do *invoker*; o interno, só as do provedor (publicação e dados do *invoker*). Uma API pedida no servidor errado recebe `404`.
 
@@ -89,7 +89,7 @@ O certificado que o CCF emite na entrada segue TS 33.310 §6.1.3a:
 - nenhuma outra extensão crítica (§6.1.1), e por isso sem `basicConstraints`;
 - validade configurável, um ano por padrão.
 
-`[MVP]` Os certificados não têm o ponto de distribuição de CRL que TS 33.310 §6.1.3a torna obrigatório, e não há CRL nem OCSP: DV-16.
+Desde a fase (c) do MVP-11, os certificados têm o ponto de distribuição de CRL que TS 33.310 §6.1.3a torna obrigatório, `http://192.168.16.130:8030/ccf-ca.crl`, e o CCF assina a CRL (`tls-sbi.md` §8.4). `[MVP]` Não há OCSP: DV-16.
 
 `[LACUNA]` `apiInvokerPublicKey` e `apiInvokerCertificate` são cadeias sem formato (tab. 8.4.4.2.5-1). O projeto usa PEM: `PUBLIC KEY` (*SubjectPublicKeyInfo*) e `CERTIFICATE`.
 
@@ -181,7 +181,7 @@ A mesma credencial serve a mais de uma entrada enquanto vale; cada entrada cria 
 
 - sem certificado de cliente, com certificado que não é da CA do CCF ou de outro *invoker* (CN diferente de `{onboardingId}`): `403`;
 - `{onboardingId}` desconhecido: `404`;
-- senão, o CCF apaga o perfil, o contexto de segurança e o segredo (TS 33.122 §6.8 passo 3) e responde `204`. Os *tokens* já emitidos valem até `exp` (DV-14);
+- senão, o CCF apaga o perfil, o contexto de segurança e o segredo (TS 33.122 §6.8 passo 3), revoga o certificado (`tls-sbi.md` §8.4) e responde `204`. Os *tokens* já emitidos valem até `exp` (DV-14);
 - depois do `204`, o CCF encerra a sessão TLS (TS 33.122 §6.8 passo 6: *"The CAPIF core function shall tear down the TLS session with the API invoker"*): com `Connection: close` no HTTP/1.1, e com `GOAWAY` no HTTP/2.
 
 ### 5.4 Publicação (`Publish_Service_API`, `Unpublish_Service_API`, `Get_Service_API`)
@@ -250,13 +250,14 @@ Nenhuma outra *claim*. Nenhum log do CCF, do NEF ou do AF mostra o *token*.
 
 ### 5.9 Dados do *invoker* (`Obtain_API_Invoker_Info`)
 
-`GET http://127.0.0.1:8020/capif-security/v1/trustedInvokers/{apiInvokerId}?authenticationInfo=true&authorizationInfo=true`, no servidor interno (tab. 8.5.2.3.3.1-1):
+`GET https://ccf.5gc.mnc093.mcc208.3gppnetwork.org:8020/capif-security/v1/trustedInvokers/{apiInvokerId}?authenticationInfo=true&authorizationInfo=true`, no servidor interno (tab. 8.5.2.3.3.1-1):
 
-- *invoker* desconhecido, ou sem contexto de segurança: `404`;
-- resposta `200` com `ServiceSecurity`, os itens do contexto, cada um com `aefId`, `prefSecurityMethods` e `selSecurityMethod` e, quando pedidos (C21):
-  - `authenticationInfo`: o certificado da CA do CCF, em PEM, para o AEF validar o certificado do *invoker* (TS 33.122 §6.5.2.3 passo 5). O NEF o guarda e só o usa no MVP-11;
+- certificado de cliente que não é de um provedor de `providers`: `403`;
+- *invoker* desconhecido, ou sem contexto de segurança, ou sem item para os AEF do cliente: `404`;
+- resposta `200` com `ServiceSecurity`, os itens do contexto para os AEF do cliente, cada um com `aefId`, `prefSecurityMethods` e `selSecurityMethod` e, quando pedidos (C21):
+  - `authenticationInfo`: o certificado da CA do CCF, em PEM, para o AEF validar o certificado do *invoker* (TS 33.122 §6.5.2.3 passo 5). O NEF o compara com a CA do certificado no `check-authentication`;
   - `authorizationInfo`: o texto JSON `{"akmaAfIds":["<AF_ID>", ...]}`, com os AF_ID do perfil (C11).
-- `[MVP]` Sem TLS em CAPIF-3 (DV-1), o CCF não sabe qual AEF pergunta e devolve todos os itens; o NEF usa o do seu `aefId`.
+- Sem TLS no servidor interno, como nos testes Go, o CCF não sabe qual AEF pergunta e devolve todos os itens; o NEF usa o do seu `aefId`.
 
 ### 5.10 Credencial de entrada (C19)
 
@@ -278,7 +279,7 @@ Nenhuma outra *claim*. Nenhum log do CCF, do NEF ou do AF mostra o *token*.
 
 ### 5.12 Estado
 
-Os perfis dos *invokers*, os contextos de segurança e as APIs publicadas ficam na memória (C1). Depois de reiniciar, o CCF não conhece mais nenhum: o NEF publica de novo (seção 6.2), e o AF entra de novo (seção 7.2).
+Os perfis dos *invokers*, os contextos de segurança e as APIs publicadas ficam na memória (C1). Depois de reiniciar, o CCF não conhece mais nenhum: o NEF publica de novo (seção 6.2), e o AF entra de novo (seção 7.2). A CRL fica no arquivo `ca.crlFile`, e as revogações sobrevivem à nova partida (`tls-sbi.md` §17.2).
 
 ## 6. O NEF
 
@@ -291,15 +292,18 @@ Seção nova no `nefcfg.yaml`. Sem ela, o NEF fica como no MVP-6:
 ```yaml
 configuration:
   capif: # CAPIF (TS 29.522 cl. 7): the NEF as API publishing and exposing function
-    ccfUri: http://127.0.0.1:8020 # internal interface of the CCF, CAPIF-3/4 (http until TLS on the SBI)
+    ccfUri: https://ccf.5gc.mnc093.mcc208.3gppnetwork.org:8020 # internal interface of the CCF, CAPIF-3/4, mutual TLS
     apfId: nef-apf
     aefId: nef-aef
     tokenPublicKey: cert/ccf-token.pub.pem # checks the access tokens of the CCF (TS 33.122 cl. 6.5.2.3 step 7)
     interface: # published for 3gpp-akma (CAPIF-2e)
-      ipv4Addr: 192.168.16.130
+      fqdn: nef.5gc.mnc093.mcc208.3gppnetwork.org
       port: 8000
     invokerInfoLifetime: 10m # how long the NEF keeps the data of an API invoker
-    allowNrfTokens: true # 3gpp-akma also without CAPIF, with access tokens of the NRF (TS 29.522 cl. 6)
+    invokerCa: cert/ccf-ca.pem # client certificates on CAPIF-2e (TS 33.122 cl. 6.5.2.3 step 5)
+    invokerCrl: true # the CCF signs the CRL of their CA (TS 33.310 cl. 6.3.1)
+    invokerCrlMaxAge: 5s # how soon the NEF sees that an API invoker offboarded (TS 33.122 cl. 6.8)
+    allowNrfTokens: false # 3gpp-akma only with access tokens of the CCF (TS 29.522 cl. 7.2)
 ```
 
 ### 6.2 Publicação (C24)
@@ -317,10 +321,11 @@ Se o CCF não responde, o NEF tenta de novo a cada 5 s, com um aviso no log só 
 
 ### 6.3 `check-authentication` (AEF_Security_API)
 
-`POST http://192.168.16.130:8000/aef-security/v1/check-authentication`, com `CheckAuthenticationReq` (`apiInvokerId` e `supportedFeatures`, os dois obrigatórios, tab. 9.1.4.2.2-1). O grupo `aef-security` sobe quando há a seção `capif`; ele não é um serviço do NRF e não entra em `serviceList`.
+`POST https://nef.5gc.mnc093.mcc208.3gppnetwork.org:8000/aef-security/v1/check-authentication`, com `CheckAuthenticationReq` (`apiInvokerId` e `supportedFeatures`, os dois obrigatórios, tab. 9.1.4.2.2-1). O grupo `aef-security` sobe quando há a seção `capif`; ele não é um serviço do NRF e não entra em `serviceList`.
 
-- `[MVP]` O pedido tem de vir de um endereço de `akma.authorizedAfs`, a mesma política de endereço do MVP-6 (DV-9); senão, `403`. TS 29.222 §6.2.2.2 não pede autorização nessa operação.
+- O CN do certificado de cliente tem de ser o `apiInvokerId` do corpo (`tls-sbi.md` §8.1); senão, `403`. Sem TLS no CAPIF-2e, como nos testes Go, o pedido tem de vir de um endereço de `akma.authorizedAfs`, a política do MVP-6.
 - Se não tem os dados do *invoker*, ou se passaram de `invokerInfoLifetime`, o NEF os pede ao CCF (seção 5.9) e os guarda.
+- O certificado de cliente tem de ser da CA de `authenticationInfo` (TS 33.122 §6.5.2.3 passo 5); senão, `403`.
 - Respostas: `200` com `CheckAuthenticationRsp` (`supportedFeatures` `"0"`); *invoker* desconhecido no CCF, `403`; CCF fora do ar, `503`.
 
 ### 6.4 Pedido `retrieve` com o *token* do CCF (C25)
@@ -328,11 +333,11 @@ Se o CCF não responde, o NEF tenta de novo a cada 5 s, com um aviso no log só 
 Antes do *middleware* do MVP-6, no grupo `3gpp-akma`:
 
 1. **Que *token* é.** `Authorization: Bearer <jwt>` com assinatura que confere com a chave pública do CCF: modo CAPIF, passos 2 a 4. Um `kid` presente tem de ser o da chave (seção 5.8). Qualquer outro pedido, com `allowNrfTokens: true`: o modo do MVP-6, sem mudança, com o *middleware* do NRF (C13). Com `allowNrfTokens: false`: `401`.
-2. **Forma.** `alg` `ES256` (TS 33.210 §6.3.3.1); `exp` presente e não vencido, com até 30 s de tolerância (TS 33.122 C.2.2); `iss` e `client_id` presentes e iguais. Senão, `401` `invalid_token`.
+2. **Forma.** `alg` `ES256` (TS 33.210 §6.3.3.1); `exp` presente e não vencido, com até 30 s de tolerância (TS 33.122 C.2.2); `iss` e `client_id` presentes e iguais; o CN do certificado de cliente igual ao `client_id` (`tls-sbi.md` §8.1). Senão, `401` `invalid_token`.
 3. **Escopo.** `scope` começa com `3gpp#` e tem um item com o `aefId` do NEF e `3gpp-akma` entre as APIs desse item (TS 29.522 §7.2). Senão, `403` `insufficient_scope`.
 4. **Dados do *invoker*.** Da memória ou do CCF (seção 5.9; TS 23.222 §8.16.3 passo 2a). O CCF responde `404`: `401` `invalid_token`, porque o *invoker* saiu ou o CCF reiniciou. O CCF fora do ar: `503`.
 
-Depois, o processamento do MVP-6 (`nef.md` §3.2, passos 2 a 6), com uma conferência a mais no passo 3: o AF_ID do pedido tem de estar nos `akmaAfIds` do *invoker* (C11) e na política de endereço. Senão, `403` sem `cause`; o `detail` diz qual política recusou.
+Depois, o processamento do MVP-6 (`nef.md` §3.2, passos 2 a 6), com uma conferência a mais no passo 3: o AF_ID do pedido tem de estar nos `akmaAfIds` do *invoker* (C11) e na lista de `akma.authorizedAfs`. Senão, `403` sem `cause`; o `detail` diz qual política recusou. Desde a fase (c) do MVP-11, o modo CAPIF não confere o endereço de origem: quem diz quem é o AF são o certificado e o *token*.
 
 Respostas do modo CAPIF, com `ProblemDetails` em `application/problem+json`:
 
@@ -341,7 +346,7 @@ Respostas do modo CAPIF, com `ProblemDetails` em `application/problem+json`:
 | *token* inválido ou vencido (passos 2 e 4) | `401`, `WWW-Authenticate: Bearer error="invalid_token"` |
 | sem *token*, com `allowNrfTokens: false` | `401`, `WWW-Authenticate: Bearer` |
 | escopo de outro AEF ou de outra API | `403`, `WWW-Authenticate: Bearer error="insufficient_scope", scope="3gpp#nef-aef:3gpp-akma"` |
-| AF_ID fora dos `akmaAfIds` ou da política de endereço | `403` sem `cause` |
+| AF_ID fora dos `akmaAfIds` ou de `akma.authorizedAfs` | `403` sem `cause` |
 | CCF fora do ar | `503` |
 
 `[3GPP]` RFC 6750 §3 e §3.1; TS 29.122 tab. 5.2.6-1 e NOTA 2. Com `allowNrfTokens: true`, um pedido sem *token*, ou com um *token* que não é do CCF, cai no modo do MVP-6 e recebe o `401` do *middleware* do free5GC (F12).
@@ -386,7 +391,7 @@ No formato do free5GC. Nunca aparecem *tokens*, credenciais de entrada, segredos
 
 | Onde | Nível | Mensagens |
 |---|---|---|
-| CCF | info | `API invoker <id> onboarded, profile <perfil>`; `API invoker <id> offboarded`; `<apiName> published by <apfId> as <apiId>, AEF <aefId>`; `<apiName> <apiId> unpublished`; `security method OAUTH for API invoker <id> at AEF <aefId>`; `access token for API invoker <id>, scope <escopo>, expires in <n> s`; `security information of API invoker <id> given to the internal interface` |
+| CCF | info | `API invoker <id> onboarded, profile <perfil>`; `API invoker <id> offboarded`; `<apiName> published by <apfId> as <apiId>, AEF <aefId>`; `<apiName> <apiId> unpublished`; `security method OAUTH for API invoker <id> at AEF <aefId>`; `access token for API invoker <id>, scope <escopo>, expires in <n> s`; `security information of API invoker <id> given to the internal interface`; `CRL <arquivo> signed: <n> revoked` |
 | CCF | warn | cada recusa, com o motivo (credencial, certificado, segredo, escopo, perfil) |
 | NEF, categoria `CAPIF` | info | `3gpp-akma published at the CCF as <apiId>`; `check-authentication of API invoker <id>: <n> AF_IDs from the CCF`; `access token of API invoker <id> accepted for AF_ID <afId>` |
 | NEF, categoria `CAPIF` | warn | *token* recusado e o motivo; AF_ID fora do perfil do *invoker*; CCF fora do ar |
@@ -399,7 +404,7 @@ No formato do free5GC. Nunca aparecem *tokens*, credenciais de entrada, segredos
 | Onde | Casos |
 |---|---|
 | CCF | cada operação das seções 5.2 a 5.10, com sucesso e recusas; as *claims* do *token* (`iss` = `client_id` = *invoker*; `exp` absoluto; `scope`); a credencial (assinatura, `aud`, `exp`, perfil); o CN do certificado; as regras da publicação; os filtros e a política da descoberta; os atributos obrigatórios das tabelas em cada corpo |
-| NEF (*patch*) | a seção 6.4: *token* válido; de outra chave; `alg` `none` e `HS256`; vencido; sem `exp`; `iss` diferente de `client_id`; escopo de outro AEF e de outra API; *invoker* que saiu (CCF `404`); CCF fora do ar (`503`); AF_ID fora do perfil e fora da política de endereço; `allowNrfTokens` `true` e `false`. A seção 6.3. A publicação e a nova tentativa. Os testes do MVP-6 continuam passando |
+| NEF (*patch*) | a seção 6.4: *token* válido; de outra chave; `alg` `none` e `HS256`; vencido; sem `exp`; `iss` diferente de `client_id`; escopo de outro AEF e de outra API; *invoker* que saiu (CCF `404`); CCF fora do ar (`503`); AF_ID fora do perfil e fora da lista do NEF; `allowNrfTokens` `true` e `false`; o certificado de outro *invoker*. A seção 6.3, com o certificado de outro *invoker* e de outra CA. A publicação e a nova tentativa. Os testes do MVP-6 continuam passando |
 | AF | a entrada e o estado; a montagem do `apiRoot`; o método; a renovação do *token*; a nova entrada depois de um CCF reiniciado; a saída |
 
 ### 10.2 `e2e.sh`: grupo CP e passo R2c
@@ -422,11 +427,11 @@ O `e2e-remote.sh` sobe o CCF com o free5GC (`run.sh -crl -aanf -ccf`) e emite a 
 | CP11 | *token* com segredo errado | `400` `invalid_client` |
 | CP12 | *token* com escopo fora do perfil | `400` `invalid_scope` |
 | CP13 | `grant_type=password` | `400` `unsupported_grant_type` |
-| CP14 | NEF sem *token* | `401` (o modo do MVP-6 está ligado; F12) |
+| CP14 | NEF sem *token* | `401` (F12; desde a fase (c) do MVP-11, sem o modo do MVP-6) |
 | CP15 | NEF com o *token* adulterado | `401` |
 | CP16 | AF_ID `af3.akma.example.FF00000001`: na política do NEF, fora do perfil | `403` sem `cause` |
 | CP17 | AF_ID `af4.akma.example.FF00000001`: no perfil, fora da política do NEF | `403` sem `cause` |
-| CP18 | saída do `capif_api.py`; *token* pedido depois | `204`; `400` `invalid_client` |
+| CP18 | saída do `capif_api.py`; *token* pedido depois | `204`; desde a fase (c) do MVP-11, o certificado revogado é recusado no TLS, antes do `400` `invalid_client` |
 | R2c | Ua\* do UE com o AF do modo CAPIF, pelo plano de usuário | como o R2n com o AF via NEF |
 | CP19 | saída do AF no fim (grupo B) | `204`; linha no log do AF |
 | CP20 | logs do CCF, do NEF e do AF | nenhum *token*, credencial, segredo de entrada ou chave privada |
@@ -436,12 +441,10 @@ As 161 verificações de hoje continuam, com o grupo do NEF do MVP-6 (C13).
 ## 11. Limitações
 
 - CAPIF parcial (DV-14): sem eventos, revogação, *logging*, auditoria, política de acesso, roteamento, registro do provedor pela API, descoberta aberta, interconexão, RNAA, ocultação de topologia e tarifação.
-- Sem TLS entre o NEF e o CCF até a fase (c) do MVP-11 (DV-1). Entre o AF e o NEF, TLS mútuo desde a fase (a).
 - O estado do CCF fica em memória (seção 5.12).
 - Um CCF, um provedor (o NEF), um AEF.
-- Sem TLS em CAPIF-3, o CCF não sabe qual AEF pede os dados do *invoker* (seção 5.9).
 - Os AF_ID de um AF externo ficam em três configurações: no perfil do CCF, na política do NEF e na lista do AAnF.
-- Sem revogação de certificados em CAPIF-1e: sem CRL, sem OCSP e sem o ponto de distribuição de CRL nos certificados (DV-16).
+- Revogação só por CRL, sem OCSP (DV-16). A CRL revoga na saída do *invoker*; o NEF a busca de novo depois de `invokerCrlMaxAge`.
 
 ## 12. Achados
 

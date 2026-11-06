@@ -2,6 +2,15 @@
 
 ## [Não lançado]
 
+### MVP-11 — O NEF com o AF de fora e com o CCF, fase (c) (06/11/2026)
+- **CCF:** o servidor interno em `https`, com TLS mútuo e a CA do operador; o provedor reconhecido pelo NF Instance ID do certificado; `Obtain_API_Invoker_Info` só com os itens do AEF que pergunta; a CRL da CA do CCF, assinada na partida, a cada saída e antes do `nextUpdate`; o certificado do *invoker* revogado na saída e recusado em CAPIF-1e.
+- **NEF:** *patch* `nef/0005`: o CN do certificado igual ao `apiInvokerId` e ao `client_id`, a CA conferida contra `authenticationInfo`, `sourceAddresses` opcional, `invokerCrlMaxAge`.
+- **`openapi`:** *patch* `0007`: a idade máxima da CRL, `sbitls.CrlChecker` e `CloseIdleConnections`.
+- **AF:** a CRL no certificado do CCF; as conexões fechadas ao trocar de certificado.
+- **Configuração:** `config/0006`, com `ccfUri` por nome, `invokerCrl: true` e `allowNrfTokens: false`; `ccfcfg.yaml`; `make-capif-certs.sh`, com o ponto de distribuição de CRL.
+- **Roteiro:** S16 a S18, o servidor interno do CCF no R1s, E05 e CP18 revistos, `R1.profiles`. Execução de 06/11/2026: 317 verificações, nenhuma falha, nenhuma pulada.
+- **Documentos:** `tls-sbi.md` §17, `capif.md`, `nef.md`, `af.md`, `e2e.md`, o tutorial, F13 e F27, DV-1 e DV-9 encerrados, DV-16 reduzido, D-AJ, a matriz na revisão 11, o plano.
+
 ### MVP-11 — Identidade nos *tokens* e nas políticas, fase (b) (05/11/2026)
 - **`openapi`:** *patch* `0006`: a verificação do produtor em todas as NFs, só `ES256`, com o certificado de assinatura da CA do operador, `iss`, `aud`, `sub`, `exp` e escopo, e as respostas de TS 29.500 §6.7.3 (F5, F12, F23); `oauth.Signer`.
 - **NRF:** *patch* `nrf/0005`: o certificado da sessão TLS confere o pedido de *token*, o registro, a atualização, o descadastro e a descoberta; *tokens* em `ES256`, com `kid`, `x5t#S256` e `iss` (F23, F26); `allowedOperationsPerNfType` (F4); saem a geração de certificados e o `rootcert` (F25).

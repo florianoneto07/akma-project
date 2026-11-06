@@ -1,6 +1,6 @@
 # Correções do free5GC para o AKMA
 
-**Criado em:** 19 de outubro de 2026 · **Atualizado em:** 5 de novembro de 2026 (F4, F5, F12, F14, F23, F25 e F26: fase (b) do MVP-11); 4 de novembro de 2026 (F21, F22, F24 e parte de F25: fase (a) do MVP-11; F26 e os estados de F4, F5, F12 e F24: especificação do MVP-11 aprovada); 2 de novembro de 2026 (F21 a F25, MVP-11; F13: o CAPIF verificado no laboratório); 30 de outubro de 2026 (F13: o CCF e o NEF feitos); 29 de outubro de 2026 (F13: MVP-9 aprovado); 28 de outubro de 2026 (F16 a F20, MVP-12; conferência no free5GC v4.3.0, MVP-13) · **Base:** free5GC v4.2.3 (NRF v1.4.5, UDM, AUSF e AMF v1.4.5, NEF v1.2.5, `openapi` v1.2.4)
+**Criado em:** 19 de outubro de 2026 · **Atualizado em:** 6 de novembro de 2026 (F13 e F27: fase (c) do MVP-11); 5 de novembro de 2026 (F4, F5, F12, F14, F23, F25 e F26: fase (b) do MVP-11); 4 de novembro de 2026 (F21, F22, F24 e parte de F25: fase (a) do MVP-11; F26 e os estados de F4, F5, F12 e F24: especificação do MVP-11 aprovada); 2 de novembro de 2026 (F21 a F25, MVP-11; F13: o CAPIF verificado no laboratório); 30 de outubro de 2026 (F13: o CCF e o NEF feitos); 29 de outubro de 2026 (F13: MVP-9 aprovado); 28 de outubro de 2026 (F16 a F20, MVP-12; conferência no free5GC v4.3.0, MVP-13) · **Base:** free5GC v4.2.3 (NRF v1.4.5, UDM, AUSF e AMF v1.4.5, NEF v1.2.5, `openapi` v1.2.4)
 
 Registro de tudo o que o projeto encontrou no free5GC e que precisa mudar para o AKMA funcionar conforme a norma. Pedido do responsável em 19/10/2026: este registro vai para o repositório público (MVP-7, plano seção 5). A regra de cada entrada:
 
@@ -26,7 +26,7 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
 | F10 | UDM | `id-translation-result` só traduz GPSI → SUPI | aberto (plano, seção 5) |
 | F11 | NEF | sem a API `3gpp-akma` | corrigido, *patch* `nef/0001` (MVP-6) |
 | F12 | NEF | 401 do *middleware* OAuth2 sem `ProblemDetails` nem `WWW-Authenticate` | corrigido no projeto: MVP-11, fase (b), *patch* `openapi/0006`, em todas as NFs |
-| F13 | NEF | APIs do AF sem CAPIF e sem TLS mútuo | o CAPIF corrigido, `nef/0002` e o CCF (MVP-9, verificado em 02/11/2026); o TLS no MVP-11 (DV-9) |
+| F13 | NEF | APIs do AF sem CAPIF e sem TLS mútuo | corrigido no projeto: o CAPIF, `nef/0002` e o CCF (MVP-9); o TLS mútuo e a ligação do certificado ao *token*, MVP-11, fases (a) e (c), *patches* `nef/0003` e `nef/0005` |
 | F14 | NEF | pede o *token* de `nnrf-nfm` para o tipo errado e não se descadastra | corrigido no projeto: MVP-11, fase (b), *patch* `nef/0004` |
 | F15 | NRF | `complexQuery` sem `routing-indicator` para `AANF` | aberto |
 | F16 | `openapi` | sem os modelos da autenticação disparada pela rede doméstica | corrigido, *patch* `openapi/0003` (MVP-12) |
@@ -40,12 +40,13 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
 | F24 | todas as NFs, `openapi` | perfis sem `fqdn` e URIs montados por IP | corrigido no projeto: MVP-11, fase (a), *patches* `*-sbi-tls` e `openapi/0005`; fica o `apiPrefix` com o URI inteiro (T22) |
 | F25 | NRF, `openapi` | certificados das NFs fora do perfil de TS 33.310 | corrigido no projeto: MVP-11, `make-sba-certs.sh` na fase (a) e *patch* `nrf/0005` na fase (b) |
 | F26 | NRF | *tokens* com `iss` vazio e certificado do NRF sem o NF Instance ID | corrigido no projeto: MVP-11, fase (b), *patch* `nrf/0005` |
+| F27 | NRF | o escopo do *token* é conferido em um só perfil do tipo pedido | não corrigido; o laboratório tem um NEF, e o `e2e.sh` limpa os perfis antigos |
 
 ### Conferência no free5GC v4.3.0 (28/10/2026)
 
 Ponto L6 do MVP-13: antes de publicar, cada item conferido na versão mais recente do free5GC. A v4.3.0 saiu em 30/09/2026. Ela fixa o NRF em `4522e4a9`, o UDM em `ba18ef3b`, o AUSF em `b693e38a`, o AMF em `9fc0ac3f`, o NEF em `6cd30f51`, a *webconsole* em `c40b94b6` e o `openapi` v1.3.0 em todas, e traz uma NF nova, o SCP. Fonte: os arquivos dessas versões no GitHub, lidos em 28/10/2026.
 
-**Os vinte itens continuam presentes na v4.3.0.** Os *patches* do projeto seguem para a v4.2.3; portá-los à v4.3.0 é do item *Upstream* do plano. F21 a F26, do MVP-11, foram conferidos só na v4.2.3. O que se conferiu em cada item:
+**Os vinte itens continuam presentes na v4.3.0.** Os *patches* do projeto seguem para a v4.2.3; portá-los à v4.3.0 é do item *Upstream* do plano. F21 a F27, do MVP-11, foram conferidos só na v4.2.3. O que se conferiu em cada item:
 
 | Item | Na v4.3.0 |
 |---|---|
@@ -198,6 +199,8 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
   - MVP-9, aprovado em 29/10/2026 com os pontos C1 a C16 do plano (pedido do responsável em 19/10/2026; MVP-8 até a renumeração de 20/10/2026): um CAPIF Core Function para o free5GC, implementável com os serviços de TS 29.222. O NEF atua como APF, publicando `3gpp-akma` com `Publish_Service_API` (§5.3), e como AEF, conferindo o *token* como manda TS 29.522 §7.2. O AF atua como *API invoker*: entra no CCF (`CAPIF_API_Invoker_Management_API`), descobre a API (`Discover_Service_API`, §5.2) e obtém o *token* em `{apiRoot}/capif-security/v1/securities/{securityId}/token` (§5.6.2.3, TS 33.122 §6.5.2.3). O TLS entre o NEF e o AF, a outra metade deste item, fica para o MVP-11.
   - 30/10/2026: o CCF feito, uma NF nova em `free5gc/ccf/` (`capif.md` §15.1). Na mesma data, o NEF, com o *patch* `nef/0002-capif.patch` e a configuração em `config/0003-nef-capif.patch` (§15.2). O AF, do lado do AF, também (§15.3).
   - 02/11/2026: o CAPIF verificado no laboratório, no `e2e.sh`, com 185 verificações e nenhuma falha (`capif.md` §15.4).
+  - 04/11/2026: o TLS mútuo no CAPIF-2e, na fase (a) do MVP-11 (`nef/0003`).
+  - 06/11/2026: na fase (c) do MVP-11, o certificado de cliente ligado ao *token* e ao `check-authentication`, e o fim do *token* do NRF na `3gpp-akma` (`nef/0005`; `tls-sbi.md` §8.1). Fecha o DV-9.
 
 ## F14 — NEF pede o *token* de `nnrf-nfm` para o tipo errado
 
@@ -350,6 +353,15 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
   - TS 33.310 §6.1.3c.3: o `subjectAltName`, nos certificados TLS e nos que validam a assinatura dos *tokens*, *"shall ... contain a URI-ID with the URI for the NF Instance ID as an URN"*. NOTA 1b: sem esse URI, *"the identity of the NRF in JWT access token "iss" Issuer claim ... cannot be securely validated by NF producers"*.
 - **Como deve ser.** O NRF põe em `iss` o próprio NF Instance ID, o mesmo do URI do certificado que valida a assinatura. O produtor confere `iss` contra esse URI.
 - **No projeto.** Corrigido no MVP-11, fase (b) (T29 e T30): *patch* `nrf/0005` (`tls-sbi.md` §7.2 e §7.4). O certificado de assinatura sai de `make-sba-certs.sh`.
+
+---
+
+## F27 — O escopo do *token* é conferido em um só perfil do tipo pedido
+
+- **Onde.** NRF, `internal/sbi/processor/access_token.go`, `AccessTokenScopeCheck`: para um `targetNfType`, `RestfulAPIGetOne` devolve um perfil só, o primeiro do tipo no MongoDB, e o escopo é conferido nele.
+- **O que a norma diz.** TS 33.501 §13.4.1.1.2 passo 2: *"The NRF checks whether the NF Service Consumer is authorized to access the requested service(s)."* NOTA 1 do mesmo passo: sem lista de fatias, o *token* *"can be used to access expected NF services of all expected NF Service Producers of the NF type based on local configuration and operator policy."*
+- **Como deve ser.** `[INTERPRETAÇÃO]` A norma não diz qual perfil olhar. O pedido é por tipo de NF, e a resposta não deve depender da ordem dos perfis no banco: o NRF deve conferir os perfis do tipo pedido.
+- **No projeto.** Não corrigido. Apareceu na fase (c) do MVP-11: o banco de testes do free5GC, parado sem se descadastrar, deixou um perfil de NEF sem `3gpp-akma`, e o NRF recusou esse escopo com `400` `invalid_scope`, com o NEF do laboratório registrado. O laboratório tem um NEF, e o passo R1 do `e2e-remote.sh` apaga os perfis de execuções anteriores (`R1.profiles`).
 
 ---
 

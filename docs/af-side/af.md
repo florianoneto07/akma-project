@@ -108,6 +108,8 @@ No modo externo, o AF se registra no NRF na partida e se descadastra ao encerrar
 
 Na partida, o AF entra no CCF (ou usa o estado), descobre `3gpp-akma`, obtém o método `OAUTH` e pede o `check-authentication` ao NEF; só então serve o Ua\*. O *token* é pedido no primeiro pedido de K_AF, fica só na memória e é renovado 30 s antes do fim. Quando o NEF recusa o *token*, o AF pede outro e repete o pedido uma vez (TS 33.122 C.4.1).
 
+Desde a fase (c) do MVP-11, o AF confere a CRL em cada conexão com o CCF, pelo ponto de distribuição do `ccf.pem`, e recusa um CCF de certificado revogado (TS 33.310 §6.3.1). No certificado do NEF, confere a CRL do operador, desde a fase (a). Ao trocar de certificado, numa nova entrada, fecha as conexões abertas, porque o NEF confere o certificado de cada sessão contra o `client_id` do *token* (`docs/free5gc-side/tls-sbi.md` §8.1 e §8.3).
+
 `[MVP]` A opção `clockOffset` (duração Go, como `2h` ou `-2h`) desloca o relógio do AF. É só de teste: simula um AF cujo relógio discorda do relógio do AAnF (MVP-5, `e2e.md` §4). Com ela, o AF registra um `warn` na partida.
 
 ## 4. Log

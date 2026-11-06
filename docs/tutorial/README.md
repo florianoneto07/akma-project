@@ -1,6 +1,6 @@
 # Tutorial — AKMA sobre o free5GC
 
-Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde à fase (a) do MVP-11 (TLS mútuo nas SBI), que veio depois do MVP-9 (CAPIF). O MVP-5 foi o primeiro MVP funcional. Em 19/10/2026 ele foi seguido do início numa VM com o free5GC v4.2.3 recém-instalado, e o roteiro da parte 8 terminou com 63 verificações e nenhuma falha (critério 4 do MVP-5).
+Este tutorial descreve o que fazer **depois de instalar o free5GC** pelo guia oficial para usar AKMA (3GPP TS 33.535). Ele cresce a cada MVP; esta versão corresponde à fase (c) do MVP-11 (TLS mútuo nas SBI), que veio depois do MVP-9 (CAPIF). O MVP-5 foi o primeiro MVP funcional. Em 19/10/2026 ele foi seguido do início numa VM com o free5GC v4.2.3 recém-instalado, e o roteiro da parte 8 terminou com 63 verificações e nenhuma falha (critério 4 do MVP-5).
 
 | Parte | Conteúdo | Disponível |
 |---|---|---|
@@ -765,7 +765,7 @@ O segundo *patch* da série traz o NEF do CAPIF (parte 11). Com a seção `capif
 ~/akma-free5gc/free5gc/scripts/make-capif-certs.sh ~/free5gc/cert 192.168.16.130
 ```
 
-Sem o CCF no ar, o NEF tenta publicar a API a cada 5 s, com um aviso na primeira falha, e continua aceitando os *tokens* do NRF (`allowNrfTokens: true`).
+Sem o CCF no ar, o NEF tenta publicar a API a cada 5 s, com um aviso na primeira falha. A API `3gpp-akma` só aceita os *tokens* do CCF (`allowNrfTokens: false`, parte 12).
 
 A configuração do NEF muda pelo *patch* de configuração da parte 4 (`free5gc/patches/config/0002-nef-akma.patch`). Se você aplicou a configuração antes desta versão do tutorial, desfaça-a com a cópia antiga dos *patches* (`patch-nf.sh config revert`), atualize o repositório e aplique de novo. No `~/free5gc/config/nefcfg.yaml`, confira:
 
@@ -988,7 +988,7 @@ Na máquina do free5GC, copie a configuração:
 cp ~/akma-free5gc/free5gc/config/ccfcfg.yaml ~/free5gc/config/
 ```
 
-As chaves e os certificados vêm de `make-capif-certs.sh` (seção 9.1), com o endereço que o AF alcança. Se o endereço da máquina não for 192.168.16.130, troque-o também em `capif1e.bindingIPv4` do `ccfcfg.yaml`. O perfil `af1-external` lista as APIs e os AF_ID que o AF pode usar (`capif.md` §5.1).
+As chaves e os certificados vêm de `make-capif-certs.sh` (seção 9.1), com o endereço que o AF alcança. Se o endereço da máquina não for 192.168.16.130, troque-o também em `capif1e.bindingIPv4` e em `ca.crlUri` do `ccfcfg.yaml`. O perfil `af1-external` lista as APIs e os AF_ID que o AF pode usar (`capif.md` §5.1).
 
 ### 11.2 Atualizar o `openapi`, a configuração e o `run.sh`
 
@@ -1063,10 +1063,9 @@ O `e2e.sh` (parte 8) faz tudo isso sozinho: sobe o CCF, emite a credencial, roda
 ### 11.5 Limitações
 
 - O CAPIF é parcial: só o caminho do AKMA (DV-14).
-- CAPIF-3/4 fica sem TLS até a fase (c) do MVP-11 (DV-1). O CAPIF-2e tem TLS mútuo desde a parte 12.
-- Os certificados dos *invokers* não têm revogação, nem CRL nem OCSP, e o *token* não leva `x5t#S256` (DV-16).
+- A revogação dos certificados dos *invokers* é só por CRL, sem OCSP, e o *token* não leva `x5t#S256` (DV-16). O TLS mútuo de CAPIF-2e e CAPIF-3/4 está na parte 12.
 - O CCF guarda tudo na memória. Depois de reiniciá-lo, o NEF publica de novo, e o AF entra de novo quando o CCF não o conhece mais.
-- Um *token* já emitido vale até `exp` (10 min), mesmo depois da saída do *invoker*.
+- Um *token* já emitido vale até `exp` (10 min), mesmo depois da saída do *invoker*. Mas o certificado dele é revogado na saída: o CCF o recusa na hora, e o NEF, em até 5 s (`invokerCrlMaxAge`).
 
 Para desfazer: `./run.sh -crl -aanf`, sem `-ccf`, deixa o CCF parado. O AF de fora para de funcionar, porque precisa dele para o *token*.
 
@@ -1074,7 +1073,7 @@ Para desfazer: `./run.sh -crl -aanf`, sem `-ccf`, deixa o CCF parado. O AF de fo
 
 Até o MVP-9, as NFs falavam em HTTP/2 sem TLS. TS 33.501 §13.1.0 pede TLS mútuo na SBI, com os certificados de TS 33.310. Esta parte põe no laboratório uma CA do operador, um certificado por NF, com o nome e o NF Instance ID, os nomes da SBI no lugar dos endereços e a CRL. O AF de fora passa a falar com o NEF por TLS mútuo. A especificação é `docs/free5gc-side/tls-sbi.md`.
 
-Esta parte corresponde às fases (a) e (b) do MVP-11. O NEF ainda fala em `http` com o CCF: isso vem na fase (c).
+Esta parte corresponde às fases (a), (b) e (c) do MVP-11.
 
 **Ordem.** As configurações do repositório já usam TLS e nomes. Numa instalação nova, faça as seções 12.1 a 12.4 antes da parte 3, depois de instalar o free5GC. As partes 3 a 11 continuam valendo, com os URIs da seção 12.6.
 
@@ -1170,11 +1169,19 @@ free5gc/scripts/build-aanf.sh
 free5gc/scripts/deploy.sh woca@192.168.16.130 --force-config
 ```
 
-Se o CCF já estava instalado, atualize a configuração dele, que ganhou o AF_ID de teste `af5` (`tls-sbi.md` §15.3). Na máquina do free5GC:
+Se o CCF já estava instalado, atualize a configuração dele, que ganhou o AF_ID de teste `af5` (`tls-sbi.md` §15.3) e, na fase (c), o servidor interno em `https`, a CRL e o `nfInstanceId` do NEF. Se a máquina tiver outro endereço, troque-o em `ca.crlUri`. Na máquina do free5GC:
 
 ```bash
 cp ~/akma-free5gc/free5gc/config/ccfcfg.yaml ~/free5gc/config/
 ```
+
+Na fase (c), o `ccf.pem` ganha o ponto de distribuição de CRL. Faça-o de novo:
+
+```bash
+~/akma-free5gc/free5gc/scripts/make-capif-certs.sh ~/free5gc/cert 192.168.16.130
+```
+
+Refaça também o `bin/ccf`, na máquina do AF, como na seção 11.1, e copie-o. O CCF escreve a CRL da sua CA em `cert/crl/ccf-ca.crl` na partida e a cada saída de um *invoker*. O serviço da CRL a serve junto com a do operador.
 
 O AF precisa do certificado dele e da CA do operador em `af/build/sba/`. A chave da CA não sai da máquina do free5GC. Na máquina do AF:
 
@@ -1205,10 +1212,11 @@ Um cliente com um certificado revogado é recusado no *handshake*, e o servidor 
 
 Os *tokens* do NRF saem em `ES256`, com o `sub` preso ao certificado de quem os pediu. O NRF confere o pedido contra esse certificado, e o AAnF confere o `aud`, o `sub` e os escopos de cada operação. A política do AAnF é pelo NF Instance ID do certificado do AF e do NEF, sem endereço de origem (`docs/free5gc-side/tls-sbi.md` §7).
 
+O NEF fala com o CCF em `https://ccf.5gc.mnc093.mcc208.3gppnetwork.org:8020`, com TLS mútuo, e o CCF reconhece o NEF pelo NF Instance ID do certificado. No CAPIF-2e, o certificado do AF tem de ser o do *invoker* do *token*, e a API `3gpp-akma` só aceita os *tokens* do CCF. Quando um *invoker* sai, o CCF revoga o certificado dele. O CCF o recusa na hora; o NEF, depois de `invokerCrlMaxAge`, 5 s no laboratório (`docs/free5gc-side/tls-sbi.md` §8).
+
 O `e2e.sh` (parte 8) confere tudo isso. O passo R1s testa cada porta da SBI, sem o código Go do projeto, e o `seed` contra um `openssl s_server` (`docs/af-side/e2e.md` §4.3).
 
 ### 12.8 Limitações
 
-- O NEF fala em `http` com o CCF, e os certificados dos *invokers* não têm CRL, até a fase (c).
 - A *webconsole* do free5GC não fala com o NRF em TLS mútuo. O laboratório não a usa: a assinatura sai do `mongosh`.
 - O BSF tem o *patch* e o certificado, mas o `run.sh` só o sobe com `-bsf`, que o laboratório não usa.

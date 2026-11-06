@@ -7,7 +7,7 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 
 | Nº | Assunto | Estado | MVP |
 |---|---|---|---|
-| DV-1 | SBI sem TLS (h2c); CAPIF-3/4 sem TLS até o MVP-11 | **implementado** (MVP-1, 17/10/2026); estendido a CAPIF-3/4, **implementado** (MVP-9, 02/11/2026); SBI com TLS mútuo desde a fase (a) do MVP-11 (04/11/2026); **a encerrar** na fase (c) | MVP-1, MVP-9, MVP-11 |
+| DV-1 | SBI sem TLS (h2c); CAPIF-3/4 sem TLS até o MVP-11 | **implementado** (MVP-1, 17/10/2026); estendido a CAPIF-3/4, **implementado** (MVP-9, 02/11/2026); SBI com TLS mútuo desde a fase (a) do MVP-11 (04/11/2026); **encerrado** na fase (c) do MVP-11 (06/11/2026) | MVP-1, MVP-9, MVP-11 |
 | DV-2 | Subscrição de `ROAMING_STATUS` desabilitada | **implementado** (MVP-1, 17/10/2026) — parcial: a etapa não existe; o campo só aceita `false` | MVP-1 |
 | DV-3 | Só SUPI do tipo IMSI | **implementado** (MVP-0, 16/10/2026) | MVP-0 |
 | DV-4 | Sem NFKC no lado UE | **implementado** (MVP-4, 18/10/2026) | MVP-4 |
@@ -15,14 +15,14 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-6 | `realm` do Digest conforme TS 33.535 | **implementado** (MVP-3, 18/10/2026) | MVP-3 |
 | DV-7 | Nunca emitir 204 em `retrieve-applicationkey` | **implementado** (MVP-1, 17/10/2026) | MVP-1 |
 | DV-8 | `aud` vazio tolerado no token OAuth2 | **encerrado** em 17/10/2026 (MVP-1b: NRF corrigido, AAnF estrito) | MVP-1 |
-| DV-9 | NEF–AF externo sem TLS nem certificado de cliente | **implementado** (MVP-6, 19/10/2026); vale também para CAPIF-2e (MVP-9, 02/11/2026); TLS mútuo no CAPIF-2e desde a fase (a) do MVP-11 (04/11/2026); **a encerrar** na fase (c) (T14, opção b, 02/11/2026) | MVP-6, MVP-9, MVP-11 |
+| DV-9 | NEF–AF externo sem TLS nem certificado de cliente | **implementado** (MVP-6, 19/10/2026); vale também para CAPIF-2e (MVP-9, 02/11/2026); TLS mútuo no CAPIF-2e desde a fase (a) do MVP-11 (04/11/2026); **encerrado** na fase (c) do MVP-11 (06/11/2026; T14, opção b) | MVP-6, MVP-9, MVP-11 |
 | DV-10 | Perfis TLS do Ua\* sem `TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384` e sem OCSP *stapling*, recomendados por TS 33.210 | **implementado** (MVP-8, 21/10/2026) | MVP-8 |
 | DV-11 | CoAP sobre DTLS sem a suíte obrigatória de RFC 7252, `TLS_PSK_WITH_AES_128_CCM_8`; vale TS 33.210 | **implementado** (MVP-8, 21/10/2026) | MVP-8 |
 | DV-12 | `trigger-auth` com POST, contra a precedência do YAML (TS 29.503 Anexo A.1), que declara `get` | **implementado** (MVP-12, 28/10/2026) | MVP-12 |
 | DV-13 | *Claims* do *token* do CCF: `iss` com o identificador do *invoker*, ao lado de `client_id`, e `exp` como instante | **implementado** (MVP-9, 02/11/2026) | MVP-9 |
 | DV-14 | CAPIF parcial: só o caminho do AKMA | **implementado** (MVP-9, 02/11/2026) | MVP-9 |
 | DV-15 | HTTP/2 por ALPN no CCF, contra o *upgrade* do HTTP de TS 29.222 §7.3 | **implementado** (MVP-9, 02/11/2026) | MVP-9 |
-| DV-16 | CAPIF-1e sem revogação de certificados (sem ponto de distribuição de CRL, CRL nem OCSP) e *token* do CCF sem `x5t#S256` | **implementado** (MVP-9, 02/11/2026); revisto na especificação do MVP-11 (04/11/2026): a revogação sai do desvio na fase (c), e ficam o OCSP e o `x5t#S256` | MVP-9, MVP-11 |
+| DV-16 | CAPIF-1e sem OCSP *stapling* e *token* do CCF sem `x5t#S256`; até o MVP-11, também sem ponto de distribuição de CRL e sem CRL | **implementado** (MVP-9, 02/11/2026); **reduzido** na fase (c) do MVP-11 (06/11/2026): a revogação por CRL saiu do desvio, e ficam o OCSP e o `x5t#S256` | MVP-9, MVP-11 |
 | DV-17 | SBI por IP, sem o FQDN no perfil nem o SNI, como modo opcional; o padrão segue a norma | **decidido** (MVP-11, 02/11/2026); **implementado** (fase a, 04/11/2026) | MVP-11 |
 | DV-18 | CRL só por HTTP, sem o LDAPv3 que TS 33.310 §6.1a pede como método principal | **decidido** (MVP-11, 04/11/2026); **implementado** (fase a, 04/11/2026) | MVP-11 |
 
@@ -61,6 +61,8 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 
 
 **MVP-11, fases (a) e (b) (04 e 05/11/2026).** A SBI passou a TLS mútuo, com os certificados de `make-sba-certs.sh` (`docs/free5gc-side/tls-sbi.md` §6). A política do AAnF saiu do endereço de origem para o NF Instance ID do certificado (§7.5), o que fecha o risco de um AF apresentar o AF_ID de outro. Falta o CAPIF-3/4, na fase (c), que encerra este desvio.
+
+**Encerrado (06/11/2026, MVP-11, fase c).** O NEF fala com o servidor interno do CCF em `https://ccf.5gc.mnc093.mcc208.3gppnetwork.org:8020`, com TLS mútuo e a CA do operador, e o CCF reconhece o provedor pelo NF Instance ID do certificado (`docs/free5gc-side/tls-sbi.md` §8.2 e §17.2). No laboratório, nenhuma interface da SBI nem do CAPIF fica em `http`; o serviço da CRL, em `http`, serve dados públicos assinados (DV-18). Evidência: [S01] a [S07] de `ccf-internal`, [S17.none], [S17.other], [S17.nef] e [R1.nef-published] na execução `20261106-170311` (`docs/af-side/e2e.md` §5.12).
 ---
 
 ## DV-2 — Subscrição de `ROAMING_STATUS` desabilitada
@@ -210,6 +212,8 @@ O certificado de cliente exige mudar o servidor SBI comum do NEF do free5GC. O T
 **MVP-11 (02/11/2026).** Decisão do responsável no ponto T14 do MVP-11, opção (b): o AF de fora usa só o modo CAPIF, com TLS mútuo em CAPIF-2e pelo método 3 (TS 33.122 §6.5.2.3 passo 5) e o certificado que o CCF emitiu na entrada. O NEF deixa de aceitar *token* do NRF na `3gpp-akma` (`allowNrfTokens: false`), e o AF de fora deixa de falar com o NRF, que é o servidor de autorização das NFs do operador (TS 33.501 §13.4.1.1.1). O desvio se encerra inteiro, sem atalho: o transporte (§12.2 e §12.3), a autenticação mútua (§12.5) e a origem do *token* (TS 29.522 §7.2). O modo sem CAPIF (TS 29.522 §6) fica no código do NEF, desligado; um servidor de autorização próprio para ele pode entrar no MVP-14.
 
 **Especificação do MVP-11 (04/11/2026).** Aprovada com os pontos T19 e T34 de `docs/free5gc-side/tls-sbi.md`. O transporte de CAPIF-2e entra na fase (a), com o grupo do NEF do MVP-6 no modo CAPIF. A ligação do certificado ao *token* (o CN do certificado igual ao `client_id`) e `allowNrfTokens: false` entram na fase (c). A política de endereço do NEF sai do modo CAPIF: `sourceAddresses` fica opcional, só para o modo sem CAPIF. `[LACUNA]` TS 29.222 não tem atributo para a indicação do TLS mútuo que TS 33.122 §6.5.2.3 passo 5 atribui ao CCF (defeito D-AJ): a política do CCF é sempre o TLS mútuo.
+
+**Encerrado (06/11/2026, MVP-11, fase c).** O AF de fora fala com o NEF por TLS mútuo, com o certificado que o CCF emitiu na entrada e o *token* do CCF. O CN do certificado tem de ser o `apiInvokerId` no `check-authentication` e o `client_id` no `retrieve`, e o certificado tem de ser da CA de `authenticationInfo` (`docs/free5gc-side/tls-sbi.md` §8.1 e §17.3). Com `allowNrfTokens: false`, um *token* do NRF em `3gpp-akma` recebe `401`, e o modo CAPIF não confere mais o endereço de origem. O modo sem CAPIF fica no código, desligado. Evidência: [CP04], [CP06], [E05], [S16.token], [S16.check], [S16.nrf] e [S16.sbi] na execução `20261106-170311` (`docs/af-side/e2e.md` §5.12).
 
 ---
 
@@ -410,6 +414,8 @@ Rever no MVP-11.
 - o CCF, o NEF e o AF conferem essa CRL nas suas pontas.
 
 A parte da revogação sai deste desvio com a implementação. Ficam o OCSP *stapling*, como no DV-10, e o `x5t#S256` do *token* do CCF, cuja chave continua sem certificado. A CRL vai só por HTTP (DV-18).
+
+**Reduzido (06/11/2026, MVP-11, fase c).** A revisão acima está implementada: `free5gc/ccf/internal/context/crl.go`, `make-capif-certs.sh`, `nef/0005`, `openapi/0007` e `af/af/internal/capif` (`docs/free5gc-side/tls-sbi.md` §17). O CCF recusa o certificado revogado em CAPIF-1e assim que responde à saída, e o NEF, depois de `invokerCrlMaxAge`. Evidência: [CP18] e [S18] na execução `20261106-170311` (`docs/af-side/e2e.md` §5.12); `TestCrl`, `TestCapifInvokerCertificateCrl`, `TestCrlChecker`, `TestExtraClientCrlMaxAge` e `TestRevokedCCF`. O impacto e a implementação acima, de 30/10/2026, valem agora só para o OCSP e para o `x5t#S256`.
 
 ---
 

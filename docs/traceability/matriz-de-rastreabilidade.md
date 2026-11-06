@@ -1,7 +1,7 @@
 # Matriz de rastreabilidade
 
-**Revisão:** 10 (MVP-9: CAPIF, o AF como *API invoker*). Revisão 9 (MVP-12): renovação da K_AKMA pelo AAnF. Revisão 8 (MVP-8, fase (d)): perfil OSCORE do Ua\*. Revisão 7 (MVP-8, fase (c)): perfis DTLS do Ua\*. Revisão 6 (MVP-8, fases (a) e (b)): serviço de chaves do ME e perfis TLS do Ua\*. Revisão 5 (MVP-6): K_AF via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina. Revisão 4 (MVP-5): etapas mínimas do fluxo ligadas a evidências do roteiro ponta a ponta
-**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 a 3.7 e 4 em 18 de outubro de 2026; revisão 5 em 19 de outubro de 2026; revisões 6 e 7 em 21 de outubro de 2026; revisão 8 em 22 de outubro de 2026; revisão 9 em 28 de outubro de 2026; revisão 10 em 2 de novembro de 2026
+**Revisão:** 11 (MVP-11: TLS mútuo nas SBI e entre o NEF e o AF). Revisão 10 (MVP-9): CAPIF, o AF como *API invoker*. Revisão 9 (MVP-12): renovação da K_AKMA pelo AAnF. Revisão 8 (MVP-8, fase (d)): perfil OSCORE do Ua\*. Revisão 7 (MVP-8, fase (c)): perfis DTLS do Ua\*. Revisão 6 (MVP-8, fases (a) e (b)): serviço de chaves do ME e perfis TLS do Ua\*. Revisão 5 (MVP-6): K_AF via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina. Revisão 4 (MVP-5): etapas mínimas do fluxo ligadas a evidências do roteiro ponta a ponta
+**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 a 3.7 e 4 em 18 de outubro de 2026; revisão 5 em 19 de outubro de 2026; revisões 6 e 7 em 21 de outubro de 2026; revisão 8 em 22 de outubro de 2026; revisão 9 em 28 de outubro de 2026; revisão 10 em 2 de novembro de 2026; revisão 11 em 6 de novembro de 2026
 
 *Nota (16/10/2026):* os caminhos da coluna "Implementação" seguem a estrutura anterior ao plano. A estrutura aprovada (plano §3) é: `akma/` → `shared/akma/`; `NFs/aanf/` → `free5gc/aanf/`; `patches/` → `free5gc/patches/`; `af/` → `af/af/`; `ue/` → `af/ue/`. Os caminhos serão atualizados linha a linha à medida que cada MVP os criar. Os desvios citados como DV-n estão em `docs/conformidade/desvios.md`.
 
@@ -148,13 +148,34 @@ Evidências: o grupo CP, o R1 e o R2c da execução `20261102-093804` de `af/scr
 | `check-authentication` no AEF | 29.222 6.2.2.2; 33.122 6.5.2.3 passo 5 | `nef/0002` (`CheckAuthentication`) | [CP00], [CP04]; `TestCapifCheckAuthentication` | **Verificado** — DV-9 |
 | *Token* do CCF: `ES256` com `kid`; `iss`, `client_id`, `scope`, `exp` | 29.222 5.6.2.3; 33.122 C.2.2; 33.210 6.3.3.1 | `free5gc/ccf` (`IssueToken`, `internal/jws`) | [CP05], [CP11] a [CP13] | **Verificado** — DV-13, D-AI |
 | NEF confere o *token* e os dados do *invoker* no CCF | 29.522 7.2; 33.122 6.5.2.3 passo 7, C.6; 23.222 8.16.3 | `nef/0002` (`capifAuthorize`, `capifInvoker`) | [CP06], [CP14], [CP15], [R2c.nef-capif]; `TestCapifAccessToken` | **Verificado** |
-| AF_ID no perfil do *invoker* e na política de endereço | 33.535 6.3 passo 2; 29.522 7.2 | `nef/0002`; `authorizationInfo` do CCF | [CP16], [CP17]; `TestCapifRetrieve` | **Verificado** — C11, DV-9 |
+| AF_ID no perfil do *invoker* e na política do NEF; desde a revisão 11, sem o endereço | 33.535 6.3 passo 2; 29.522 7.2 | `nef/0002`; `authorizationInfo` do CCF | [CP16], [CP17]; `TestCapifRetrieve` | **Verificado** — C11, DV-9 |
 | K_AF via NEF com o *token* do CCF, sem SUPI; acesso anônimo | 33.535 6.3 passos 3 a 5, 6.2.2 | `nef/0001` e `0002` | [CP06], [CP07], [R2c.ua-capif] | **Verificado** |
 | Renovação do *token*; *token* novo quando o AEF o recusa | 33.122 C.4.1, C.5 | `af/af/internal/capif` (`accessToken`, `Invalidate`); `af/af/internal/nef` | `TestToken`, `TestRefusedToken`; teste local com o CCF (`capif.md` §15.3) | **Verificado** |
 | Saída do *invoker*; fim da sessão TLS | 33.122 6.8 passos 3, 5 e 6; 29.222 5.5.2.3 | `free5gc/ccf` (`HTTPOffboard`); `af/af/internal/capif` (`Close`) | [CP18], [CP19]; `TestCapifOffboardingTearsDownTLS` | **Verificado** |
 | TLS de CAPIF-1e; perfis de certificado | 33.122 6.1, 6.3.1.1; 33.210 6.2; 33.310 6.1.1, 6.1.3a, 6.1.4a | `free5gc/ccf` (`server.go`, `Onboard`); `make-capif-certs.sh` | [CP01] (`openssl verify`); `TestCapifTLS`, `checkInvokerCertificate` | **Verificado** — DV-15, DV-16 |
 | Nenhum *token*, credencial, segredo ou chave privada nos logs | 33.122 C.5 (o *token* é opaco ao *invoker*); plano D16 | CCF, NEF e AF | [CP20.free5gc], [CP20.af] | **Verificado** |
-| TLS em CAPIF-3/4 e em CAPIF-2e | 33.122 6.6, 6.5; 33.501 12.2 a 12.4 | — | — | Pendente — DV-1, DV-9 (MVP-11) |
+| TLS em CAPIF-3/4 e em CAPIF-2e | 33.122 6.6, 6.5; 33.501 12.2 a 12.4 | ver a revisão 11 | ver a revisão 11 | **Verificado** (MVP-11) |
+
+## TLS do MVP-11 e evidências (revisão 11)
+
+Evidências: os grupos R1s e S da execução `20261106-170311` de `af/scripts/e2e.sh`, com 317 verificações, nenhuma falha e nenhuma pulada (`docs/af-side/e2e.md` §5.12), e os testes Go do `sbitls`, do `oauth`, do CCF, do NEF, do NRF, do AAnF e do AF. Especificação: `docs/free5gc-side/tls-sbi.md`.
+
+| Etapa | Cláusula | Implementação | Evidência | Estado |
+|---|---|---|---|---|
+| TLS mútuo em toda a SBI, com os certificados no perfil | 33.501 13.1.0; 33.310 6.1.3c.3, 6.1.4a; 33.210 6.2 | `make-sba-certs.sh`; `openapi/0005`; os *patches* `*-sbi-tls`; `free5gc/aanf` | [S01] a [S05]; `TestOwnCertificate`, `TestIdentity` | **Verificado** — DV-1 encerrado |
+| Nomes da SBI: FQDN no perfil, SNI, conferência do nome | 33.310 6.1.3c.3; RFC 6066 3 | `openapi/0005`; os *patches* `*-sbi-tls` | [S04], [S08.name], [S08.ca], [S09]; `TestServerName`, `TestServerOfAnotherCA` | **Verificado** — DV-17 |
+| CRL em cada ponta, com falha fechada | 33.310 6.1a, 6.3.1, 7.1 | `openapi/0005` (`sbitls/crl.go`); `free5gc/crl` | [R1.crl], [S06], [S07]; `TestRevocation`, `TestCrlFetchedOncePerUri` | **Verificado** — DV-18 |
+| Nenhum segredo do TLS em arquivo | plano, T6 | `util/0001` | [S19.free5gc], [S19.key-log], [S19.af] | **Verificado** — F22 |
+| NRF confere o pedido de *token*, o registro e a descoberta pelo certificado | 33.501 13.3.1.3, 13.4.1.1.2 passo 2; 29.510 5.4.2.2.1 | `nrf/0005` | [S10] | **Verificado** |
+| *Token* do NRF: `ES256`, `kid`, `x5t#S256`, `iss` | 33.210 6.3.3; 33.501 13.4.1.1.2 | `nrf/0005`; `openapi/0006` | [S13] | **Verificado** — F23, F26 |
+| Produtor confere `aud`, `sub`, escopo e `exp` | 33.501 13.4.1.1.2 passo 2; 29.500 6.7.3 | `openapi/0006`; `free5gc/aanf` | [S11], [S12], [S14] | **Verificado** — F5, F12 |
+| Escopos por tipo de consumidor | 29.510 tab. 6.1.6.2.3-1 NOTA 11; 29.535 tab. 5.1.9-1 | `nrf/0005`; `free5gc/aanf` | [S14]; `TestScopeGranted` | **Verificado** — F4 |
+| AAnF autoriza o AF e o NEF pelo certificado | 33.501 13.1.0; 33.535 6.2.1 passo 2 | `free5gc/aanf` | [S15], [E07] | **Verificado** |
+| CAPIF-2e: TLS mútuo com o certificado do *invoker*; o *token* e o certificado são do mesmo *invoker* | 33.501 12.2, 12.3; 33.122 6.5.2.3 passo 5 | `nef/0003`, `nef/0005` | [CP04], [S16.token], [S16.check], [S16.sbi]; `TestCapifTokenOfTheCertificate`, `TestCapifCheckAuthenticationCertificate` | **Verificado** — DV-9 encerrado, D-AJ |
+| Só o *token* do CCF na `3gpp-akma` | 29.522 7.2; 33.501 12.4 | `config/0006`; `nef/0002` | [E05], [S16.nrf]; `TestCapifWithoutNrfTokens` | **Verificado** — DV-9 encerrado |
+| CAPIF-3/4: TLS mútuo; o CCF reconhece o provedor pelo certificado | 33.122 6.6 | `free5gc/ccf` (`server.go`, `api_publish.go`, `api_security.go`) | [S01] a [S07] de `ccf-internal`, [S17.none], [S17.other], [S17.nef], [R1.nef-published]; `TestCapifInternalProvider`, `TestCapifInvokerInfoOfTheAef` | **Verificado** — DV-1 encerrado |
+| CRL da CA do CCF; revogação na saída do *invoker* | 33.310 6.1.3a, 6.1a, 6.3.1; 33.122 6.8 | `free5gc/ccf` (`crl.go`); `nef/0005`; `openapi/0007`; `af/af/internal/capif` | [CP18], [S18]; `TestCrl`, `TestCapifInvokerCertificateCrl`, `TestCrlChecker`, `TestExtraClientCrlMaxAge`, `TestRevokedCCF` | **Verificado** — DV-16 reduzido |
+| OCSP *stapling* e `x5t#S256` do *token* do CCF | 33.210 6.2.2, 6.2.3, 6.3.3.4 | — | — | Não feito — DV-16 |
 
 ## Derivação criptográfica
 
@@ -285,4 +306,4 @@ Evidências: o grupo CP, o R1 e o R2c da execução `20261102-093804` de `af/scr
 | Sincronização NTP entre a VM do AF e a do free5GC (par AAnF↔AF) | ADR-0001-R2 §5.3 | `timedatectl` nas duas VMs | Especificado |
 | AF alcança a porta do AAnF | ADR-0001-R2 §5.1, §5.2 | requisição a partir de `192.168.16.129` | **Verificado** em 17/10/2026 (MVP-1) |
 | UE alcança o AF pelo plano de usuário (`uesimtun0` → UPF → N6) | D5; `docs/free5gc-side/plano-de-usuario.md` | `ping` e Ua\* a partir do `uesimtun0` no *namespace* do UE; contadores da `upfgtp` | **Verificado** em 18/10/2026 (MVP-4): UE no próprio *namespace*, NAT no N6 |
-| Proteção das interfaces SBI | TS 33.535 §4.4.0; TS 33.501 §13.1.0 | TLS habilitado | Decisão — DV-1; TLS no MVP-6+ |
+| Proteção das interfaces SBI | TS 33.535 §4.4.0; TS 33.501 §13.1.0 | TLS mútuo, grupos R1s e S do `e2e.sh` | **Verificado** em 06/11/2026 (MVP-11); DV-1 encerrado |

@@ -28,6 +28,6 @@ Base de código: free5GC v4.2.3 (`docs/baseline/ambiente-verificado.md`).
 | `renovacao-kakma.md` — renovação da K_AKMA pelo AAnF: `trigger-auth` no UDM, notificação e reautenticação no AMF | MVP-12 | aprovada e implementada (28/10/2026) |
 | `amf.md` — autenticação primária pedida pela rede doméstica (TS 33.501 §6.1.5) | MVP-12 | escrito (28/10/2026) |
 | `capif.md` — CAPIF: o CCF, o NEF como APF e AEF e o AF como *API invoker*: especificação | MVP-9 | aprovada (29/10/2026); revista em 30/10/2026; implementada e verificada (02/11/2026) |
-| `tls-sbi.md` — TLS mútuo nas SBI e entre o NEF e o AF: a PKI, os nomes, a CRL, a identidade nos *tokens*: especificação | MVP-11 | aprovada (04/11/2026); fases (a) e (b) implementadas e verificadas (04 e 05/11/2026) |
+| `tls-sbi.md` — TLS mútuo nas SBI e entre o NEF e o AF: a PKI, os nomes, a CRL, a identidade nos *tokens*: especificação | MVP-11 | aprovada (04/11/2026); fases (a), (b) e (c) implementadas e verificadas (04 a 06/11/2026) |
 
 O que é comum aos dois lados — KDF, formatos de identificador, codificação, vetores — fica em `docs/shared/`.

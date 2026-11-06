@@ -1,6 +1,6 @@
 # TLS nas SBI e entre o NEF e o AF — especificação
 
-**MVP:** MVP-11 · **Data:** 2 de novembro de 2026 · **Estado:** **aprovada** pelo responsável em 04/11/2026, com os pontos T18 a T39 da seção 13 como propostos; o DV-18, o F26 e os defeitos D-AJ e D-AK registrados na mesma data. O escopo foi aprovado no plano em 02/11/2026, com os pontos T1 a T17 (plano, seção 4): o T4 revisto, com os dois modos e o padrão por nome; o T14 na opção (b). **Fases (a) e (b) implementadas e verificadas** em 04 e 05/11/2026 (seções 15 e 16); a fase (c) está por fazer.
+**MVP:** MVP-11 · **Data:** 2 de novembro de 2026 · **Estado:** **aprovada** pelo responsável em 04/11/2026, com os pontos T18 a T39 da seção 13 como propostos; fases (a), (b) e (c) implementadas e verificadas (seções 15 a 17); o DV-18, o F26 e os defeitos D-AJ e D-AK registrados na mesma data. O escopo foi aprovado no plano em 02/11/2026, com os pontos T1 a T17 (plano, seção 4): o T4 revisto, com os dois modos e o padrão por nome; o T14 na opção (b). **Fases (a) e (b) implementadas e verificadas** em 04 e 05/11/2026 (seções 15 e 16); a fase (c) está por fazer.
 
 Este documento detalha o que o plano aprovou: a PKI de teste do operador, os nomes das NFs, o TLS mútuo em toda a SBI, a identidade dos certificados nos *tokens* e nas políticas, e o TLS mútuo entre o NEF e o AF de fora e entre o NEF e o CCF. Os pontos abertos continuam a numeração do plano, do T18 em diante. Neste texto, "CA do operador" é a CA de teste da SBI (T3), e "CA do CCF" é a do MVP-9, que assina os certificados dos *invokers*.
 
@@ -657,7 +657,7 @@ Cada fase termina com o `e2e.sh` completo. O responsável faz os *commits*; as m
 
 **Fase (b).** `free5gc/patches/openapi/0006-access-token.patch`; `free5gc/patches/nrf/0005-token-identity.patch`; `free5gc/patches/config/0005-access-token.patch`; `free5gc/aanf/`; o `e2e.sh`; os documentos.
 
-**Fase (c).** `free5gc/ccf/` e `ccfcfg.yaml`; `free5gc/patches/nef/0004-capif-tls.patch` e `free5gc/patches/config/0006-capif-tls.patch`; o AF; o `e2e.sh`; `desvios.md` (DV-1, DV-9, DV-16, DV-17 e DV-18), `correcoes-free5gc.md`, o registro de defeitos, a matriz de rastreabilidade (revisão 11) e o plano.
+**Fase (c).** `free5gc/ccf/` e `ccfcfg.yaml`; `free5gc/patches/openapi/0007-capif-tls.patch`, `free5gc/patches/nef/0005-capif-tls.patch` e `free5gc/patches/config/0006-capif-tls.patch`; o AF; o `e2e.sh`; `desvios.md` (DV-1, DV-9, DV-16, DV-17 e DV-18), `correcoes-free5gc.md`, o registro de defeitos, a matriz de rastreabilidade (revisão 11) e o plano.
 
 Na .130, antes da fase (a): *backup* de `config/` e `cert/` e um *snapshot* da VM, anunciados antes. O `/etc/hosts` das duas máquinas muda na fase (a), também anunciado.
 
@@ -747,3 +747,51 @@ Com isso, o *patch* do NEF da fase (c) passa a `nef/0005-capif-tls.patch`. Os es
 - **Banco de testes do free5GC.** Na .130: os três `TestAkma`; `TestRegistration`, com e sem `oauth`; `TestOAuth2Callback oauth`. O modo `oauth` do banco usa `cert/sba/nrf-token.*` e roda em `http`: exercita o `ES256`, sem cadeia, `aud` nem `sub` (seção 16.2).
 - **`go vet` e `go test -race`.** Nenhum aviso e nenhuma corrida, nos módulos do projeto e nas onze NFs. Ficam as duas falhas da seção 15.4, que não vêm do projeto: no SMF, `internal/pfcp/handler`; no UDR, `TestUDR_InfluData_CreateThenGet`.
 - **Os *patches*.** A árvore original com os *patches* reconstrói as cópias testadas das onze NFs.
+
+## 17. Implementação da fase (c)
+
+Como as seções 15 e 16: o que a especificação não fixava. Nada aqui muda a leitura da norma.
+
+### 17.1 Os *patches*
+
+- `nef/0005-capif-tls.patch`, e não `nef/0004`, como a seção 16.1 já dizia. A seção 14 foi corrigida.
+- `openapi/0007-capif-tls.patch`, que a seção 14 não trazia. Ele traz a idade máxima da CRL (seção 17.3), `sbitls.CrlChecker`, para conferir a CRL de um par cuja CA não é a do processo, e `openapi.CloseIdleConnections` (seção 17.4).
+- `config/0006-capif-tls.patch`: o `ccfUri` por nome, `invokerCrl: true`, `invokerCrlMaxAge`, `allowNrfTokens: false` e `authorizedAfs` sem `sourceAddresses`.
+
+### 17.2 O CCF
+
+- **O servidor interno.** Com `certificate`, `key` e `ca`, serve `https`, com `sbitls.Init` e `ConfigureServer`, como as NFs. Sem os três, continua em `http`, para os testes Go. O `nfInstanceId` do provedor é obrigatório com TLS.
+- **A CRL depois de reiniciar.** O CCF guarda o estado em memória (`capif.md` §5.12), mas uma revogação não pode se perder. Na partida, ele lê o `ca.crlFile` anterior, confere a assinatura com a sua CA, mantém as entradas e continua a numeração. Uma CRL de outra CA é posta de lado, com um aviso.
+- **A assinatura da CRL.** Versão 2, com `cRLNumber` crescente, `nextUpdate` de uma semana e a razão `cessationOfOperation` (RFC 5280 §5.3.1) em cada entrada. O arquivo é trocado por `rename`, e o serviço da CRL nunca lê um arquivo pela metade.
+- **CAPIF-1e.** O CCF confere o número de série do certificado de cliente em memória, no `VerifyConnection`, sem baixar a própria CRL. A recusa vale a partir da resposta da saída.
+- **`ccf credential`.** O subcomando usa o contexto do CCF e não toca a CRL: a CRL só é assinada por quem serve.
+
+### 17.3 O NEF
+
+- **A idade máxima da CRL.** A seção 5.3 confere a CRL até o `nextUpdate`. Na CRL do CCF, de uma semana, isso deixaria um *invoker* que saiu aceito no NEF por dias. `[MVP]` `capif.invokerCrlMaxAge`, 5 s no laboratório, faz o NEF buscar a CRL de novo depois desse tempo, no *handshake* seguinte. Se a busca falha, a CRL em memória continua valendo até o `nextUpdate`, com um aviso. A CRL do operador não muda de regra. `[3GPP]` TS 33.310 §6.3.1 pede a conferência da CRL e não fixa com que frequência.
+- **A ordem no `check-authentication`.** O CN é conferido antes de pedir os dados ao CCF. A CA é conferida depois, porque vem em `authenticationInfo`: o NEF compara o emissor da cadeia verificada com o PEM do CCF. Os dois casos dão `403`, com `detail` diferente.
+- **A ordem no `retrieve`.** O CN é conferido depois do `iss` e do `client_id`, e antes do escopo e dos dados do *invoker*.
+- **Sem TLS.** Nos testes Go, sem certificado, o `check-authentication` volta à política de endereço do MVP-6, e o `retrieve` não confere o CN.
+- **A sessão aberta.** A CRL e o CN são conferidos no *handshake* e em cada pedido, respectivamente. Numa sessão TLS já aberta, um certificado revogado continua até a sessão cair, e o `client_id` do *token* continua a valer até o `exp`. É o limite de TS 33.122 C.6, com a vida curta do *token* (DV-14).
+
+### 17.4 O AF
+
+- **O CCF.** `sbitls.CrlChecker`, no `VerifyConnection` do cliente de CAPIF-1e. O `ccf.pem` não é da CA do processo, que é a do operador, e por isso a conferência não vem do `sbitls.Init`.
+- **O certificado de cada sessão.** Com a conferência do CN, uma sessão aberta com o certificado de uma entrada anterior seria de outro *invoker*. Numa nova entrada, o AF fecha as conexões ociosas (`openapi.CloseIdleConnections`), as dos dois clientes do processo.
+- **Um *invoker* revogado.** Só o próprio *invoker* pede a saída, e o AF apaga o estado logo depois (`capif.md` §7). Por isso, o AF não trata o caso de um estado com certificado revogado: a partida falharia no TLS, até o estado ser apagado à mão.
+
+### 17.5 As ferramentas
+
+- **S16.** Em `capif_api.py`, com um terceiro *invoker*, que entra só para isso e sai no fim. Além da tabela da seção 9.2, confere o `check-authentication` de um *invoker* com o certificado do outro (`S16.check`). O caso do *token* do NRF é o E05, que `nef_api.py` também registra como `S16.nrf`.
+- **E05.** Volta a `401`, como a seção 16.2 previa: `seed token --target NEF --scope 3gpp-akma`.
+- **S17.** Em `sbi_token.py`, na .130, porque o servidor interno está em *loopback*. Tem um caso de controle: os dados de um *invoker* desconhecido, com o certificado do NEF, dão `404`, e não `403`.
+- **S01 a S07 no CCF.** `ccf-internal` entrou na lista do R1s. O S04 não confere o URI do NF Instance ID nele, porque o servidor interno não é uma NF e o certificado não o tem (seção 4.4).
+- **CP18 e S18.** O CP18 confere a recusa no TLS, em vez do `400` `invalid_client`: o certificado revogado não abre mais sessão em CAPIF-1e. O `invalid_client` continua nos testes Go, nos outros casos de recusa. O S18 espera 7 s, o `invokerCrlMaxAge` e uma margem.
+
+### 17.6 A verificação
+
+- **`e2e.sh`.** `317 passed, 0 failed, 0 skipped`, na execução `20261106-170311` (`docs/af-side/e2e.md` §5.12).
+- **Banco de testes do free5GC.** Na .130: os três `TestAkma`; `TestRegistration`, com e sem `oauth`; `TestOAuth2Callback oauth`.
+- **`go vet` e `go test -race`.** Nenhum aviso e nenhuma corrida, nos módulos do projeto e nas onze NFs. Ficam as duas falhas da seção 15.4, que não vêm do projeto.
+- **Os *patches*.** A árvore original com os *patches* reconstrói as cópias testadas das onze NFs e a do `openapi`.
+- **Um achado no caminho.** O E05 falhou no primeiro ensaio com `invalid_scope`: o banco de testes deixou perfis no MongoDB, e o NRF confere o escopo em um só perfil do tipo pedido (F27). O passo R1 passou a apagar os perfis antigos (`R1.profiles`).

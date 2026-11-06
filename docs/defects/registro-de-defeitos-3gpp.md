@@ -42,7 +42,7 @@ Todos os itens estão no texto das normas; nenhum é defeito do projeto. A decis
 | D-AF, D-AG | PEM, `authenticationInfo`, `authorizationInfo` e `apiScheme` fixados em `capif.md` (pontos C18, C21 e C26) |
 | D-AH | o CCF recusa `securityInfo` vazio, pela tabela 8.5.4.2.2-1 (`capif.md` §5.6) |
 | D-AI | `ES256` com `kid` no *token* e na credencial de entrada (C9 e C19 revistos em 30/10/2026, `capif.md` §15.1) |
-| D-AJ | a política do CCF é sempre o TLS mútuo, com a CA do *invoker* em `authenticationInfo` (ponto T34 de `tls-sbi.md`), a implementar no MVP-11 |
+| D-AJ | a política do CCF é sempre o TLS mútuo, com a CA do *invoker* em `authenticationInfo` (ponto T34 de `tls-sbi.md`), implementada no MVP-11 (fases a e c) |
 | D-AK | editorial, nada a implementar |
 
 ### Conferência nas versões mais recentes (28/10/2026)
@@ -690,7 +690,7 @@ Acrescentados em 04/11/2026, da leitura de TS 33.122, TS 29.222 e TS 33.310 para
 
 **Proposta.** Acrescentar a `SecurityInformation` um atributo com o modo do TLS do método 3, ou fixar o modo em TS 33.122. Dizer em TS 29.222 §10.3 sobre que TLS corre o `Initiate_Authentication`.
 
-**Decisão do projeto** (ponto T34 de `tls-sbi.md`). A política do CCF é sempre o TLS mútuo, e a indicação ao AEF é a CA do *invoker* em `authenticationInfo`. O AF apresenta o certificado quando o NEF o pede no *handshake*, e o `check-authentication` também vai sobre o TLS mútuo.
+**Decisão do projeto** (ponto T34 de `tls-sbi.md`). A política do CCF é sempre o TLS mútuo, e a indicação ao AEF é a CA do *invoker* em `authenticationInfo`. O AF apresenta o certificado quando o NEF o pede no *handshake*, e o `check-authentication` também vai sobre o TLS mútuo. Implementada em 06/11/2026: o NEF confere a CA do certificado contra `authenticationInfo` (`tls-sbi.md` §17.3).
 
 ---
 

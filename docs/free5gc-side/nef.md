@@ -282,3 +282,10 @@ Na fase (b):
 - O AAnF reconhece o NEF pelo NF Instance ID e pelo tipo do certificado de cliente, e não mais pelo endereço de origem (`tls-sbi.md` §7.5). As seções 4 e 4.1 descrevem o que valia antes disso.
 - O NEF pede ao NRF os escopos de `naanf-akma` que o AAnF passou a exigir, e o descadastro pede o *token* com o tipo certo, o que fecha o F14 (`nef/0004-token-scopes.patch`).
 - O `401` do NEF segue TS 29.500 §6.7.3, com `ProblemDetails` e `WWW-Authenticate` (F12). Um *token* do NRF para outro produtor recebe `403` `ACCESS_TOKEN_CLAIM_MISMATCH`.
+
+Na fase (c):
+
+- O modo do MVP-6 sai do laboratório: `allowNrfTokens: false`, e um *token* do NRF em `3gpp-akma` recebe `401` `invalid_token`. O código e os testes Go continuam (`tls-sbi.md` §8.1).
+- No modo CAPIF, o passo 3 da seção 3.2 confere só a lista de `akma.authorizedAfs`: `sourceAddresses` fica opcional e vale apenas sem CAPIF. Quem diz quem é o AF são o certificado e o *token*.
+- O NEF confere o CN do certificado de cliente: no `check-authentication`, contra o `apiInvokerId`; no `retrieve`, contra o `client_id` do *token*.
+- O NEF fala com o CCF em `https`, por nome, com o certificado de NF, e confere a CRL da CA do CCF nos certificados dos *invokers*, com `invokerCrlMaxAge` de 5 s (`tls-sbi.md` §17.3).
