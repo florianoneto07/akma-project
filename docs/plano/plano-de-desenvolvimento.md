@@ -1,6 +1,6 @@
 # Plano de desenvolvimento por MVPs
 
-**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) implementado e verificado, com 83 verificações e nenhuma falha (19/10/2026). MVP-7 (repositório público) concluído: publicado no GitHub e instalado numa VM limpa só pelo guia, com 83 verificações e nenhuma falha (20/10/2026). MVP-8 (Ua\* da norma e autorização por aplicação no UE): organização e especificação das fases (a) e (b) aprovadas; fase (a), o serviço de chaves do ME, implementada e verificada, com 88 verificações e nenhuma falha (20/10/2026); fase (b), os perfis TLS (K.2, PSK TLS 1.3 e PSK TLS 1.2), implementada e verificada, com 115 verificações e nenhuma falha (21/10/2026); fase (c), os perfis DTLS 1.3 e DTLS 1.2 com CoAP, implementada e verificada, com 126 verificações e nenhuma falha (22/10/2026); fase (d), o perfil OSCORE, implementada e verificada, com 141 verificações e nenhuma falha (22/10/2026); o CAPIF passou a MVP-9. MVP-12 (renovação da K_AKMA pelo AAnF) com a especificação aprovada (`docs/free5gc-side/renovacao-kakma.md`, pontos K1 a K12), implementado e verificado, com 161 verificações e nenhuma falha (28/10/2026). MVP-13 (V2 do repositório público) concluído: aprovado em 28/10/2026, com os pontos L1 a L13; exportado, instalado numa VM limpa só pelo guia público, com 161 verificações e nenhuma falha, e publicado no GitHub com as *tags* `v1.0.0` e `v2.0.0` e o *release* V2 (29/10/2026). MVP-9 (CAPIF no free5GC) aprovado em 29/10/2026, com os pontos C1 a C16 como propostos; especificação `docs/free5gc-side/capif.md` aprovada na mesma data, com os pontos C17 a C30 como propostos; **concluído** em 02/11/2026: CCF, NEF e AF implementados, com o C9, o C18 e o C19 revistos e o DV-16, e `e2e.sh` com 185 verificações, nenhuma falha e 3 puladas fora do MVP-9. MVP-11 (TLS nas SBI e entre o NEF e o AF) aprovado em 02/11/2026, com os pontos T1 a T17 (T4 revisto; T14 na opção b); especificação `docs/free5gc-side/tls-sbi.md` aprovada em 04/11/2026; fases (a), (b) e (c) implementadas e verificadas em 04, 05 e 06/11/2026: MVP-11 concluído. MVP-14 (revisão dos desvios e das normas) pedido pelo responsável em 02/11/2026, para logo depois do MVP-11; proposto em 06/11/2026, com os pontos Q1 a Q15; segunda passada feita em 08/11/2026, com os pontos Q16 a Q20; decidido na mesma data, com os vinte pontos, e **concluído**, com F21 a F31 conferidos no free5GC v4.3.0. O próximo é o MVP-15 (correções da revisão), a propor.
+**Estado:** **Aprovado** em 16 de outubro de 2026, com as decisões registradas na seção 1. Em execução: MVP-0 implementado (16/10/2026); MVP-1 implementado e verificado na VM do free5GC (17/10/2026); MVP-1b (correção do NRF do free5GC) implementado e verificado (17/10/2026); MVP-2 (UDM e AUSF) implementado e verificado (17/10/2026); MVP-3a (mensagens AKMA na tela do free5GC e do UERANSIM, com a derivação no ME antecipada do MVP-4) implementado (18/10/2026); MVP-3 (AF e Ua\* simplificado) implementado e verificado (18/10/2026); MVP-4 (K_AF no ME, cliente Ua\* no UE pelo plano de usuário) implementado e verificado (18/10/2026); MVP-5 (roteiro ponta a ponta e testes negativos) implementado e executado, com 63 verificações e nenhuma falha (18/10/2026), e reproduzido numa instalação limpa do free5GC v4.2.3 seguindo o tutorial (19/10/2026); MVP-6 (AF externo via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina) implementado e verificado, com 83 verificações e nenhuma falha (19/10/2026). MVP-7 (repositório público) concluído: publicado no GitHub e instalado numa VM limpa só pelo guia, com 83 verificações e nenhuma falha (20/10/2026). MVP-8 (Ua\* da norma e autorização por aplicação no UE): organização e especificação das fases (a) e (b) aprovadas; fase (a), o serviço de chaves do ME, implementada e verificada, com 88 verificações e nenhuma falha (20/10/2026); fase (b), os perfis TLS (K.2, PSK TLS 1.3 e PSK TLS 1.2), implementada e verificada, com 115 verificações e nenhuma falha (21/10/2026); fase (c), os perfis DTLS 1.3 e DTLS 1.2 com CoAP, implementada e verificada, com 126 verificações e nenhuma falha (22/10/2026); fase (d), o perfil OSCORE, implementada e verificada, com 141 verificações e nenhuma falha (22/10/2026); o CAPIF passou a MVP-9. MVP-12 (renovação da K_AKMA pelo AAnF) com a especificação aprovada (`docs/free5gc-side/renovacao-kakma.md`, pontos K1 a K12), implementado e verificado, com 161 verificações e nenhuma falha (28/10/2026). MVP-13 (V2 do repositório público) concluído: aprovado em 28/10/2026, com os pontos L1 a L13; exportado, instalado numa VM limpa só pelo guia público, com 161 verificações e nenhuma falha, e publicado no GitHub com as *tags* `v1.0.0` e `v2.0.0` e o *release* V2 (29/10/2026). MVP-9 (CAPIF no free5GC) aprovado em 29/10/2026, com os pontos C1 a C16 como propostos; especificação `docs/free5gc-side/capif.md` aprovada na mesma data, com os pontos C17 a C30 como propostos; **concluído** em 02/11/2026: CCF, NEF e AF implementados, com o C9, o C18 e o C19 revistos e o DV-16, e `e2e.sh` com 185 verificações, nenhuma falha e 3 puladas fora do MVP-9. MVP-11 (TLS nas SBI e entre o NEF e o AF) aprovado em 02/11/2026, com os pontos T1 a T17 (T4 revisto; T14 na opção b); especificação `docs/free5gc-side/tls-sbi.md` aprovada em 04/11/2026; fases (a), (b) e (c) implementadas e verificadas em 04, 05 e 06/11/2026: MVP-11 concluído. MVP-14 (revisão dos desvios e das normas) pedido pelo responsável em 02/11/2026, para logo depois do MVP-11; proposto em 06/11/2026, com os pontos Q1 a Q15; segunda passada feita em 08/11/2026, com os pontos Q16 a Q20; decidido na mesma data, com os vinte pontos, e **concluído**, com F21 a F31 conferidos no free5GC v4.3.0. MVP-15 (correções da revisão) proposto em 08/11/2026, com os pontos W1 a W11, a aprovar.
 **Data:** 15 de outubro de 2026; revisão 3 em 16 de outubro de 2026; aprovação em 16 de outubro de 2026
 **Base:** documentos `00` a `04`, Adendo E, ADR-0001-R2, ADR-0002, ADR-0003, `docs/baseline/ambiente-verificado.md`, `docs/baseline/conferencia-normativa.md`, `docs/literatura/analise-dos-artigos.md`, `docs/conformidade/desvios.md`
 **Revisão 2 (15/10/2026):** conferido contra as normas do acervo (hoje em `specs/`).
@@ -1553,6 +1553,137 @@ Decididos pelo responsável em 08/11/2026, como propostos.
 
 **O tutorial ganha.** Nada: o MVP-14 não muda o que se instala.
 
+### MVP-15 — Correções da revisão
+
+**Estado (08/11/2026):** **proposto**, com os pontos W1 a W11, a aprovar. O escopo vem das decisões do MVP-14 (Q6, Q8, Q12 e Q16 a Q19). A proposta foi feita pela leitura das normas e do código; nada foi executado no laboratório. Nada implementado; nenhuma VM alterada; nenhum registro mudou.
+
+**Objetivo.** Fazer, antes do MVP-10, as correções que a revisão do MVP-14 aprovou, para que o código fique igual à norma nesses pontos: os achados 1, 2 e 11 a 14; F27, F28 e o F29 do AAnF; o `x5t#S256` do DV-16; o DV-3, o DV-4 e o DV-17. Cada correção tem testes Go e verificações novas no `e2e.sh`.
+
+**O que o detalhamento mudou.** Quatro decisões do MVP-14 esbarraram em fatos do código ou da norma, e cada uma volta num ponto:
+
+- **Q16, o AF de dentro e o NRF (W8).** O Q16 pôs o AF de dentro a descobrir o AAnF no NRF. `[MVP]` Hoje esse AF não fala com o NRF: não se registra, não pede *token*, e o AAnF o autoriza por política local (`free5gc/aanf/internal/sbi/api_akma.go`; TS 33.535 §6.2.1 passo 2). O NRF escuta no *loopback* da máquina do free5GC (`tls-sbi.md` §3.1), fora do alcance da .129. `[3GPP]` TS 33.535 §6.7 admite a configuração local: *"The AF/NEF shall utilize the NRF to discover the AAnF instance(s) unless AAnF information is available by other means, e.g. locally configured on the AF/NEF."*
+- **Q19, o `Server` no CCF (W4).** `[3GPP]` O `Server` de TS 29.500 tab. 5.2.2.2-1 é das NFs, no formato *"<NFType>-<NF Instance ID>"*. O CCF não é tipo de NF de TS 29.510 (`tls-sbi.md` §4.4), e as APIs do CAPIF seguem TS 29.122 §5.2.8 (TS 29.222 §7.9), cujos cabeçalhos próprios, os `Nb-Api-*`, são opcionais.
+- **Q6, o DV-3 no AAnF (W5).** `[MVP]` O AAnF não confere o tipo do SUPI, só a presença (`register_anchorkey.go`, `validateAkmaKeyInfo`). Quem recusa os outros tipos é a biblioteca `shared/akma`, que o *patch* do AUSF e o `seed` usam.
+- **Q6, a utf8proc no *patch* `0003` (W9).** `[MVP]` A versão corrente, a v2.12.0 (25/09/2026, licença MIT), traz as tabelas Unicode num arquivo de 2,4 MB, `utf8proc_data.c`.
+
+**Fase (a) — a SBI do núcleo.** Um *patch* novo no AUSF, no NEF e no NRF, sobre os que existem; um *patch* novo por NF para o FQDN obrigatório; o AAnF e o CCF.
+
+| Item | Norma | Hoje | O que muda |
+|---|---|---|---|
+| Routing Indicator padrão (achado 1) | `[3GPP]` TS 33.535 §6.7: *"When the UE's Routing Indicator is set to its default value as defined in TS 23.003 [9], the AAnF NF consumer can select any AAnF instance within the home network of the UE."* TS 23.003 §2.2B: sem RID configurado, *"this data field shall be set to the value 0"* | o AUSF e o NEF mandam sempre `routing-indicator` ao NRF, e o AAnF publica `"0000"`: com o RID `"0"`, nenhum AAnF é achado | com o RID `"0"` (`akid.DefaultRID`), a descoberta vai sem o parâmetro |
+| `anonInd` no NEF (achado 2) | TS 33.535 §6.3 passo 3: *"The NEF sends a Naanf_AKMA_ApplicationKey_Get request to the selected AAnF with the A-KID"*; passo 5: *"If UE Id not needed indication is received in the incoming request, the NEF shall not provide the GPSI (external ID) to AF. The NEF shall not send the SUPI to the AF."* TS 29.535 tab. 4.2.2.1-1: `ApplicationKey_AnonUser_Get` só pelo AF | o NEF repassa o `anonInd` ao AAnF | o NEF pede sem `anonInd` e recebe o SUPI, com o escopo `supi-access` que o AAnF já lhe dá; o SUPI não sai para o AF, e a indicação fica guardada para o GPSI do MVP-10 |
+| Reuso da descoberta (achado 13) | TS 29.510 §5.3.2.2.1: *"The service consumer should reuse the previous result if input query parameters in the new service discovery request are the same as used for the previous search and the validity period of the result is not expired."* | o AUSF e o NEF descobrem o AAnF a cada pedido | o resultado fica guardado, pelos parâmetros da busca, durante a `validityPeriod`. `[INTERPRETAÇÃO]` Uma falha de conexão com o AAnF guardado apaga a entrada |
+| Cabeçalhos de TS 29.500 (achado 14) | tab. 5.2.2.2-1 e 5.2.3.2.1-1; TS 29.535 §5.1.2.3 | o AUSF e o NEF mandam ao AAnF o `User-Agent` `OpenAPI-Generator/1.0.0/go`; o AAnF só põe o tipo no pedido ao UDM; não há `Server` nem `3gpp-Sbi-NF-Peer-Info` | W4 |
+| Escopo do *token* (F27) | TS 33.501 §13.4.1.1.2 passo 2: *"The NRF checks whether the NF Service Consumer is authorized to access the requested service(s)."*, e a NOTA 1 | o NRF confere o escopo num só perfil do tipo pedido e ignora o `targetNfInstanceId` | W2 |
+| `retrieve-key` (F28) | TS 29.510 §5.4.2.3, §6.3.4.3, tab. 6.3.5.2.7-1 e 6.3.5.2.8-1 | o NRF só serve `/oauth2/token`; o `openapi` v1.2.4 não tem `RetrieveKeyReq` nem `RetrieveKeyRsp` | W3 |
+| *Heart-beat* do AAnF (F29) | TS 29.510 §5.2.2.3.2; tab. 6.1.6.2.2-1, `heartBeatTimer`: proposto pela NF no registro e devolvido pelo NRF | o AAnF não manda | o AAnF propõe o intervalo da configuração (`[MVP]` 60 s por padrão), segue o da resposta e manda o `PATCH` com `replace` em `/nfStatus`, sem `If-Match`. `[INTERPRETAÇÃO]` Com `404`, registra-se de novo. O NRF do free5GC guarda o valor proposto e não suspende ninguém (F29, com o *upstream*) |
+| Fim do modo por IP (DV-17) | TS 29.510 tab. 6.1.6.2.2-1 NOTA 1; TS 33.501 §13.1.0 | sem `sbi.fqdn`, URIs por IP, com um aviso no log | com `https`, as NFs, o AAnF e o servidor interno do CCF não partem sem o FQDN, e sai o ramo por IP dos URIs próprios. Com `http`, nada muda: a NOTA 1 só vale com `https` |
+
+**Fase (b) — identidades e chaves.**
+
+| Item | Norma | Hoje | O que muda |
+|---|---|---|---|
+| SUPI de outros tipos (DV-3) | TS 33.501 A.7.0: P0 = *"IMSI or NAI or GCI or GLI"*, *"represented as a character string as specified in B.2.1.2 of TS 33.220"*; TS 23.003 §28.7.2, §28.15.2 e §28.16.2; §2.2B: para NSI, GLI e GCI, o Home Network Identifier é um domínio | `shared/akma/supi` recusa `nai-`, `gci-` e `gli-`, e `akid` só monta o realm `5gc.mnc<MNC>.mcc<MCC>.3gppnetwork.org` | W5 |
+| `x5t#S256` do CCF (DV-16) | TS 33.210 §6.3.3.4: *"The "x5t#S256" header parameter should be supported."* TS 33.122 §6.5.2.3 passo 7: o AEF confere *"the CAPIF core function signature"* | o *token* só leva `kid`; o NEF recebe a chave pública por configuração (`ccf-token.pub.pem`) | um certificado para a chave do *token*, o `x5t#S256` no cabeçalho e a conferência no NEF (W6) |
+| Certificado do AF do K.2 (achado 12) | TS 33.222 §5.3.1.3: *"The AP/AS certificate profile shall comply with the requirements for TLS certificates in clause 6.1 of TS 33.310"*; §5.3.1.0: *"Support of certificate revocation and of the related fields in certificates is optional."* | `make-test-ca.sh`: a CA e o AF só com o CN; `basicConstraints` crítica no certificado do AF | o perfil de `make-capif-certs.sh`: O e CN em UTF8String (TS 33.310 §6.1.1), a CA de §6.1.4a e o certificado de entidade TLS de §6.1.3a, com o DNS-ID (W7) |
+
+**Fase (c) — o AF e o UE.**
+
+| Item | Norma | Hoje | O que muda |
+|---|---|---|---|
+| O AF pelo A-KID (achado 11) | TS 33.535 §4.4.2: *"AKMA AF shall be able to identify the AAnF serving the UE from the A-KID."*; §6.7: *"Internal AFs, the NEF and the AUSF shall select the same AAnF set based on the UE's Routing Indicator."*; §6.3 passo 1: *"the AF discovers the HPLMN of the UE based on the A-KID"* | o AF de dentro usa só o `aanfUri`; o AF de fora manda todo A-KID ao CCF configurado | W8 |
+| Cabeçalhos do AF (achado 14) | TS 29.500 tab. 5.2.2.2-1 e 5.2.3.2.1-1 | o `User-Agent` padrão do gerador | o `User-Agent` `AF-<NF Instance ID>` nos pedidos ao AAnF, e o `3gpp-Sbi-NF-Peer-Info` se o W4 o aprovar |
+| Fim do modo por IP no AF (DV-17) | TS 33.501 §13.1.0 | o AF segue a forma do `aanfUri` | com `https`, o `aanfUri` só por nome |
+| NFKC no ME (DV-4) | TS 33.220 B.2.1.2: as cadeias em UTF-8 com NFKC; TS 33.535 A.4 | o ME recusa FQDN não ASCII | o ME aplica o NFKC, com a utf8proc (W9); o `nr-akma-selftest` passa nos três vetores de NFKC do MVP-0 |
+
+**Verificações novas no `e2e.sh`.** `[MVP]` Além das 317 de hoje, ao menos uma por item:
+
+- **fase (a):**
+  - um contexto com o RID `"0"`, criado pelo `seed` e pedido pelo NEF;
+  - o pedido anônimo pelo NEF, com o SUPI no AAnF e sem ele no AF;
+  - dois pedidos com uma só descoberta;
+  - os cabeçalhos no log do AAnF e numa resposta de erro;
+  - um perfil antigo de NEF sem `3gpp-akma`, que não impede o *token* (W2);
+  - `retrieve-key` com o `kid`, com uma chave que não existe e com um emissor que não existe (W3);
+  - os *heart-beats* do AAnF no NRF;
+  - o AAnF e o CCF com `https` e sem FQDN, que não partem;
+- **fase (b):**
+  - contextos com SUPI `nai-`, `gci-` e `gli-`, com a K_AF conferida nos vetores novos;
+  - o `x5t#S256` do *token* conferido com o certificado; o *token* com outro valor fica para os testes Go do NEF;
+  - o perfil do certificado do K.2, com as sessões do K.2 de hoje;
+- **fase (c):**
+  - um A-KID com um RID que o AF não atende, recusado sem pedido ao AAnF;
+  - o RID `"0"`;
+  - um A-KID de outra HPLMN no AF de fora, recusado;
+  - o `nr-akma-selftest` com os oito vetores;
+  - a K_AF de um FQDN não ASCII no `nr-cli`, igual à do AAnF.
+
+**Pontos para aprovação.**
+
+| Nº | Ponto | Proposta | Base e alternativas |
+|---|---|---|---|
+| W1 | Forma | três fases, cada uma com testes Go, *patches* novos sobre os que existem, a instalação na .130 e o `e2e.sh`, e começada só com o aval do responsável. Sem especificação à parte: o desenho é o desta proposta, e cada fase atualiza os documentos do seu lado | como no MVP-11, sem a especificação, porque cada item é pequeno. Alternativas: uma especificação antes do código; uma fase só |
+| W2 | F27: os perfis que o NRF confere | com `targetNfInstanceId`, o perfil dessa instância; sem ele, basta um perfil `REGISTERED` do tipo pedido que dê ao consumidor todos os escopos | `[INTERPRETAÇÃO]` TS 33.501 §13.4.1.1.2 passo 2; NOTA 1: sem lista de fatias, o *token* vale para os produtores do tipo *"based on local configuration and operator policy"*. Alternativa: exigir que todos os perfis do tipo deem o escopo; aí um perfil antigo sem o serviço continua a bloquear, como na fase (c) do MVP-11 |
+| W3 | F28: a resposta e quem a usa | a resposta com `x509Cert`: o certificado de assinatura em DER, numa parte binária `application/pkix-cert` (TS 29.510 §6.3.5.5.2), achado pelo `kid` ou pelo `x5t#S256`; `400 KEY_IDENTIFICATION_FAIL` e `404 UNKNOWN_ISSUER` (tab. 6.3.4.3.2-2). Nenhum consumidor no laboratório: os produtores seguem com `nrfCertPem` | TS 33.501 §13.4.1.0 NOTA 1b admite a chave por configuração. Com o certificado, o produtor confere o `iss` pelo URI dele (TS 33.310 §6.1.3c.3 NOTA 1b). Alternativas: `rawPubKey`, em JSON, sem o certificado; o AAnF como consumidor, quando o `kid` do *token* não for o do certificado configurado |
+| W4 | Cabeçalhos de TS 29.500 (revê o Q19) | o `User-Agent` `<NFType>-<NF Instance ID>` nos pedidos do AUSF, do NEF e do AF ao AAnF e em todos os pedidos do AAnF; o `Server` `AANF-<NF Instance ID>` nas respostas de erro do AAnF, e não no CCF; o `3gpp-Sbi-NF-Peer-Info`, com `srcinst` e, quando conhecido, `dstinst`, nos pedidos ao AAnF e nas respostas dele | tab. 5.2.3.2.1-1, do `3gpp-Sbi-NF-Peer-Info`: *"The HTTP client and server should include this header in every HTTP request and response messages."* É o único da tabela com papel na comunicação direta, sem SCP, SEPP nem *binding*. O resto vale para todas as NFs do free5GC (F31). Alternativa: o Q19 como foi escrito, com o `Server` no CCF e sem o `3gpp-Sbi-NF-Peer-Info` |
+| W5 | DV-3 (corrige o texto do Q6) | a biblioteca (`supi`, o P0 dos quatro tipos com o NFKC; `akid`, o realm do domínio da NAI), os vetores novos no oráculo, o *patch* do AUSF (o realm do A-KID tirado do SUPI) e o `seed`. O AAnF não muda. O limite do free5GC e do UERANSIM vai a `correcoes-free5gc.md` (F32) e a `recomendacoes-ueransim.md` (UE-5) na fase (b), depois de lido o código deles | os vetores novos passam pelas três conferências de hoje: o oráculo, a biblioteca e o `ueauth.GetKDFValue` do free5GC (`shared/crosscheck`). Alternativa: só a biblioteca e os vetores, com o AUSF só no IMSI |
+| W6 | Certificado do *token* do CCF | da CA do CCF, ECDSA P-256, no perfil de TS 33.310 tab. 6.1.3c.3-2, sem o `nfTypes` e sem o URI do NF Instance ID, que são das NFs: `keyUsage` `digitalSignature`, `id-kp-oauthAccessTokenSigning` (RFC 9509) e o ponto de distribuição da CRL da CA do CCF. O `kid` continua o de RFC 7638. O NEF confere a cadeia, a EKU (RFC 9509 §3), a CRL, o `kid` e o `x5t#S256` | `[INTERPRETAÇÃO]` TS 33.122 não dá perfil para esse certificado; o da tab. 6.1.3c.3-2 é o do *token* do NRF, feito no MVP-11 (`tls-sbi.md` §4.3). A CA do CCF já é a âncora do NEF no CAPIF. Alternativa: a CA do operador, como o `nrf-token.pem` |
+| W7 | Certificado do K.2: a revogação | sem o ponto de distribuição de CRL | TS 33.222 §5.3.1.0 deixa opcionais a revogação e os campos dela. Alternativa: a CRL da CA de teste no serviço de CRL, o ponto de distribuição no certificado e a conferência no `uaclient` |
+| W8 | O AF pelo A-KID (revê o Q16) | o AF de dentro escolhe o AAnF por configuração: uma lista de AAnF, cada um com os Routing Indicators que atende. Com o RID `"0"`, qualquer um; com um RID que nenhum atende, o pedido é recusado sem ir ao AAnF. O AF de fora tem uma lista de CCF, uma entrada por domínio do A-KID, e recusa o domínio que não conhece | §6.7 admite a configuração local, e a lista atende o *"shall select the same AAnF set based on the UE's Routing Indicator"*. Alternativa: o Q16 como foi escrito, com a descoberta no NRF. O AF teria de se registrar no NRF e pedir *tokens* de `nnrf-disc`, e o NRF teria de sair do *loopback*, com endereço e porta novos em todas as NFs, nos certificados e no `/etc/hosts` das duas máquinas |
+| W9 | utf8proc (refina o Q6) | a v2.12.0, baixada uma vez do GitHub com o SHA-256 conferido, como o wolfSSL em `build-wolfssl.sh`, e compilada com o código do ME por `patch-ueransim.sh` | o *patch* `0003` com as tabelas teria mais de 2,4 MB. Alternativa: embutida no *patch*, como dizia o Q6 |
+| W10 | `[LACUNA]` a forma do FQDN no AF_ID | registrar o D-AP: TS 33.535 A.4 e TS 33.220 B.2.1.2 não dizem se o FQDN de um nome internacionalizado entra como U-label ou como A-label (RFC 5890). No projeto, o ME aplica o NFKC à cadeia que a aplicação lhe dá, que tem de ser a mesma do AF_ID do AF | em ASCII, as duas formas coincidem, e o NFKC não muda nada. Alternativa: só a implementação, sem o registro |
+| W11 | Registros | na aprovação: o texto do DV-3 em `desvios.md` corrigido (W5); notas no Q16 e no Q19 com o que o W4 e o W8 decidirem; o D-AP (W10), no registro e na cópia em `~/akma`. Ao fim de cada fase: os desvios, os F e os achados que ela fecha. Ao fim da fase (c): a matriz na revisão 13 | a regra do registro: nada entra antes da decisão. Alternativa: todos os registros só ao fim do MVP-15 |
+
+**Fora do escopo.**
+
+- Com o *upstream*: o *heart-beat* das NFs do free5GC e a suspensão no NRF (F29); os `3gpp-Sbi-*` e os outros cabeçalhos nas NFs do free5GC (F31).
+- O SUPI de outros tipos de ponta a ponta, que depende do free5GC e do UERANSIM.
+- O OCSP e o LDAPv3 (MVP-18); o GPSI (MVP-10); o *roaming* (MVP-16).
+- Um consumidor de `retrieve-key`, se o W3 ficar como proposto.
+
+**Pré-requisitos.** MVP-14 concluído (08/11/2026). Os pontos W1 a W11 aprovados. Antes de cada instalação na .130, o aviso ao responsável e um *snapshot*, como no MVP-11.
+
+**Arquivos.**
+
+- **Fase (a):**
+  - *patches* novos em `free5gc/patches/ausf/`, `nef/`, `nrf/` e `openapi/` (os modelos de `retrieve-key`), e um por NF para o FQDN obrigatório;
+  - `free5gc/aanf/` (*heart-beat*, cabeçalhos, FQDN obrigatório) e `free5gc/ccf/` (FQDN obrigatório);
+  - `af/scripts/negative/` e o `e2e.sh`;
+  - `aanf.md`, `nrf.md`, `nef.md`, `tls-sbi.md` §3.2, `e2e.md` e o tutorial.
+- **Fase (b):**
+  - `shared/akma/supi`, `akid` e `derive`; `reference/kdf/gen_vectors.py` e os vetores;
+  - o *patch* do AUSF e o `seed`;
+  - `free5gc/ccf/internal/jws`, `make-capif-certs.sh`, um *patch* novo no NEF e um de configuração, com o NEF lendo o certificado no lugar da chave;
+  - `af/scripts/make-test-ca.sh`;
+  - `capif.md`, `ua-star-norma.md` e `docs/shared/`.
+- **Fase (c):**
+  - `af/af/internal/config`, `server` e `capif`, e `af/config/`;
+  - um *patch* novo no UERANSIM e `patch-ueransim.sh`;
+  - `af.md`, `teste-ue.md`, `ue-ueransim.md` e o tutorial.
+- **Em todas:** `desvios.md`, `correcoes-free5gc.md`, o registro de defeitos, a matriz, o plano e o `CHANGELOG.md`.
+
+**Critérios de aceitação.**
+
+1. Testes Go com `-race` em `shared/akma`, `shared/crosscheck`, `free5gc/aanf`, `free5gc/ccf`, `af` e nos *patches* novos.
+2. O `e2e.sh` com as verificações novas de cada fase, sem falha nem pulada.
+3. Os achados 1, 2 e 11 a 14 fechados; F27 e F28 corrigidos no projeto, e o F29 no AAnF; o `x5t#S256` sai do DV-16; o DV-4 e o DV-17 encerrados; o DV-3 encerrado no código do projeto.
+4. `TestAkma` e `TestRegistration`, com e sem `oauth`, no banco de testes do free5GC, na .130.
+5. Os registros do W11 feitos.
+
+**Riscos.**
+
+- O fim do modo por IP passa por um *patch* em cada NF: uma NF que monte URI por um caminho não visto falha na partida ou na primeira chamada. Os testes de hoje só cobrem o caminho por nome.
+- A configuração nova do AF (W8) quebra as configurações antigas; o guia público só muda na V3.
+- A utf8proc entra na compilação do UERANSIM, que na .130 já depende de um CMake local.
+- A resposta *multipart* de `retrieve-key` não tem cliente de referência; o `e2e.sh` a confere com um cliente próprio, em Python.
+
+**O tutorial ganha.**
+
+- o `sbi.fqdn` obrigatório com `https`;
+- a configuração nova do AF (W8) e o *heart-beat* do AAnF;
+- o certificado do K.2 refeito e o do *token* do CCF;
+- a utf8proc na compilação do UERANSIM.
+
 ---
 
 ## 5. Depois do MVP-6
@@ -1597,7 +1728,7 @@ Decididos pelo responsável em 08/11/2026, como propostos.
 - no AF: o AAnF e o CCF escolhidos pelo A-KID (achado 11); o certificado do K.2 no perfil de TS 33.310 (achado 12); o `User-Agent` (achado 14); o fim do modo por IP (DV-17);
 - no ME: o NFKC, com a utf8proc no `nr-ue` (DV-4).
 
-A propor, com os pontos a decidir. Entre eles: o perfil que o NRF confere no F27 (Q8); como o AF de dentro alcança o NRF para descobrir o AAnF, já que o NRF escuta no *loopback* da máquina do free5GC (`tls-sbi.md` §3.1); a forma de trazer a utf8proc ao `nr-ue`; e as fases.
+Proposto em 08/11/2026, na seção 4, com os pontos W1 a W11. O detalhamento revê três itens desta lista: o AF de dentro por configuração, no lugar do NRF (W8); o `Server` só no AAnF (W4); e, no DV-3, a biblioteca, o AUSF e o `seed`, sem mudança no AAnF (W5).
 
 **MVP-16 — *Roaming*** (MVP-14, Q5, opção c). Reservado: a subscrição do estado de *roaming*, a política, a falha e o aviso de serviço desligado (DV-2, F30, TS 33.535 §6.8), só quando houver uma VPLMN.
 
