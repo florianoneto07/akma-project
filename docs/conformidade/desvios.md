@@ -21,8 +21,8 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-12 | `trigger-auth` com POST, contra a precedência do YAML (TS 29.503 Anexo A.1), que declara `get` | **implementado** (MVP-12, 28/10/2026) | MVP-12 |
 | DV-13 | *Claims* do *token* do CCF: `iss` com o identificador do *invoker*, ao lado de `client_id`, e `exp` como instante | **implementado** (MVP-9, 02/11/2026) | MVP-9 |
 | DV-14 | CAPIF parcial: só o caminho do AKMA | **implementado** (MVP-9, 02/11/2026) | MVP-9 |
-| DV-15 | HTTP/2 por ALPN no CCF, contra o *upgrade* do HTTP de TS 29.222 §7.3 | **implementado** (MVP-9, 02/11/2026) | MVP-9 |
-| DV-16 | CAPIF-1e sem OCSP *stapling* e *token* do CCF sem `x5t#S256`; até o MVP-11, também sem ponto de distribuição de CRL e sem CRL | **implementado** (MVP-9, 02/11/2026); **reduzido** na fase (c) do MVP-11 (06/11/2026): a revogação por CRL saiu do desvio, e ficam o OCSP e o `x5t#S256` | MVP-9, MVP-11 |
+| DV-15 | HTTP/2 por ALPN no CCF e no NEF, contra o *upgrade* do HTTP de TS 29.222 §7.3 e TS 29.122 §5.2.2 | **implementado** (MVP-9, 02/11/2026); ampliado ao NEF na revisão do MVP-14 (08/11/2026) | MVP-9, MVP-14 |
+| DV-16 | Sem OCSP *stapling* em CAPIF-1e e, desde a revisão do MVP-14, na SBI, em CAPIF-2e e em CAPIF-3/4; *token* do CCF sem `x5t#S256`; até o MVP-11, também sem ponto de distribuição de CRL e sem CRL | **implementado** (MVP-9, 02/11/2026); **reduzido** na fase (c) do MVP-11 (06/11/2026): a revogação por CRL saiu do desvio, e ficam o OCSP e o `x5t#S256`; **ampliado** na revisão do MVP-14 (08/11/2026); correção aprovada: `x5t#S256` no MVP-15, OCSP no MVP-18 | MVP-9, MVP-11, MVP-14 |
 | DV-17 | SBI por IP, sem o FQDN no perfil nem o SNI, como modo opcional; o padrão segue a norma | **decidido** (MVP-11, 02/11/2026); **implementado** (fase a, 04/11/2026) | MVP-11 |
 | DV-18 | CRL só por HTTP, sem o LDAPv3 que TS 33.310 §6.1a pede como método principal | **decidido** (MVP-11, 04/11/2026); **implementado** (fase a, 04/11/2026) | MVP-11 |
 
@@ -38,6 +38,33 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-6 | implementado | `realm="3GPP-bootstrapping-akma@af1.akma.example"` no desafio do AF |
 | DV-7 | implementado | nenhuma resposta 204 nos testes da API [N01] a [N16] |
 | DV-8 | encerrado | `aud` exigido pelo AAnF com o NRF corrigido; sem *token*, 401 [N15], [N16] |
+
+## Revisão do MVP-14 (08/11/2026)
+
+Cada desvio revisto com a pergunta do MVP-14: o que falta para ficar de acordo com a norma? A primeira passada está no plano (MVP-14, "Revisão dos desvios"); a segunda, em `revisao-das-normas.md`. Decisões do responsável de 08/11/2026, nos pontos do plano:
+
+| Desvio | Decisão | Ponto | Próximo passo |
+|---|---|---|---|
+| DV-1 | segue encerrado | — | — |
+| DV-2 | mantido até haver uma VPLMN | Q5, opção (c) | MVP-16, reservado; D-AL à 3GPP |
+| DV-3 | a decidir: o responsável pediu a explicação | Q6 | — |
+| DV-4 | a decidir: o responsável pediu a explicação | Q6 | — |
+| DV-5 | mantido; vai à 3GPP | Q4 | D-F |
+| DV-6 | mantido; vai à 3GPP | Q4 | D-C |
+| DV-7 | mantido; vai à 3GPP | Q4 | D-G |
+| DV-8 | segue encerrado | — | — |
+| DV-9 | segue encerrado; o servidor de autorização do modo sem CAPIF, a decidir (o responsável pediu a explicação) | Q3 | — |
+| DV-10 | OCSP *stapling*: corrigir; `D0 02`: a decidir | Q9; Q6 | MVP-18 |
+| DV-11 | mantido; vai à 3GPP | Q4 | D-U, D-W |
+| DV-12 | mantido; vai à 3GPP | Q4 | D-B |
+| DV-13 | mantido; vai à 3GPP | Q4 | D-AA, D-AB |
+| DV-14 | corrigir a saída do *invoker* com o aviso ao AEF, a revogação, os *logs* e a auditoria; o resto fica | Q7 | MVP-17 |
+| DV-15 | mantido; vai à 3GPP; ampliado ao NEF | Q4; Q11 | D-AE, ampliado |
+| DV-16 | corrigir o `x5t#S256` e o OCSP *stapling*; ampliado à SBI, a CAPIF-2e e a CAPIF-3/4 | Q8; Q9; Q11 | MVP-15; MVP-18 |
+| DV-17 | a decidir: o responsável pediu a explicação | Q6 | — |
+| DV-18 | corrigir: o LDAPv3 ao lado do HTTP | Q10 | MVP-18 |
+
+Os sete desvios que vêm de defeitos da norma ficam no código como estão. As opções de texto para cada defeito estão em `docs/defects/propostas-para-a-norma.md` (Q4); o envio à 3GPP fica com o responsável.
 
 ---
 
@@ -74,6 +101,8 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 **Por quê.** Questão em aberto nº 1: o `shall` do Stage 2 convive com a *feature* opcional do Stage 3. Orientação do material de partida do projeto.
 
 **Impacto.** Sem subscrição, o AAnF não detecta UE em *roaming* nem recusa por política de *roaming*; o testbed é sem *roaming*. `ROAMING_AKMA_SERVICE_DENIED` nunca é emitido.
+
+**Revisão do MVP-14 (08/11/2026).** Decisão do responsável no ponto Q5, opção (c): manter o desvio até haver uma VPLMN, como a seção 5 do plano previa. A revisão mostrou que os passos 5 a 8 de §6.2.1 e §6.8 acontecem na HPLMN e poderiam ser feitos com uma ferramenta no papel do AMF de outra PLMN, e que o UDM do free5GC não atende o evento por SUPI (F30). O conflito entre o *shall* do Stage 2 e a *feature* opcional do Stage 3 vai à 3GPP (D-AL).
 
 **Implementação (17/10/2026).** `akma.roamingStatusSubscription` existe no `aanfcfg.yaml`, mas o valor `true` impede a partida do AAnF com mensagem que cita este desvio (`free5gc/aanf/pkg/factory/config.go`; teste `TestInvalidConfigs`). A etapa configurável prevista acima fica para quando o AAnF consumir o UDM. A *feature* `RoamingRestriction` não é anunciada, e o `notifUri` dos pedidos é ignorado. Todo teste de API confere que `ROAMING_AKMA_SERVICE_DENIED` não aparece em nenhuma resposta (`api_akma_test.go`, função `do`).
 
@@ -331,6 +360,8 @@ Ficam de fora: a atualização da entrada e a entrada com aprovação; os evento
 - Sem *logging*, auditoria e tarifação no CCF, as chamadas ficam registradas só no log do NEF (categoria `AKMA`).
 - Um *invoker* de outra implementação que dependa de uma API de fora (os eventos, por exemplo) não funciona com este CCF.
 
+**Revisão do MVP-14 (08/11/2026).** Decisão do responsável no ponto Q7: o MVP-17 traz a saída do *invoker* com o aviso ao AEF (TS 33.122 §6.8 passos 7 a 10, com `CAPIF_Events_API`), a revogação (`Revoke_Authorization`, TS 29.222 §5.6.2.5 e §6.2.2.3), os *logs* das chamadas (`Log_API_Invocation`, §5.8) e a auditoria (`Query_API_Invocation_Log`, §5.9). O resto da lista acima continua no desvio.
+
 **Implementação (02/11/2026).** O CCF serve só as operações listadas acima (`free5gc/ccf/`). O NEF faz só a publicação, o `check-authentication` e a conferência do *token* (`free5gc/patches/nef/0002`). Evidência: o grupo CP e o R2c da execução `20261102-093804` (`docs/af-side/e2e.md` §5.9).
 
 ---
@@ -349,6 +380,8 @@ Ficam de fora: a atualização da entrada e a entrada com aprovação; os evento
 **Por quê.** Decidido pelo responsável em 29/10/2026, com o ponto C29 da especificação do MVP-9 (`docs/free5gc-side/capif.md`). Sobre TLS, o HTTP/2 só se negocia por ALPN, como fazem o `crypto/tls` e o `net/http` do Go.
 
 **Impacto.** Um cliente que siga §7.3 ao pé da letra e mande `Upgrade: h2c` numa conexão TLS continua em HTTP/1.1, que §7.3 torna obrigatório: não fica sem serviço.
+
+**Ampliação (08/11/2026, revisão do MVP-14).** TS 29.522 §5.2 aplica às APIs do NEF o uso do HTTP de TS 29.122 §5.2.2, e TS 29.122 V19.7.0 §5.2.2.1 tem a mesma frase: *"An SCS/AS desiring to use HTTP/2 shall use the HTTP upgrade mechanism to negotiate applicable HTTP version as described in IETF RFC 9113 [22]."* O NEF negocia o HTTP/2 por ALPN, como o CCF, e o desvio passa a cobri-lo. O D-AE foi ampliado na mesma data; o desvio fica e vai à 3GPP (Q4).
 
 **Implementação (02/11/2026).** `free5gc/ccf/internal/sbi/server.go` (`TLSConfig`, com `h2` e `http/1.1` no ALPN). Evidência: `TestCapifTLS` no CCF, com HTTP/2 por ALPN e HTTP/1.1 no TLS 1.2. Na execução `20261102-093804` (`docs/af-side/e2e.md` §5.9), usaram o CCF o AF, cujo cliente Go oferece `h2` no ALPN, e o `capif_api.py`, em HTTP/1.1.
 
@@ -417,6 +450,8 @@ A parte da revogação sai deste desvio com a implementação. Ficam o OCSP *sta
 
 **Reduzido (06/11/2026, MVP-11, fase c).** A revisão acima está implementada: `free5gc/ccf/internal/context/crl.go`, `make-capif-certs.sh`, `nef/0005`, `openapi/0007` e `af/af/internal/capif` (`docs/free5gc-side/tls-sbi.md` §17). O CCF recusa o certificado revogado em CAPIF-1e assim que responde à saída, e o NEF, depois de `invokerCrlMaxAge`. Evidência: [CP18] e [S18] na execução `20261106-170311` (`docs/af-side/e2e.md` §5.12); `TestCrl`, `TestCapifInvokerCertificateCrl`, `TestCrlChecker`, `TestExtraClientCrlMaxAge` e `TestRevokedCCF`. O impacto e a implementação acima, de 30/10/2026, valem agora só para o OCSP e para o `x5t#S256`.
 
+**Ampliação e decisão (08/11/2026, revisão do MVP-14).** O OCSP *stapling* de TS 33.210 §6.2.2 e §6.2.3 (*should*) vale para todo TLS do projeto, pelas remissões de TS 33.501 §13.1.0 e §12.3 e de TS 33.122 §6.6. A SBI, CAPIF-2e e CAPIF-3/4 também não grampeiam, e o desvio passa a cobri-los (achado 3 do MVP-14, ponto Q11). Decisões do responsável: o `x5t#S256` do *token* do CCF no MVP-15 (Q8); o OCSP, com um respondedor e o *stapling* em todos os servidores TLS do projeto, no MVP-18 (Q9).
+
 ---
 
 ## DV-17 — SBI por IP, como modo opcional
@@ -465,3 +500,5 @@ O próprio §6.1a permite o HTTP para os certificados TLS, que são os deste MVP
 **Implementação.** Fase (a) do MVP-11, em 04/11/2026, pela especificação `docs/free5gc-side/tls-sbi.md` (§5): o serviço `free5gc/crl/` e a conferência no pacote `sbitls`.
 
 **Como fechar.** Um leitor de CRL por LDAPv3 no pacote `sbitls`, com um diretório no ponto de distribuição.
+
+**Revisão do MVP-14 (08/11/2026).** TS 33.310 §7.1: *"SEGs shall use LDAP to access the CRL and cross-certificate repositories. TLS entities shall use LDAP or HTTP to access the CRL repositories."* A frase reforça a leitura (b) do T27: para as entidades TLS, o HTTP basta. O *"shall be supported as the primary method"* de §6.1a continua sem atender, e o responsável decidiu corrigir (Q10): o LDAPv3 ao lado do HTTP, no MVP-18.

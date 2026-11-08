@@ -2,6 +2,13 @@
 
 ## [Não lançado]
 
+### MVP-14 — Revisão dos desvios e das normas (06 a 08/11/2026)
+- **Proposta:** a primeira passada, no plano, com os pontos Q1 a Q15; decididos pelo responsável em 08/11/2026, salvo o Q3, o Q6 e o Q13, que pediram explicação.
+- **Segunda passada:** `docs/conformidade/revisao-das-normas.md`, a tabela de conformidade com os 1.391 parágrafos com *shall* ou *should* de 19 normas, nas versões mais recentes; os achados 11 a 15, a decidir (Q16 a Q20).
+- **Normas:** `docs/defects/propostas-para-a-norma.md`, as opções de texto para cada defeito (Q4); D-AL a D-AO e o D-AE ampliado no registro de defeitos.
+- **Registros:** a decisão de cada desvio em `desvios.md`, com o DV-15 e o DV-16 ampliados e o DV-18 com TS 33.310 §7.1; F28 a F30 em `correcoes-free5gc.md`; a matriz na revisão 12; as versões em `especificacoes.md`.
+- Nenhum código, *patch* ou VM alterados.
+
 ### MVP-11 — O NEF com o AF de fora e com o CCF, fase (c) (06/11/2026)
 - **CCF:** o servidor interno em `https`, com TLS mútuo e a CA do operador; o provedor reconhecido pelo NF Instance ID do certificado; `Obtain_API_Invoker_Info` só com os itens do AEF que pergunta; a CRL da CA do CCF, assinada na partida, a cada saída e antes do `nextUpdate`; o certificado do *invoker* revogado na saída e recusado em CAPIF-1e.
 - **NEF:** *patch* `nef/0005`: o CN do certificado igual ao `apiInvokerId` e ao `client_id`, a CA conferida contra `authenticationInfo`, `sourceAddresses` opcional, `invokerCrlMaxAge`.

@@ -29,6 +29,17 @@ Todas as decisões de implementação deste projeto referem-se às versões abai
 
 **Nota (16/10/2026):** o baseline de TS 23.502 permanece V19.8.0; a cópia no acervo é a V19.9.0, usada para consulta. Ver [Adendo E](../05-adendo-E-ts23502-v19-9-0.md).
 
+**Versões mais recentes (06/11/2026; MVP-14, ponto Q2).** O baseline continua na Release 19: TS 33.535 só existe na V19.0.0, e o seu §2 diz que *"a non-specific reference implicitly refers to the latest version of that document in the same Release as the present document"*. A revisão do MVP-14 leu as versões mais recentes, e a Release 20 não muda o que o AKMA usa (`docs/conformidade/revisao-das-normas.md`, plano, MVP-14). Os textos estão em `specs/` e os YAML em `specs/openapi-r20/`, fora do controle de versão.
+
+| Especificação | Mais recente em 06/11/2026 |
+|---|---|
+| TS 33.535, TS 24.109, TS 33.220, TS 33.222, TS 33.122, TS 33.310 | as mesmas do baseline (sem Release 20) |
+| TS 33.501 | V20.3.0 |
+| TS 33.210 | V20.0.0 |
+| TS 29.535, TS 29.522, TS 29.503, TS 29.510, TS 29.222, TS 23.222, TS 23.003 | V20.1.0 |
+| TS 29.500 | V20.0.0 |
+| TS 23.502 | V20.3.0 (não baixada: passa de 10 MB) |
+
 ## Arquivos OpenAPI
 
 | Arquivo | Versão | Corresponde a |

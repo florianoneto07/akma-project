@@ -1,6 +1,6 @@
 # Correções do free5GC para o AKMA
 
-**Criado em:** 19 de outubro de 2026 · **Atualizado em:** 6 de novembro de 2026 (F13 e F27: fase (c) do MVP-11); 5 de novembro de 2026 (F4, F5, F12, F14, F23, F25 e F26: fase (b) do MVP-11); 4 de novembro de 2026 (F21, F22, F24 e parte de F25: fase (a) do MVP-11; F26 e os estados de F4, F5, F12 e F24: especificação do MVP-11 aprovada); 2 de novembro de 2026 (F21 a F25, MVP-11; F13: o CAPIF verificado no laboratório); 30 de outubro de 2026 (F13: o CCF e o NEF feitos); 29 de outubro de 2026 (F13: MVP-9 aprovado); 28 de outubro de 2026 (F16 a F20, MVP-12; conferência no free5GC v4.3.0, MVP-13) · **Base:** free5GC v4.2.3 (NRF v1.4.5, UDM, AUSF e AMF v1.4.5, NEF v1.2.5, `openapi` v1.2.4)
+**Criado em:** 19 de outubro de 2026 · **Atualizado em:** 8 de novembro de 2026 (F28 a F30: revisão do MVP-14); 6 de novembro de 2026 (F13 e F27: fase (c) do MVP-11); 5 de novembro de 2026 (F4, F5, F12, F14, F23, F25 e F26: fase (b) do MVP-11); 4 de novembro de 2026 (F21, F22, F24 e parte de F25: fase (a) do MVP-11; F26 e os estados de F4, F5, F12 e F24: especificação do MVP-11 aprovada); 2 de novembro de 2026 (F21 a F25, MVP-11; F13: o CAPIF verificado no laboratório); 30 de outubro de 2026 (F13: o CCF e o NEF feitos); 29 de outubro de 2026 (F13: MVP-9 aprovado); 28 de outubro de 2026 (F16 a F20, MVP-12; conferência no free5GC v4.3.0, MVP-13) · **Base:** free5GC v4.2.3 (NRF v1.4.5, UDM, AUSF e AMF v1.4.5, NEF v1.2.5, `openapi` v1.2.4)
 
 Registro de tudo o que o projeto encontrou no free5GC e que precisa mudar para o AKMA funcionar conforme a norma. Pedido do responsável em 19/10/2026: este registro vai para o repositório público (MVP-7, plano seção 5). A regra de cada entrada:
 
@@ -40,13 +40,16 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
 | F24 | todas as NFs, `openapi` | perfis sem `fqdn` e URIs montados por IP | corrigido no projeto: MVP-11, fase (a), *patches* `*-sbi-tls` e `openapi/0005`; fica o `apiPrefix` com o URI inteiro (T22) |
 | F25 | NRF, `openapi` | certificados das NFs fora do perfil de TS 33.310 | corrigido no projeto: MVP-11, `make-sba-certs.sh` na fase (a) e *patch* `nrf/0005` na fase (b) |
 | F26 | NRF | *tokens* com `iss` vazio e certificado do NRF sem o NF Instance ID | corrigido no projeto: MVP-11, fase (b), *patch* `nrf/0005` |
-| F27 | NRF | o escopo do *token* é conferido em um só perfil do tipo pedido | não corrigido; o laboratório tem um NEF, e o `e2e.sh` limpa os perfis antigos |
+| F27 | NRF | o escopo do *token* é conferido em um só perfil do tipo pedido | não corrigido; o laboratório tem um NEF, e o `e2e.sh` limpa os perfis antigos; proposto para o MVP-15 |
+| F28 | NRF | sem `Nnrf_AccessToken_RetrieveKey` | não corrigido; proposto para o MVP-15 |
+| F29 | todas as NFs, NRF | sem *heart-beat* | não corrigido; o AAnF, código do projeto, proposto para o MVP-15 |
+| F30 | UDM | sem o evento `ROAMING_STATUS` por SUPI | não corrigido; fica com o DV-2, até haver uma VPLMN |
 
 ### Conferência no free5GC v4.3.0 (28/10/2026)
 
 Ponto L6 do MVP-13: antes de publicar, cada item conferido na versão mais recente do free5GC. A v4.3.0 saiu em 30/09/2026. Ela fixa o NRF em `4522e4a9`, o UDM em `ba18ef3b`, o AUSF em `b693e38a`, o AMF em `9fc0ac3f`, o NEF em `6cd30f51`, a *webconsole* em `c40b94b6` e o `openapi` v1.3.0 em todas, e traz uma NF nova, o SCP. Fonte: os arquivos dessas versões no GitHub, lidos em 28/10/2026.
 
-**Os vinte itens continuam presentes na v4.3.0.** Os *patches* do projeto seguem para a v4.2.3; portá-los à v4.3.0 é do item *Upstream* do plano. F21 a F27, do MVP-11, foram conferidos só na v4.2.3. O que se conferiu em cada item:
+**Os vinte itens continuam presentes na v4.3.0.** Os *patches* do projeto seguem para a v4.2.3; portá-los à v4.3.0 é do item *Upstream* do plano. F21 a F27, do MVP-11, e F28 a F30, do MVP-14, foram conferidos só na v4.2.3. O que se conferiu em cada item:
 
 | Item | Na v4.3.0 |
 |---|---|
@@ -68,14 +71,14 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
 
 | Repositório | Itens | *Patches* do projeto |
 |---|---|---|
-| `nrf` | F1, F2, F3, F4, F15, F23, F24, F25, F26 | `nrf/0001` a `0003` (F1 a F3); `nrf/0004` (F24); `nrf/0005` (F4, F23, F25, F26) |
+| `nrf` | F1, F2, F3, F4, F15, F23, F24, F25, F26, F27, F28, F29 | `nrf/0001` a `0003` (F1 a F3); `nrf/0004` (F24); `nrf/0005` (F4, F23, F25, F26) |
 | `openapi` | F5, F6, F16, F21, F23, F24, F25 | `openapi/0001` a `0003` (F6, F16); `openapi/0004`, os modelos e clientes do CAPIF (F13); `openapi/0005` (F21, F24); `openapi/0006` (F5, F12, F23) |
 | `util` | F22 | `util/0001` (F22) |
-| `udm` | F7, F10, F17, F20 (a notificação de desregistro), F24 | `udm/0001`, `udm/0002` (F7, F17); `udm/0003` (F24) |
-| `ausf` | F8, F24 | `ausf/0001`; `ausf/0002` (F24) |
-| `amf` | F18, F19, F20 (a verificação de *token* nos *callbacks*), F24 | `amf/0001` (F18, F19); `amf/0002` (F24) |
-| `nef` | F11, F12, F13, F14, F24 | `nef/0001` (F11), `nef/0002` (F13, o CAPIF); `nef/0003` (F24); `nef/0004` (F14) |
-| `smf`, `pcf`, `udr`, `nssf`, `chf`, `bsf` | F24 | `smf/0001`, `pcf/0001`, `udr/0001`, `nssf/0001`, `chf/0001`, `bsf/0001` (F24) |
+| `udm` | F7, F10, F17, F20 (a notificação de desregistro), F24, F29, F30 | `udm/0001`, `udm/0002` (F7, F17); `udm/0003` (F24) |
+| `ausf` | F8, F24, F29 | `ausf/0001`; `ausf/0002` (F24) |
+| `amf` | F18, F19, F20 (a verificação de *token* nos *callbacks*), F24, F29 | `amf/0001` (F18, F19); `amf/0002` (F24) |
+| `nef` | F11, F12, F13, F14, F24, F29 | `nef/0001` (F11), `nef/0002` (F13, o CAPIF); `nef/0003` (F24); `nef/0004` (F14) |
+| `smf`, `pcf`, `udr`, `nssf`, `chf`, `bsf` | F24, F29 | `smf/0001`, `pcf/0001`, `udr/0001`, `nssf/0001`, `chf/0001`, `bsf/0001` (F24) |
 | `webconsole` | F9 | — (*script* `provision-akma-subscriber.sh`) |
 | `free5gc` (configuração, `run.sh`, banco de testes) | integração sem cláusula (abaixo) | `config/`, `run/`, `test/` |
 
@@ -362,6 +365,41 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
 - **O que a norma diz.** TS 33.501 §13.4.1.1.2 passo 2: *"The NRF checks whether the NF Service Consumer is authorized to access the requested service(s)."* NOTA 1 do mesmo passo: sem lista de fatias, o *token* *"can be used to access expected NF services of all expected NF Service Producers of the NF type based on local configuration and operator policy."*
 - **Como deve ser.** `[INTERPRETAÇÃO]` A norma não diz qual perfil olhar. O pedido é por tipo de NF, e a resposta não deve depender da ordem dos perfis no banco: o NRF deve conferir os perfis do tipo pedido.
 - **No projeto.** Não corrigido. Apareceu na fase (c) do MVP-11: o banco de testes do free5GC, parado sem se descadastrar, deixou um perfil de NEF sem `3gpp-akma`, e o NRF recusou esse escopo com `400` `invalid_scope`, com o NEF do laboratório registrado. O laboratório tem um NEF, e o passo R1 do `e2e-remote.sh` apaga os perfis de execuções anteriores (`R1.profiles`).
+
+---
+
+## F28 — NRF sem `Nnrf_AccessToken_RetrieveKey`
+
+- **O que o free5GC faz.** `[FREE5GC]` O NRF só serve `/oauth2/token` (`internal/sbi/api_accesstoken.go`); não há a rota `/oauth2/retrieve-key`. Cada produtor recebe pela configuração a chave que valida os *tokens*.
+- **Onde a norma diz.** `[3GPP]`
+  - TS 29.510 V20.1.0 §6.3.4.1: *"The "Retrieve Key Request" custom operation shall be supported."*
+  - TS 29.510 §5.4.2.3.1: o consumidor manda um POST a `{nrfApiRoot}/oauth2/retrieve-key`, com o NF Instance ID do emissor e os parâmetros de cabeçalho que identificam a chave; *"On success, "200 OK" shall be returned, the content of the POST response shall contain the raw public key, the X.509 certificate or a certificate chain required to validate the signature of the access token."*
+  - TS 33.501 §14.3.3 define `Nnrf_AccessToken_RetrieveKey`; §13.4.1.0 NOTA 1b admite também a provisão da chave pela operação ou *"in any other implementation specific way"*.
+- **Como deve ser.** O NRF serve `retrieve-key` e devolve o certificado de assinatura dos *tokens* para o `kid` ou o `x5t#S256` pedidos. O produtor pode pedir a chave quando não a tem.
+- **No projeto.** Não corrigido. As NFs e o AAnF leem o certificado de `nrfCertPem` (MVP-11), o que §13.4.1.0 permite; falta a operação no NRF. Proposto para o MVP-15 (MVP-14, achado 5).
+
+## F29 — Sem *heart-beat* das NFs no NRF
+
+- **O que o free5GC faz.** `[FREE5GC]` Nenhuma NF do free5GC manda o *heart-beat*, o `PATCH` periódico do próprio perfil. O NRF guarda o `heartBeatTimer` (`internal/context/management_data.go`) e não suspende NF alguma. O AAnF, do projeto, copiou o padrão.
+- **Onde a norma diz.** `[3GPP]` TS 29.510 V20.1.0 §5.2.2.3.2:
+  - *"Each NF that has previously registered in NRF shall contact the NRF periodically (heart-beat), by invoking the NFUpdate service operation, in order to show that the NF is still operative."*
+  - *"The time interval at which the NRF shall be contacted is deployment-specific, and it is returned by the NRF to the NF Service Consumer as a result of a successful registration."*
+  - o pedido é um `PATCH` que troca `nfStatus`, sem `If-Match`; o NRF marca `SUSPENDED` a NF que não renova e deixa de devolvê-la na descoberta.
+- **Como deve ser.** Cada NF repete o `PATCH` no intervalo devolvido no registro; o NRF suspende quem não renova.
+- **No projeto.** Não corrigido. Proposto: o AAnF no MVP-15; as NFs do free5GC e a suspensão no NRF, com o *upstream* (MVP-14, achado 6). A suspensão também tira da descoberta os perfis antigos que causam o F27.
+
+## F30 — UDM sem o evento `ROAMING_STATUS` por SUPI
+
+- **O que o free5GC faz.** `[FREE5GC]` `CreateEeSubscriptionProcedure` (`internal/sbi/processor/event_exposure.go`) só aceita `msisdn-`, `extid-`, `extgroupid-` e `anyUE` em `ueIdentity`, e responde 400 `MANDATORY_IE_INCORRECT` a `imsi-`. A subscrição é guardada, mas nenhum código gera o relatório de evento.
+- **Onde a norma diz.** `[3GPP]` TS 29.503 V20.1.0:
+  - tab. 6.4.3.2.2-1: `ueIdentity` *"shall contain the Generic Public Subscription Identifier (see TS 23.501 [2] clause 5.9.8) or Subscription Permanent Identifier (see TS 33.535 [55] clause 6.2.1 for the usage of SUPI in this procedure)"*;
+  - §5.5.2.2.2: com o `immediateFlag`, para um evento que o UDM detecta, como `ROAMING_STATUS`, *"the UDM may include the current status of the event if available"*;
+  - tab. 6.4.6.2.8-1: `RoamingStatusReport`, com `roaming`, `newServingPlmn`, `accessType` e `purged`;
+  - §5.5.2.4.2: a notificação ao `callbackReference` da subscrição.
+
+  TS 33.535 §6.2.1 passos 5 e 6 são o uso pelo AAnF.
+- **Como deve ser.** O UDM aceita a subscrição por SUPI, responde com o estado corrente, tirado do registro do AMF (a PLMN do GUAMI contra a HPLMN do SUPI), e notifica quando o registro muda de PLMN.
+- **No projeto.** Não corrigido: o DV-2 fica até haver uma VPLMN (MVP-14, Q5, opção c).
 
 ---
 

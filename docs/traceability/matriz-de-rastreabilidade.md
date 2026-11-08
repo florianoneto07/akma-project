@@ -1,9 +1,9 @@
 # Matriz de rastreabilidade
 
-**Revisão:** 11 (MVP-11: TLS mútuo nas SBI e entre o NEF e o AF). Revisão 10 (MVP-9): CAPIF, o AF como *API invoker*. Revisão 9 (MVP-12): renovação da K_AKMA pelo AAnF. Revisão 8 (MVP-8, fase (d)): perfil OSCORE do Ua\*. Revisão 7 (MVP-8, fase (c)): perfis DTLS do Ua\*. Revisão 6 (MVP-8, fases (a) e (b)): serviço de chaves do ME e perfis TLS do Ua\*. Revisão 5 (MVP-6): K_AF via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina. Revisão 4 (MVP-5): etapas mínimas do fluxo ligadas a evidências do roteiro ponta a ponta
-**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 a 3.7 e 4 em 18 de outubro de 2026; revisão 5 em 19 de outubro de 2026; revisões 6 e 7 em 21 de outubro de 2026; revisão 8 em 22 de outubro de 2026; revisão 9 em 28 de outubro de 2026; revisão 10 em 2 de novembro de 2026; revisão 11 em 6 de novembro de 2026
+**Revisão:** 12 (MVP-14: revisão dos desvios e das normas). Revisão 11 (MVP-11: TLS mútuo nas SBI e entre o NEF e o AF). Revisão 10 (MVP-9): CAPIF, o AF como *API invoker*. Revisão 9 (MVP-12): renovação da K_AKMA pelo AAnF. Revisão 8 (MVP-8, fase (d)): perfil OSCORE do Ua\*. Revisão 7 (MVP-8, fase (c)): perfis DTLS do Ua\*. Revisão 6 (MVP-8, fases (a) e (b)): serviço de chaves do ME e perfis TLS do Ua\*. Revisão 5 (MVP-6): K_AF via NEF, acesso anônimo, remoção por OAM e UERANSIM em outra máquina. Revisão 4 (MVP-5): etapas mínimas do fluxo ligadas a evidências do roteiro ponta a ponta
+**Data:** 02 de setembro de 2026; revisão 3.1 em 16 de outubro de 2026; revisões 3.2 a 3.4 em 17 de outubro de 2026; revisões 3.5 a 3.7 e 4 em 18 de outubro de 2026; revisão 5 em 19 de outubro de 2026; revisões 6 e 7 em 21 de outubro de 2026; revisão 8 em 22 de outubro de 2026; revisão 9 em 28 de outubro de 2026; revisão 10 em 2 de novembro de 2026; revisão 11 em 6 de novembro de 2026; revisão 12 em 8 de novembro de 2026
 
-*Nota (16/10/2026):* os caminhos da coluna "Implementação" seguem a estrutura anterior ao plano. A estrutura aprovada (plano §3) é: `akma/` → `shared/akma/`; `NFs/aanf/` → `free5gc/aanf/`; `patches/` → `free5gc/patches/`; `af/` → `af/af/`; `ue/` → `af/ue/`. Os caminhos serão atualizados linha a linha à medida que cada MVP os criar. Os desvios citados como DV-n estão em `docs/conformidade/desvios.md`.
+*Nota (16/10/2026):* os caminhos da coluna "Implementação" seguem a estrutura anterior ao plano. A estrutura aprovada (plano §3) é: `akma/` → `shared/akma/`; `NFs/aanf/` → `free5gc/aanf/`; `patches/` → `free5gc/patches/`; `af/` → `af/af/`; `ue/` → `af/ue/`. Os caminhos serão atualizados linha a linha à medida que cada MVP os criar. Na revisão 12, todas as linhas usam a estrutura aprovada; a nota fica como histórico. Os desvios citados como DV-n estão em `docs/conformidade/desvios.md`.
 
 Legenda de estado:
 
@@ -31,7 +31,7 @@ Evidências: os identificadores entre colchetes são verificações da execuçã
 | Autenticação primária não depende do AAnF | 6.1 passo 3 (D9) | `free5gc/patches/ausf/` (`startAkma`) | [R4.registration], [R4.ausf-error] | **Verificado** — D9 |
 | UE inclui o A-KID no pedido de sessão; K_AF derivada pelo ME | 6.2.1 passo 1; A.4 | `0003-akma-kaf-nr-cli-selftest.patch`; `af/ue/uaclient/` | [R2.ua], [R3.ua-new], [R5.ua-restored] | **Verificado** |
 | AF sem contexto ativo pede a K_AF ao AAnF com A-KID e AF_ID | 6.2.1 passo 2; 6.7 (configuração local) | `af/af/internal/aanf/` | log do AF `K_AF … obtained from the AAnF`; `TestApplicationKey` | **Verificado** |
-| AAnF verifica a política local para o AF | 6.2.1 passo 2 | `free5gc/aanf/` (`AfPolicy`) | [N03] (403); o AF fora da política recebe 503 (MVP-3) | **Verificado** — DV-1 |
+| AAnF verifica a política local para o AF | 6.2.1 passo 2 | `free5gc/aanf/` (`AfPolicy`) | [N03] (403); o AF fora da política recebe 503 (MVP-3) | **Verificado** — DV-1, encerrado na revisão 11: a política é pelo certificado ([S15]) |
 | AAnF verifica a presença da K_AKMA | 6.2.1 passo 2 | `free5gc/aanf/` | [N06], [B1], [C1], [N21] (403 `K_AKMA_NOT_PRESENT`) | **Verificado** — DV-7 |
 | GPSI pelo UDM | 6.2.1 passos 3 e 4 | — | — | Não aplicável: a política local do MVP não pede GPSI |
 | Subscrição de `ROAMING_STATUS` | 6.2.1 passos 5 e 6 | — | — | **Desvio DV-2**: etapa desabilitada |
@@ -51,7 +51,7 @@ Evidências: verificações da execução `20261019-213720` de `af/scripts/e2e.s
 | Etapa | Cláusula | Implementação | Evidência | Estado |
 |---|---|---|---|---|
 | AF de fora da rede pede a K_AF ao NEF com A-KID e AF_ID; sem CAPIF, ponto de terminação configurado | 33.535 6.3 passo 1 e NOTA; 29.522 4.4.23.2, 5.14 | `af/af/internal/nef`; `af/config/afcfg-external.yaml` | [E01]; [R2n.ua-nef]; 3H | **Verificado** |
-| NEF autoriza o AF, inclusive pelo AF_ID | 33.535 6.3 passo 2 | `free5gc/patches/nef/0001` (`AkmaAfPolicy`) | [E06]; [E04], [E05] (*token*) | **Verificado** — DV-9 |
+| NEF autoriza o AF, inclusive pelo AF_ID | 33.535 6.3 passo 2 | `free5gc/patches/nef/0001` (`AkmaAfPolicy`) | [E06]; [E04], [E05] (*token*) | **Verificado** — DV-9, encerrado na revisão 11 (TLS mútuo e *token* do CCF) |
 | NEF seleciona o AAnF pelo RID | 33.535 6.3 passo 2; 6.7 | `nef/0001` (`aanf_service.go`) | log do NEF e [R2n.aanf-via-nef]; teste `no AAnF at the NRF` | **Verificado** |
 | NEF pede a K_AF ao AAnF; o AAnF processa como em 6.2.1 | 33.535 6.3 passo 3 | `nef/0001`; `free5gc/aanf/` (`NefPolicy`) | [R2n.aanf-via-nef]; [E07] (fora da política do AAnF); [E08] (sem K_AKMA) | **Verificado** — P11 |
 | AAnF responde ao NEF com K_AF, validade e SUPI | 33.535 6.3 passo 4 | `free5gc/aanf/` | `TestRetrieveViaNef`; [E02] (a mesma K_AF entregue direto) | **Verificado** |
@@ -60,7 +60,7 @@ Evidências: verificações da execução `20261019-213720` de `af/scripts/e2e.s
 | 204 quando o dado não existe | 29.522 tab. 5.14.3.2.2-2 | `nef/0001`: repassa o 204 do AAnF | teste `204 of the AAnF relayed` | **Verificado** — `[INTERPRETAÇÃO]`; o AAnF nunca emite 204 (DV-7) |
 | Acesso anônimo: K_AF sem identidade do UE; o AAnF guarda a validade | 33.535 6.2.2; 7.1.5; 29.535 4.2.2.3.2 | `free5gc/aanf/` (MVP-1); AF `anonymous`; NEF repassa `anonInd` | [N01c], [E03], [R2n.ua-anon], [R2n.ua-nef-anon]; 3H | **Verificado** |
 | Remoção do contexto AKMA pelo OAM | 33.535 6.6, tab. 7.1.1-1; 29.535 4.2.1.3.2, tab. 4.2.2.1-1 | `seed remove` no papel do OAM | [R6.removed], [R6.not-found] | **Verificado** |
-| Segurança NEF–AF: TLS mútuo e OAuth | 33.501 12.2 a 12.4 | `http`, *token* do NRF, política AF_ID ↔ endereço | [E04], [E06] | **Desvio DV-9**; CAPIF no MVP-9 |
+| Segurança NEF–AF: TLS mútuo e OAuth | 33.501 12.2 a 12.4 | até a revisão 10: `http`, *token* do NRF, política AF_ID ↔ endereço; desde a revisão 11: TLS mútuo, certificado e *token* do CCF (`nef/0003`, `nef/0005`) | [S16.token], [S16.check], [S16.sbi] | **Verificado** — DV-9 encerrado (revisão 11) |
 | UE em outra máquina: N2 e N3 entre máquinas | 23.501 (N2, N3); guia oficial do free5GC | configuração do AMF, do SMF, do UPF e dos gNB | 3H: NG Setup a partir de 192.168.16.131, mesmo A-KID no UE, no AUSF e no AAnF | **Verificado** |
 | Nenhuma chave em log, inclusive no NEF | plano, todos os MVPs | todos | [R7.no-key-*], [L1]; `TestAkmaNoKeyInLogs` do NEF; 3H | **Verificado** |
 
@@ -145,7 +145,7 @@ Evidências: o grupo CP, o R1 e o R2c da execução `20261102-093804` de `af/scr
 | Entrada do AF no CCF, com a credencial de entrada; certificado do *invoker* | 33.122 6.1; 29.222 5.5.2.2 | `free5gc/ccf` (`api_invoker_management.go`); `af/af/internal/capif` (`onboard`) | [CP00], [CP01], [CP08]; `TestCapifOnboardingRefused`, `TestStart` | **Verificado** — C19, D-AI |
 | Descoberta da API do AKMA e montagem do `apiRoot` | 29.222 5.2.2.2 e NOTA; 33.122 6.3.1.1 | `free5gc/ccf` (`api_discover.go`); `af/af/internal/capif` (`chooseAEF`) | [CP02], [CP09], [CP10]; `TestChooseAEF` | **Verificado** — D-AG |
 | Método de segurança `OAUTH` | 29.222 5.6.2.2; 33.122 6.3.1.2 | `free5gc/ccf` (`api_security.go`) | [CP03] | **Verificado** — DV-14 |
-| `check-authentication` no AEF | 29.222 6.2.2.2; 33.122 6.5.2.3 passo 5 | `nef/0002` (`CheckAuthentication`) | [CP00], [CP04]; `TestCapifCheckAuthentication` | **Verificado** — DV-9 |
+| `check-authentication` no AEF | 29.222 6.2.2.2; 33.122 6.5.2.3 passo 5 | `nef/0002` (`CheckAuthentication`) | [CP00], [CP04]; `TestCapifCheckAuthentication` | **Verificado** — DV-9 encerrado (revisão 11) |
 | *Token* do CCF: `ES256` com `kid`; `iss`, `client_id`, `scope`, `exp` | 29.222 5.6.2.3; 33.122 C.2.2; 33.210 6.3.3.1 | `free5gc/ccf` (`IssueToken`, `internal/jws`) | [CP05], [CP11] a [CP13] | **Verificado** — DV-13, D-AI |
 | NEF confere o *token* e os dados do *invoker* no CCF | 29.522 7.2; 33.122 6.5.2.3 passo 7, C.6; 23.222 8.16.3 | `nef/0002` (`capifAuthorize`, `capifInvoker`) | [CP06], [CP14], [CP15], [R2c.nef-capif]; `TestCapifAccessToken` | **Verificado** |
 | AF_ID no perfil do *invoker* e na política do NEF; desde a revisão 11, sem o endereço | 33.535 6.3 passo 2; 29.522 7.2 | `nef/0002`; `authorizationInfo` do CCF | [CP16], [CP17]; `TestCapifRetrieve` | **Verificado** — C11, DV-9 |
@@ -212,7 +212,7 @@ Evidências: os grupos R1s e S da execução `20261106-170311` de `af/scripts/e2
 | Erro `K_AKMA_NOT_PRESENT` (403) | TS 29.535 V19.5.0 | 5.1.7.3 | `free5gc/aanf/internal/sbi/processor/` | `TestRetrieveKAkmaNotPresent`; VM | **Implementado** (MVP-1) |
 | Erro `AKMA_CONTEXT_NOT_FOUND` (404) | TS 29.535 V19.5.0 | 5.1.7.3 | `free5gc/aanf/internal/sbi/processor/` | `TestRemoveContext`; VM | **Implementado** (MVP-1) |
 | `retrieve-applicationkey` nunca responde 204 | TS 29.535 V19.5.0 | 4.2.2.3.2 | `free5gc/aanf/internal/sbi/processor/` | conferido em todo teste de API | **Implementado** (MVP-1) — DV-7, defeito D-G |
-| AF_ID autorizado associado ao AF que o pede | TS 33.535 V19.0.0 | 4.2.2, 6.2.1 passo 2 | `free5gc/aanf/internal/context/context.go` (`AfPolicy`) | `TestRetrieveAfNotAuthorized`; VM | **Implementado** (MVP-1) — risco residual sem TLS (DV-1) |
+| AF_ID autorizado associado ao AF que o pede | TS 33.535 V19.0.0 | 4.2.2, 6.2.1 passo 2 | `free5gc/aanf/internal/context/context.go` (`AfPolicy`) | `TestRetrieveAfNotAuthorized`; VM | **Implementado** (MVP-1) — desde a revisão 11, pelo certificado ([S15]); DV-1 encerrado |
 | Códigos HTTP obrigatórios para POST | TS 29.500 V19.7.0 | 5.2.7.1, 5.2.7.2 | `free5gc/aanf/internal/sbi/api_akma.go` | 8 códigos testados; 429, 502, 503 justificados (`docs/free5gc-side/aanf.md` §6) | **Implementado** (MVP-1) |
 | Método não suportado → 501; versão de API desconhecida → 400 `INVALID_API` | TS 29.500 V19.7.0 | 5.2.7.2, Tab. 5.2.7.2-1 | `free5gc/aanf/internal/sbi/api_akma.go` | `TestRoutingErrors` | **Implementado** (MVP-1) |
 | OAuth2 em `register-anchorkey` e `remove-context`: assinatura, escopo, `exp`, `aud` | TS 29.535 V19.5.0; TS 33.501 V19.7.0 | 5.1.9; 13.4.1.1.2 | `free5gc/aanf/internal/context/context.go` | `TestOAuth2`; VM (401 sem token; 200 com token do NRF corrigido) | **Implementado** (MVP-1; `aud` estrito desde o MVP-1b, DV-8 encerrado) |
@@ -256,8 +256,8 @@ Evidências: os grupos R1s e S da execução `20261106-170311` de `af/scripts/e2
 | Domínio de origem do A-KID: MCC e MNC do SUCI; com SUPI, da PLMN única de `plmnSupportList` | TS 33.535 V19.0.0; TS 23.003 V19.7.0 | 6.1; 2.2, 28.2 | `free5gc/patches/ausf/` (`homeNetwork`) | `TestHomeNetworkFromSuci`, `TestBuildAkmaKeyInfoMatchesOracle` | **Implementado** (MVP-2) — `[INTERPRETAÇÃO]` |
 | Registro no AAnF sem bloquear a resposta ao AMF; falha no AAnF não altera a autenticação | TS 33.535 V19.0.0 | 6.1 passo 3 | `free5gc/patches/ausf/` (`startAkma`) | `TestStartAkmaDoesNotBlock`; UERANSIM com AAnF parado | **Implementado** (MVP-2) — D9 |
 | Consumidor `Naanf_AKMA` no AUSF | TS 29.535 V19.5.0 | 4.2.2.2 | `free5gc/patches/ausf/` (`internal/sbi/consumer/aanf_service.go`) | `TestRegisterAkmaDiscoversAanf`, `TestRegisterAkmaConfiguredUri`; banco de testes; UERANSIM | **Implementado** (MVP-2) |
-| GPSI via `GET /{ueId}/id-translation-result` | TS 29.503 V19.7.0 | 5.2.2.2.10 | — | — | Pendente — política local |
-| Subscrição `ROAMING_STATUS` com `immediateFlag` | TS 29.503 V19.7.0 | 5.5.2.2.2, 6.4.6.2.8 | — | — | Decisão — DV-2 (configurável, desabilitada) |
+| GPSI via `GET /{ueId}/id-translation-result` | TS 29.503 V19.7.0 | 5.2.2.2.10 | — | — | Pendente — MVP-10 (F10) |
+| Subscrição `ROAMING_STATUS` com `immediateFlag` | TS 29.503 V19.7.0 | 5.5.2.2.2, 6.4.6.2.8 | — | — | **Desvio DV-2** — mantido até haver uma VPLMN (revisão 12); o UDM do free5GC não tem o evento (F30) |
 | `POST /{ueId}/registrations/trigger-auth` | TS 33.501 V19.7.0; TS 29.503 V19.7.0 | 14.2.6; 5.3.2.16, 6.2.3.13 | `free5gc/patches/udm/0002-auth-trigger.patch` | `TestAuthTrigger`, `TestAuthTriggerRequests`; [R6r.udm], [R6r.udm-get] | **Verificado** (MVP-12) — DV-12, defeito D-B |
 
 ## Lado UE (ME)
@@ -307,3 +307,51 @@ Evidências: os grupos R1s e S da execução `20261106-170311` de `af/scripts/e2
 | AF alcança a porta do AAnF | ADR-0001-R2 §5.1, §5.2 | requisição a partir de `192.168.16.129` | **Verificado** em 17/10/2026 (MVP-1) |
 | UE alcança o AF pelo plano de usuário (`uesimtun0` → UPF → N6) | D5; `docs/free5gc-side/plano-de-usuario.md` | `ping` e Ua\* a partir do `uesimtun0` no *namespace* do UE; contadores da `upfgtp` | **Verificado** em 18/10/2026 (MVP-4): UE no próprio *namespace*, NAT no N6 |
 | Proteção das interfaces SBI | TS 33.535 §4.4.0; TS 33.501 §13.1.0 | TLS mútuo, grupos R1s e S do `e2e.sh` | **Verificado** em 06/11/2026 (MVP-11); DV-1 encerrado |
+
+## Revisão do MVP-14 e o que fica de lado (revisão 12)
+
+Fonte: a revisão dos desvios e a primeira passada no plano (MVP-14), e a segunda passada em `docs/conformidade/revisao-das-normas.md`, a tabela de conformidade com os 1.391 parágrafos com *shall* ou *should* das cláusulas que tocam o projeto, lidos nas versões mais recentes em 06/11/2026. As decisões do responsável de 08/11/2026 estão em `desvios.md` ("Revisão do MVP-14"). Os achados 11 a 15 esperam decisão (plano, Q16 a Q20).
+
+TS 33.535 V19.0.0, cláusula por cláusula:
+
+| Cláusula | Assunto | Estado | O que fica de lado | Onde se trata |
+|---|---|---|---|---|
+| §3.1, §4.2.1 | contexto AKMA; o GPSI pelo UDM | **Parcial** | o GPSI | MVP-10 |
+| §4.1, §4.6 | cenários com *roaming* | Pendente | os três cenários com *roaming* | DV-2; MVP-16, só com uma VPLMN |
+| §4.2.2 a §4.2.5, §4.3, §4.5 | papéis das NFs; interfaces | **Verificado** | — | — |
+| §4.4.0, §4.4.1, §4.4.3 | requisitos de segurança, do Ua\* e do UE | **Verificado** | — | — |
+| §4.4.2 | A-KID | **Parcial** | o AF achar o AAnF pelo A-KID | achado 11 (Q16) |
+| §4.7 | *Authentication Proxy* | Pendente | opcional | sob demanda |
+| §5 | chaves e vida das chaves | **Verificado** | — | — |
+| §6.1 | K_AKMA depois da autenticação primária | **Verificado** | o EAP-AKA' só no banco de testes; o EAP-TLS, que o free5GC não tem | — |
+| §6.2.1 passos 1, 2, 7 a 9 | K_AF para o AF de dentro | **Verificado** | a *Service Disable URI*; a falha por *roaming* | DV-2 |
+| §6.2.1 passos 3 e 4 | GPSI pelo UDM | Pendente | — | MVP-10 |
+| §6.2.1 passos 5 e 6 | subscrição do estado de *roaming* | **Desvio DV-2** | — | MVP-16, só com uma VPLMN |
+| §6.2.2 | acesso anônimo | **Verificado** | — | — |
+| §6.3 | K_AF via NEF | **Parcial** | o GPSI; o *roaming*; o `anonInd` repassado; a HPLMN pelo A-KID | MVP-10; DV-2; MVP-15 (achado 2); achado 11 (Q16) |
+| §6.4, §6.5, §6.6 | troca de chaves; iniciação; remoção | **Verificado** | o OAM é o `seed remove` | — |
+| §6.7 | descoberta do AAnF | **Parcial** | o Routing Indicator padrão; o SCP; vários conjuntos de AAnF | MVP-15 (achado 1); sob demanda |
+| §6.8, §7.1.6, §7.3.3 | aviso de serviço desligado | Pendente | — | depende do DV-2 |
+| §7.1, §7.3, §7.4 | serviços do AAnF, do NEF e do UDM | **Parcial** | `Nudm_SDM_Get`; `Nudm_EventExposure_Subscribe`; `ServiceDisableNotification` | MVP-10; DV-2 |
+| Anexo A | derivações | **Verificado** | SUPI de outros tipos; NFKC no ME | DV-3, DV-4 (Q6) |
+| Anexo B | perfis TLS | **Verificado** | — | DV-5, DV-6; DV-10: `D0 02` (Q6), OCSP (MVP-18) |
+| Anexo C | DTLS | **Verificado** | — | DV-11 |
+| Anexo D | OSCORE | **Verificado** | — | — |
+
+As normas que TS 33.535 chama e as que o projeto também implementa:
+
+| Norma | O que fica de lado | Onde se trata |
+|---|---|---|
+| TS 33.501 | EAP-TLS; acesso não 3GPP; troca das chaves AS; SEPP, N32, SCP e CCA; *tokens* em *roaming*; vários NRF; o OCSP *stapling* do perfil TLS | fora do escopo; MVP-18 |
+| TS 29.535 | `Naanf_AKMA_Notify`; `RoamingRestriction`; `AKMA_GPSI_Support`; os cabeçalhos de TS 29.500 | DV-2; MVP-10; achado 14 (Q19) |
+| TS 29.522 | a notificação ao AF; o GPSI; CAPIF-5 | DV-2; MVP-10; DV-14 |
+| TS 29.503 | `id-translation-result` de SUPI para GPSI; `ROAMING_STATUS` por SUPI | F10, MVP-10; F30, DV-2 |
+| TS 24.109 e TS 33.220 | o `realm`, a RFC 3310 e o NFKC no ME | DV-6, DV-5 e DV-4 |
+| TS 33.222 | o certificado do AF do K.2 fora de TS 33.310 §6.1.1 | achado 12 (Q17) |
+| TS 33.122, TS 23.222 e TS 29.222 | eventos, revogação, *logs* e auditoria; atualização da publicação e da entrada; entrada com aprovação; troca do método; métodos 1 e 2; CAPIF-5; ocultação; interconexão; RNAA | MVP-17; DV-14 |
+| TS 33.210 | OCSP *stapling*; `D0 02`; `x5t#S256` do CCF | MVP-18; Q6; MVP-15 |
+| TS 33.310 | OCSP; LDAPv3; inscrição automática; o certificado do AF do K.2 | MVP-18; sob demanda; achado 12 |
+| TS 29.510 | *heart-beat*; `retrieve-key`; reuso da descoberta; OPTIONS antes do registro | F29 e F28, MVP-15; achado 13 (Q18) |
+| TS 29.500 | `User-Agent`, `Server` e `3gpp-Sbi-*` | achado 14 (Q19) |
+| TS 29.122 | as notificações; o *upgrade* do HTTP | DV-2; DV-15 |
+| TS 23.003 | o Routing Indicator padrão; SUPI de outros tipos | achado 1; DV-3 |

@@ -5,7 +5,7 @@
 
 Cada item registra a inconsistência, as fontes que a evidenciam, a decisão adotada pelo projeto e o grupo de trabalho responsável.
 
-**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio. 28 de outubro de 2026 — D-B: especificação do MVP-12 aprovada. Estes defeitos são a base das recomendações à 3GPP da V2 do repositório público (plano, MVP-13). Na implementação do MVP-12, D-B implementado (DV-12) e D-O e D-P acrescentados, de TS 29.503. No MVP-13: todos os itens conferidos nas versões mais recentes das normas (seção seguinte), e as lacunas que o projeto teve de decidir acrescentadas como sugestões, D-Q a D-Z. 29 de outubro de 2026 — D-AA a D-AC, do CAPIF, achados na proposta do MVP-9, aprovada nessa data. Na mesma data, D-AD a D-AG, da especificação do CAPIF (`docs/free5gc-side/capif.md`), aprovada. 2 de novembro de 2026 — D-AH e D-AI, achados na implementação do MVP-9. 4 de novembro de 2026 — D-AJ e D-AK, da especificação do MVP-11 (`docs/free5gc-side/tls-sbi.md`), aprovada nessa data.
+**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio. 28 de outubro de 2026 — D-B: especificação do MVP-12 aprovada. Estes defeitos são a base das recomendações à 3GPP da V2 do repositório público (plano, MVP-13). Na implementação do MVP-12, D-B implementado (DV-12) e D-O e D-P acrescentados, de TS 29.503. No MVP-13: todos os itens conferidos nas versões mais recentes das normas (seção seguinte), e as lacunas que o projeto teve de decidir acrescentadas como sugestões, D-Q a D-Z. 29 de outubro de 2026 — D-AA a D-AC, do CAPIF, achados na proposta do MVP-9, aprovada nessa data. Na mesma data, D-AD a D-AG, da especificação do CAPIF (`docs/free5gc-side/capif.md`), aprovada. 2 de novembro de 2026 — D-AH e D-AI, achados na implementação do MVP-9. 4 de novembro de 2026 — D-AJ e D-AK, da especificação do MVP-11 (`docs/free5gc-side/tls-sbi.md`), aprovada nessa data. 8 de novembro de 2026 — D-AL a D-AO, da revisão do MVP-14 (`docs/conformidade/revisao-das-normas.md`), e o D-AE ampliado a TS 29.122; as opções de texto de cada defeito estão em `docs/defects/propostas-para-a-norma.md` (ponto Q4 do MVP-14).
 
 ### Situação no projeto (22/10/2026)
 
@@ -44,6 +44,10 @@ Todos os itens estão no texto das normas; nenhum é defeito do projeto. A decis
 | D-AI | `ES256` com `kid` no *token* e na credencial de entrada (C9 e C19 revistos em 30/10/2026, `capif.md` §15.1) |
 | D-AJ | a política do CCF é sempre o TLS mútuo, com a CA do *invoker* em `authenticationInfo` (ponto T34 de `tls-sbi.md`), implementada no MVP-11 (fases a e c) |
 | D-AK | editorial, nada a implementar |
+| D-AL | DV-2: sem a subscrição, mantido até haver uma VPLMN (MVP-14, Q5) |
+| D-AM | nada: sem o aviso de serviço desligado (§6.8), que depende do DV-2 |
+| D-AN | nada: sem `AKMA_GPSI_Support`; o MVP-10 decide com este item |
+| D-AO | editorial, nada a implementar |
 
 ### Conferência nas versões mais recentes (28/10/2026)
 
@@ -603,6 +607,8 @@ Acrescentados em 29/10/2026, da leitura de TS 29.222, TS 33.122 e TS 29.522 para
 
 **Decisão do projeto** (DV-15). ALPN.
 
+**Ampliação (08/11/2026, MVP-14).** TS 29.522 §5.2 aplica às APIs do NEF o uso do HTTP de TS 29.122 §5.2.2, e TS 29.122 V19.7.0 §5.2.2.1 tem a mesma frase: *"An SCS/AS desiring to use HTTP/2 shall use the HTTP upgrade mechanism to negotiate applicable HTTP version as described in IETF RFC 9113 [22]."* A proposta vale para as duas normas. O NEF do projeto também negocia por ALPN (DV-15).
+
 ---
 
 ## D-AF — Formato das cadeias de segurança do CAPIF (sugestão)
@@ -708,6 +714,78 @@ Acrescentados em 04/11/2026, da leitura de TS 33.122, TS 29.222 e TS 33.310 para
 **Proposta.** Trocar por *"table 6.1.3c.3-1"*.
 
 **Decisão do projeto.** O certificado que assina os *tokens* do NRF segue a tabela 6.1.3c.3-1 nas outras extensões (`tls-sbi.md` §4.3).
+
+---
+
+## Defeitos da revisão do MVP-14
+
+Achados na revisão das normas do MVP-14 (`docs/conformidade/revisao-das-normas.md`), registrados em 08/11/2026 com o ponto Q11. As opções de texto estão em `propostas-para-a-norma.md`.
+
+## D-AL — Subscrição de *roaming* obrigatória no Stage 2 e opcional no Stage 3
+
+| | |
+|---|---|
+| **Especificações** | TS 33.535 V19.0.0, §6.2.1 passo 5 e §6.3 passo 4; TS 29.535 V20.1.0, tab. 5.1.8-1 |
+| **Grupo responsável** | 3GPP SA3; CT3 para TS 29.535 |
+
+**Descrição.** TS 33.535 §6.2.1 passo 5: *"Once receiving the request from the AF, the AAnF shall send a Nudm_EventExposure_Subscribe request to UDM with SUPI/GPSI to request the RoamingStatusReport from the UDM."* §6.3 passo 4 repete para o pedido via NEF. TS 29.535 põe a reação ao *roaming* na *feature* `RoamingRestriction`, opcional (tab. 5.1.8-1), e marca com ela `ROAMING_AKMA_SERVICE_DENIED` (tab. 5.1.7.3-1). É a questão 1 do README desde 16/10/2026.
+
+**Impacto.** Um AAnF sem a *feature* segue TS 29.535 e não segue o *shall* de TS 33.535; e um AAnF sem política de *roaming* subscreveria um estado que não usa.
+
+**Proposta.** Condicionar os dois passos à política de *roaming* do AAnF, como em `propostas-para-a-norma.md`.
+
+**Decisão do projeto.** DV-2: sem a subscrição, até haver uma VPLMN (MVP-14, Q5).
+
+---
+
+## D-AM — AF_ID na notificação de serviço desligado
+
+| | |
+|---|---|
+| **Especificações** | TS 33.535 V19.0.0, §6.8.2 passo 5 e §7.1.6; TS 29.522 V20.1.0, tab. 5.14.5.3.4-1 |
+| **Grupo responsável** | 3GPP SA3; CT3 para TS 29.522 |
+
+**Descrição.** §6.8.2 passo 5: *"The AAnF sends Naanf_AKMA_ServiceDisableNotification to NEF. The notification includes the A-KID and the AF_ID."* §7.1.6 só tem *"Input, Required: A-KID"* e nenhum opcional, e `ServiceDisableNotif` só tem `aKId`. No mesmo passo, *"If AF(s) are determined at step 5"*: o certo é o passo 4.
+
+**Impacto.** Quem segue o Stage 3 não manda o AF_ID; um NEF que use o mesmo URI de notificação para vários AF não sabe a quem repassar.
+
+**Proposta.** O `afId` opcional na notificação do AAnF ao NEF e em §7.1.6; *"step 4"* no passo 5.
+
+**Decisão do projeto.** Nada: sem §6.8, que depende do DV-2.
+
+---
+
+## D-AN — GPSI no AKMA: a *feature* contra a nota
+
+| | |
+|---|---|
+| **Especificações** | TS 29.535 V20.1.0, §4.2.2.2.2, §4.2.2.3.2 e tab. 5.1.4.3.2-2; TS 33.535 V19.0.0, §6.1 passo 4 e §7.1.2 |
+| **Grupo responsável** | 3GPP CT3 |
+
+**Descrição.** §4.2.2.3.2: com `AKMA_GPSI_Support`, a resposta leva *"either the SUPI within the "supi" attribute or the GPSI within the "gpsi" attribute"*. Tab. 5.1.4.3.2-2, NOTA 2: *"For the "AkmaAfKeyData" data structure used in the current release of this specification, the "gpsi" attribute is not applicable and the "supi" attribute shall be included"*, sem exceção para a *feature*. §4.2.2.2.2 admite, com a *feature*, o GPSI no lugar do SUPI no `AkmaKeyInfo` do registro; TS 33.535 §6.1 passo 4 e §7.1.2 pedem o SUPI, e o AUSF não tem o GPSI.
+
+**Impacto.** O texto não diz se o AAnF com a *feature* pode mandar o GPSI ao AF de dentro, que é o motivo dela (tab. 5.1.8-1).
+
+**Proposta.** A NOTA 2 só sem a *feature*; o registro só com o SUPI.
+
+**Decisão do projeto.** Nada por ora: sem `AKMA_GPSI_Support`. O MVP-10 decide com este item.
+
+---
+
+## D-AO — Editoriais da revisão do MVP-14 (prioridade baixa)
+
+| | |
+|---|---|
+| **Especificações** | TS 33.535 V19.0.0, §6.6, §6.8, §7.1.1, §7.1.4, §7.1.6 e §7.3.1; TS 29.522 V20.1.0, §4.4.23.2 |
+| **Grupo responsável** | 3GPP SA3; CT3 para TS 29.522 |
+
+**Descrição.** TS 33.535 chama as operações de `Naanf_AKMA_ServiceDisableNotification` e `Naanf_AKMA_Context_Remove`; TS 29.535, de `Naanf_AKMA_Notify` e `Naanf_AKMA_ContextRemove`. Tab. 7.3.1-1 dá *"Request/Response"* à `ServiceDisableNotification`, e a tab. 7.1.1-1, *"Notification/Response"*; a tab. 7.1.1-1 não lista o NEF entre os consumidores dessa notificação, que §6.8.2 usa. TS 29.522 §4.4.23.2 escreve "RoamingRestiction".
+
+**Impacto.** Sem efeito técnico.
+
+**Proposta.** Os nomes de TS 29.535 em TS 33.535; *"Notification/Response"* nas duas tabelas; o NEF na tab. 7.1.1-1; "RoamingRestriction".
+
+**Decisão do projeto.** Editorial, nada a implementar.
 
 ---
 
