@@ -9,21 +9,21 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 |---|---|---|---|
 | DV-1 | SBI sem TLS (h2c); CAPIF-3/4 sem TLS até o MVP-11 | **implementado** (MVP-1, 17/10/2026); estendido a CAPIF-3/4, **implementado** (MVP-9, 02/11/2026); SBI com TLS mútuo desde a fase (a) do MVP-11 (04/11/2026); **encerrado** na fase (c) do MVP-11 (06/11/2026) | MVP-1, MVP-9, MVP-11 |
 | DV-2 | Subscrição de `ROAMING_STATUS` desabilitada | **implementado** (MVP-1, 17/10/2026) — parcial: a etapa não existe; o campo só aceita `false` | MVP-1 |
-| DV-3 | Só SUPI do tipo IMSI | **implementado** (MVP-0, 16/10/2026) | MVP-0 |
-| DV-4 | Sem NFKC no lado UE | **implementado** (MVP-4, 18/10/2026) | MVP-4 |
+| DV-3 | Só SUPI do tipo IMSI | **implementado** (MVP-0, 16/10/2026); correção aprovada na revisão do MVP-14 (08/11/2026): a biblioteca e o AAnF com os quatro tipos, no MVP-15 | MVP-0, MVP-14 |
+| DV-4 | Sem NFKC no lado UE | **implementado** (MVP-4, 18/10/2026); correção aprovada na revisão do MVP-14 (08/11/2026): o NFKC no ME, no MVP-15 | MVP-4, MVP-14 |
 | DV-5 | Digest do Ua\* conforme RFC 7616 | **implementado** (MVP-3, 18/10/2026) | MVP-3 |
 | DV-6 | `realm` do Digest conforme TS 33.535 | **implementado** (MVP-3, 18/10/2026) | MVP-3 |
 | DV-7 | Nunca emitir 204 em `retrieve-applicationkey` | **implementado** (MVP-1, 17/10/2026) | MVP-1 |
 | DV-8 | `aud` vazio tolerado no token OAuth2 | **encerrado** em 17/10/2026 (MVP-1b: NRF corrigido, AAnF estrito) | MVP-1 |
 | DV-9 | NEF–AF externo sem TLS nem certificado de cliente | **implementado** (MVP-6, 19/10/2026); vale também para CAPIF-2e (MVP-9, 02/11/2026); TLS mútuo no CAPIF-2e desde a fase (a) do MVP-11 (04/11/2026); **encerrado** na fase (c) do MVP-11 (06/11/2026; T14, opção b) | MVP-6, MVP-9, MVP-11 |
-| DV-10 | Perfis TLS do Ua\* sem `TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384` e sem OCSP *stapling*, recomendados por TS 33.210 | **implementado** (MVP-8, 21/10/2026) | MVP-8 |
+| DV-10 | Perfis TLS do Ua\* sem `TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384` e sem OCSP *stapling*, recomendados por TS 33.210 | **implementado** (MVP-8, 21/10/2026); na revisão do MVP-14 (08/11/2026): o OCSP *stapling* a corrigir no MVP-18; a `D0 02` mantida até o wolfSSL tê-la | MVP-8, MVP-14 |
 | DV-11 | CoAP sobre DTLS sem a suíte obrigatória de RFC 7252, `TLS_PSK_WITH_AES_128_CCM_8`; vale TS 33.210 | **implementado** (MVP-8, 21/10/2026) | MVP-8 |
 | DV-12 | `trigger-auth` com POST, contra a precedência do YAML (TS 29.503 Anexo A.1), que declara `get` | **implementado** (MVP-12, 28/10/2026) | MVP-12 |
 | DV-13 | *Claims* do *token* do CCF: `iss` com o identificador do *invoker*, ao lado de `client_id`, e `exp` como instante | **implementado** (MVP-9, 02/11/2026) | MVP-9 |
 | DV-14 | CAPIF parcial: só o caminho do AKMA | **implementado** (MVP-9, 02/11/2026) | MVP-9 |
 | DV-15 | HTTP/2 por ALPN no CCF e no NEF, contra o *upgrade* do HTTP de TS 29.222 §7.3 e TS 29.122 §5.2.2 | **implementado** (MVP-9, 02/11/2026); ampliado ao NEF na revisão do MVP-14 (08/11/2026) | MVP-9, MVP-14 |
 | DV-16 | Sem OCSP *stapling* em CAPIF-1e e, desde a revisão do MVP-14, na SBI, em CAPIF-2e e em CAPIF-3/4; *token* do CCF sem `x5t#S256`; até o MVP-11, também sem ponto de distribuição de CRL e sem CRL | **implementado** (MVP-9, 02/11/2026); **reduzido** na fase (c) do MVP-11 (06/11/2026): a revogação por CRL saiu do desvio, e ficam o OCSP e o `x5t#S256`; **ampliado** na revisão do MVP-14 (08/11/2026); correção aprovada: `x5t#S256` no MVP-15, OCSP no MVP-18 | MVP-9, MVP-11, MVP-14 |
-| DV-17 | SBI por IP, sem o FQDN no perfil nem o SNI, como modo opcional; o padrão segue a norma | **decidido** (MVP-11, 02/11/2026); **implementado** (fase a, 04/11/2026) | MVP-11 |
+| DV-17 | SBI por IP, sem o FQDN no perfil nem o SNI, como modo opcional; o padrão segue a norma | **decidido** (MVP-11, 02/11/2026); **implementado** (fase a, 04/11/2026); correção aprovada na revisão do MVP-14 (08/11/2026): tirar o modo por IP, no MVP-15 | MVP-11, MVP-14 |
 | DV-18 | CRL só por HTTP, sem o LDAPv3 que TS 33.310 §6.1a pede como método principal | **decidido** (MVP-11, 04/11/2026); **implementado** (fase a, 04/11/2026) | MVP-11 |
 
 **Consolidação (MVP-5, 18/10/2026).** Nenhum desvio novo surgiu no MVP-5. Estado e evidência de cada um no roteiro ponta a ponta (`docs/af-side/e2e.md`, execução `20261018-171510`):
@@ -47,21 +47,21 @@ Cada desvio revisto com a pergunta do MVP-14: o que falta para ficar de acordo c
 |---|---|---|---|
 | DV-1 | segue encerrado | — | — |
 | DV-2 | mantido até haver uma VPLMN | Q5, opção (c) | MVP-16, reservado; D-AL à 3GPP |
-| DV-3 | a decidir: o responsável pediu a explicação | Q6 | — |
-| DV-4 | a decidir: o responsável pediu a explicação | Q6 | — |
+| DV-3 | corrigir no código do projeto: a biblioteca `shared/akma` e o AAnF aceitam IMSI, NAI, GLI e GCI, com vetores novos; de ponta a ponta, o limite fica com o free5GC e o UERANSIM | Q6, opção (b) | MVP-15 |
+| DV-4 | corrigir: o NFKC no ME, com uma biblioteca pequena de normalização no `nr-ue`, a utf8proc (licença MIT), sem pacote novo na máquina do UE | Q6, opção (b) | MVP-15 |
 | DV-5 | mantido; vai à 3GPP | Q4 | D-F |
 | DV-6 | mantido; vai à 3GPP | Q4 | D-C |
 | DV-7 | mantido; vai à 3GPP | Q4 | D-G |
 | DV-8 | segue encerrado | — | — |
-| DV-9 | segue encerrado; o servidor de autorização do modo sem CAPIF, a decidir (o responsável pediu a explicação) | Q3 | — |
-| DV-10 | OCSP *stapling*: corrigir; `D0 02`: a decidir | Q9; Q6 | MVP-18 |
+| DV-9 | segue encerrado; sem servidor de autorização para o modo sem CAPIF, que fica no código do NEF, desligado | Q3, opção (a) | D-Y à 3GPP |
+| DV-10 | OCSP *stapling*: corrigir; `D0 02`: mantida até o wolfSSL tê-la | Q9; Q6, opção (a) | MVP-18 |
 | DV-11 | mantido; vai à 3GPP | Q4 | D-U, D-W |
 | DV-12 | mantido; vai à 3GPP | Q4 | D-B |
 | DV-13 | mantido; vai à 3GPP | Q4 | D-AA, D-AB |
 | DV-14 | corrigir a saída do *invoker* com o aviso ao AEF, a revogação, os *logs* e a auditoria; o resto fica | Q7 | MVP-17 |
 | DV-15 | mantido; vai à 3GPP; ampliado ao NEF | Q4; Q11 | D-AE, ampliado |
 | DV-16 | corrigir o `x5t#S256` e o OCSP *stapling*; ampliado à SBI, a CAPIF-2e e a CAPIF-3/4 | Q8; Q9; Q11 | MVP-15; MVP-18 |
-| DV-17 | a decidir: o responsável pediu a explicação | Q6 | — |
+| DV-17 | corrigir: tirar o modo por IP; `sbi.fqdn` obrigatória com `https` | Q6, opção (b) | MVP-15 |
 | DV-18 | corrigir: o LDAPv3 ao lado do HTTP | Q10 | MVP-18 |
 
 Os sete desvios que vêm de defeitos da norma ficam no código como estão. As opções de texto para cada defeito estão em `docs/defects/propostas-para-a-norma.md` (Q4); o envio à 3GPP fica com o responsável.
@@ -120,6 +120,8 @@ Os sete desvios que vêm de defeitos da norma ficam no código como estão. As o
 
 **Implementação (16/10/2026).** `shared/akma/supi/supi.go`: `FromSBI` devolve `ErrUnsupportedType` para `nai-`, `gci-` e `gli-`; `Param.Validate` recusa qualquer valor fora de `^[0-9]{5,15}$`, inclusive com o prefixo `imsi-`. Testes: `supi_test.go` (`TestUnsupportedTypes`, `TestPrefixRejectedAtKDFLayer`) e `derive_test.go` (`TestSBIPrefixRejected`).
 
+**Revisão do MVP-14 (08/11/2026).** Decisão do responsável no ponto Q6, opção (b): no MVP-15, a biblioteca `shared/akma` e o AAnF passam a aceitar os quatro tipos de SUPI de TS 33.501 A.7.0, com vetores novos no oráculo. O código do projeto fica igual à norma. `[FREE5GC]` O limite passa a ser do free5GC e do UERANSIM, que só têm IMSI: nas fontes do AUSF, do UDM e do AMF não há tratamento dos outros tipos, e o `Supi::Parse` do UERANSIM só aceita `imsi-`. A proposta do MVP-15 leva esse limite a `correcoes-free5gc.md` e a `recomendacoes-ueransim.md`. O laboratório não muda, porque só tem IMSI.
+
 ---
 
 ## DV-4 — Sem NFKC no lado UE
@@ -133,6 +135,8 @@ Os sete desvios que vêm de defeitos da norma ficam no código como estão. As o
 **Impacto.** Nenhum para FQDN ASCII (invariante sob NFKC); AF com FQDN internacionalizado não é suportado no lado UE.
 
 **Implementação (18/10/2026).** `af/ue/ueransim/patches/0003-akma-kaf-nr-cli-selftest.patch`: `keys::IsValidAfFqdn` aceita só nome DNS ASCII. `CalculateKAf` e o comando `akma-kaf` do `nr-cli` recusam qualquer outro. O `nr-akma-selftest` confere a recusa nos três vetores de NFKC do MVP-0 (`docs/af-side/teste-ue.md` §1).
+
+**Revisão do MVP-14 (08/11/2026).** Decisão do responsável no ponto Q6, opção (b): no MVP-15, o ME aplica o NFKC, com uma biblioteca pequena de normalização embutida no `nr-ue`, a utf8proc (licença MIT), sem pacote novo na máquina do UE. O desvio se encerra. A proposta do MVP-15 decide a forma de trazer a biblioteca: no *patch* `0003`, como diz o Q6, ou baixada com o *hash* conferido, como o wolfSSL do `build-wolfssl.sh`. A revisão também refinou o motivo do desvio. No K.2, no PSK TLS e no DTLS, o FQDN vai no `server_name`, que só aceita ASCII (RFC 6066 §3). No OSCORE, vai no URI do CoAP, que admite UTF-8 com *percent-encoding* (RFC 3986 §3.2.2).
 
 ---
 
@@ -244,6 +248,8 @@ O certificado de cliente exige mudar o servidor SBI comum do NEF do free5GC. O T
 
 **Encerrado (06/11/2026, MVP-11, fase c).** O AF de fora fala com o NEF por TLS mútuo, com o certificado que o CCF emitiu na entrada e o *token* do CCF. O CN do certificado tem de ser o `apiInvokerId` no `check-authentication` e o `client_id` no `retrieve`, e o certificado tem de ser da CA de `authenticationInfo` (`docs/free5gc-side/tls-sbi.md` §8.1 e §17.3). Com `allowNrfTokens: false`, um *token* do NRF em `3gpp-akma` recebe `401`, e o modo CAPIF não confere mais o endereço de origem. O modo sem CAPIF fica no código, desligado. Evidência: [CP04], [CP06], [E05], [S16.token], [S16.check], [S16.nrf] e [S16.sbi] na execução `20261106-170311` (`docs/af-side/e2e.md` §5.12).
 
+**Revisão do MVP-14 (08/11/2026).** Decisão do responsável no ponto Q3, opção (a): o projeto não faz um servidor de autorização para o modo sem CAPIF. `[LACUNA]` TS 29.522 §6 não diz quem emite o *token* nesse modo (D-Y), e a forma do servidor seria escolha do projeto. O CAPIF, o caminho que a norma detalha (§7.2), já serve ao AF de fora. O modo fica no código do NEF, desligado, com os testes Go.
+
 ---
 
 ## DV-10 — Perfis TLS do Ua\* sem `D0 02` e sem OCSP *stapling*
@@ -271,6 +277,11 @@ O certificado de cliente exige mudar o servidor SBI comum do NEF do free5GC. O T
 **Implementação (21/10/2026).** `af/wolftls/wolftls.go` (listas de suítes do servidor e do cliente); `af/akmatls/akmatls.go` (`ServerConfig`, sem `OCSPStaple`). Evidência: `TestTLS12Hello` (`ClientHello` com `D0 01` como única suíte PSK; `ServerHello` com `D0 01`); [R2t.psk12] e [T04] na execução `20261021-164401` (`docs/af-side/e2e.md` §5.4). Especificação: `docs/af-side/ua-star-norma.md` §3.8, itens 2 e 7.
 
 **Como fechar.** `D0 02`: quando o wolfSSL a tiver, ou com outra pilha de PSK TLS; basta acrescentá-la às listas e o AF_ID `<FQDN>.010001D002` às políticas. OCSP: com uma CA que tenha respondedor, o AF busca a resposta e a põe em `OCSPStaple`.
+
+**Revisão do MVP-14 (08/11/2026).** Decisões do responsável:
+
+- **OCSP *stapling*** (Q9): corrigir no MVP-18, em todos os servidores TLS do projeto, com o respondedor do DV-16;
+- **`D0 02`** (Q6, opção a): fica como está até o wolfSSL tê-la. A suíte é só recomendada (*should*), e a obrigatória, `D0 01`, está. Um *patch* próprio de criptografia no wolfSSL não teria conferência independente, porque o OpenSSL 3.0.13 e o 4.1 *beta* não têm `ECDHE_PSK` com GCM.
 
 ---
 
@@ -474,6 +485,15 @@ Os certificados são os mesmos nos dois modos, com o FQDN e o IP no `subjectAltN
 **Impacto.** No modo por IP, o perfil da NF não tem o FQDN que TS 29.510 pede com `https`, o cliente não manda o SNI, e a identidade do servidor é conferida pelo IP do certificado, não pelo nome. O TLS mútuo, a CRL e a ligação do *token* ao certificado (T7, T9 e T10) não mudam.
 
 **Implementação.** Fase (a) do MVP-11, em 04/11/2026, pela especificação `docs/free5gc-side/tls-sbi.md`, aprovada na mesma data (T21; §3.2). A escolha é a chave `sbi.fqdn` de cada NF e do AAnF (`internal.fqdn` no CCF): com ela, por nome; sem ela, por IP, com um aviso no log quando há `https`. Quem só é cliente, como o AF, segue a forma do URI configurado. Nas configurações do projeto, o modo é por nome.
+
+**Revisão do MVP-14 (08/11/2026).** Decisão do responsável no ponto Q6, opção (b): o modo por IP sai no MVP-15, e o desvio se encerra. A decisão revê o T4 do MVP-11.
+
+- `sbi.fqdn` (`internal.fqdn` no CCF) passa a ser obrigatória com `https`, nos *patches* `*-sbi-tls`, no AAnF e no CCF; no AF, o `aanfUri` com `https` passa a ser por nome.
+- Com `http`, a NOTA 1 de TS 29.510 não pede o FQDN. A proposta do MVP-15 confere as configurações e o banco de testes do free5GC, que hoje valem sem a chave (`tls-sbi.md` §3.2).
+- Um laboratório sem DNS usa o `/etc/hosts`, como o do projeto.
+- Fora da SBI, o CAPIF-1e e a CRL continuam por IP (T34, T26), sem desvio.
+
+`tls-sbi.md` §3.2 muda com o MVP-15.
 
 ---
 

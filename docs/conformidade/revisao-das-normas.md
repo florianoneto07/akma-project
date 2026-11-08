@@ -1,6 +1,6 @@
 # Revisão das normas — segunda passada do MVP-14
 
-**MVP:** MVP-14 · **Data:** 8 de novembro de 2026 · **Estado:** segunda passada feita, por leitura das normas e do código; nada foi executado no laboratório. Pedida pelo responsável no ponto Q15, com o Q1 aprovado (plano, MVP-14). Os achados 11 a 15 da seção 6 esperam decisão (pontos Q16 a Q20 do plano).
+**MVP:** MVP-14 · **Data:** 8 de novembro de 2026 · **Estado:** segunda passada feita, por leitura das normas e do código; nada foi executado no laboratório. Pedida pelo responsável no ponto Q15, com o Q1 aprovado (plano, MVP-14). Os achados 11 a 15 da seção 6 foram decididos na mesma data (pontos Q16 a Q20 do plano): os achados 11 a 14 entram no MVP-15, com o F31, e o 15 fica com o Q10.
 
 Este documento é a tabela de conformidade do projeto: cada parágrafo com *shall* ou *should* das cláusulas que tocam o projeto, com o estado e a evidência. A primeira passada, com a revisão dos desvios, está no plano (MVP-14). As opções de texto para os defeitos da norma estão em `docs/defects/propostas-para-a-norma.md` (Q4).
 
@@ -261,7 +261,7 @@ O texto da Release 20 é o mesmo da baseline V19.5.0 nos requisitos; só a reda�
 | §5.14.7.1 ¶1 | S | *"HTTP error handling shall be supported as specified in clause 5.2.6 of 3GPP TS 29.122 [4]."* | feito | TS 29.122 §5.2.6 (F12, MVP-11) |
 | §5.14.7.1 ¶2 | S | *"In addition, the requirements in the following clauses shall apply."* | feito | TS 29.122 §5.2.6 (F12, MVP-11) |
 | §6 ¶1 | S | *"The security aspects of NEF shall be supported as defined in clause 12 of 3GPP TS 33.501 [6]."* | feito | TS 33.501 §12 (MVP-11) |
-| §6 ¶2 | S | *"When CAPIF is not supported and/or not used, the access to the NEF Northbound APIs shall be authorized by means of OAuth2 protocol (see IETF RFC 6749 …"* | não se aplica | o laboratório usa o CAPIF; o modo sem CAPIF fica desligado (Q3) |
+| §6 ¶2 | S | *"When CAPIF is not supported and/or not used, the access to the NEF Northbound APIs shall be authorized by means of OAuth2 protocol (see IETF RFC 6749 …"* | não se aplica | o laboratório usa o CAPIF; o modo sem CAPIF fica desligado, sem servidor de autorização (Q3, opção a) |
 | §6 ¶3 | S | *"When the NEF supports CAPIF for external exposure and CAPIF is used, the provisions of clause 7.2 shall apply for authorizing the access to the NEF …"* | feito | §7.2 |
 | §7.1 ¶1 | S | *"When CAPIF is used with an NEF that is used for external exposure, the NEF shall support the following as defined in 3GPP TS 29.222 [12]:"* | **em parte** | AEF, APF e o método 3, sim; CAPIF-5, não (DV-14; `[INTERPRETAÇÃO]` implantação centralizada) |
 | §7.2 ¶1 | S | *"When CAPIF is used for managing the exposure of the NEF northbound APIs, before invoking an API exposed by the NEF, the AF, acting as an API Invoker, …"* | feito | [CP03], [CP04] |
@@ -803,7 +803,7 @@ A V20.3.0 não foi comparada: o arquivo passa do limite de 10 MB da ferramenta d
 
 ## 6. Achados da segunda passada
 
-A segunda passada confirma os achados 1 a 10 da primeira e acrescenta os que seguem, a decidir (plano, MVP-14, Q16 a Q20). Os números continuam os da primeira passada.
+A segunda passada confirma os achados 1 a 10 da primeira e acrescenta os que seguem, decididos em 08/11/2026 como propostos (plano, MVP-14, Q16 a Q20). Os números continuam os da primeira passada.
 
 11. `[3GPP]` TS 33.535 §4.4.2: *"AKMA AF shall be able to identify the AAnF serving the UE from the A-KID."* §6.7: a seleção *"should consider"* o Routing Indicator. §6.3 passo 1: *"the AF discovers the HPLMN of the UE based on the A-KID"*. O AF de dentro só usa o AAnF de `aanfUri` (`af/af/internal/config`), e o AF de fora manda todo A-KID ao CCF e ao NEF configurados, sem olhar o domínio. §6.7 permite a configuração local, mas o AF não consegue servir a mais de um AAnF nem a mais de uma HPLMN. Correção: sem `aanfUri`, o AF de dentro descobre o AAnF no NRF com o RID do A-KID, como o AUSF e o NEF; o AF de fora escolhe o CCF pelo domínio do A-KID, numa lista da configuração, e recusa o domínio que não conhece. Custo pequeno.
 12. `[3GPP]` TS 33.222 §5.3.1.3: *"The AP/AS certificate profile shall comply with the requirements for TLS certificates in clause 6.1 of TS 33.310"*. O certificado que `af/scripts/make-test-ca.sh` faz para o AF do K.2 tem só o CN, sem o O que TS 33.310 §6.1.1 pede, e marca `basicConstraints` como crítica, que §6.1.1 manda deixar não crítica quando a norma não a exige. A CA de teste também não tem O. Correção: o perfil de `make-capif-certs.sh`, que segue §6.1.3a e §6.1.4a. Custo pequeno.
@@ -827,4 +827,9 @@ Feitos nesta data, com o Q11 aprovado:
 - Registro de defeitos, e a cópia em `~/akma`: D-AL a D-AO e o D-AE ampliado a TS 29.122 §5.2.2.
 - Matriz de rastreabilidade, revisão 12 (Q14).
 
-Esperam decisão: o Q3 (o servidor de autorização do modo sem CAPIF), o Q6 (os desvios mantidos com motivo), o Q13 (a conferência no free5GC v4.3.0) e os achados 11 a 15 (Q16 a Q20). O registro do DV-19 não é preciso: pelo Q8, o NEF deixa de repassar o `anonInd` no MVP-15.
+Decididos depois, na mesma data, com as recomendações aceitas: o Q3 (opção a, sem servidor de autorização para o modo sem CAPIF), o Q6 (opção b no DV-3, no DV-4 e no DV-17; opção a na `D0 02`), o Q13 (opção a) e os achados 11 a 15 (Q16 a Q20). Registros que vieram dessas decisões:
+
+- `desvios.md`: a decisão do DV-3, do DV-4, do DV-9, do DV-10 e do DV-17;
+- `correcoes-free5gc.md`: o F31 (os cabeçalhos de TS 29.500) e a conferência de F21 a F31 no free5GC v4.3.0, em que os onze continuam presentes.
+
+O registro do DV-19 não é preciso: pelo Q8, o NEF deixa de repassar o `anonInd` no MVP-15.

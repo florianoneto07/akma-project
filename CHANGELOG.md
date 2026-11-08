@@ -3,10 +3,12 @@
 ## [Não lançado]
 
 ### MVP-14 — Revisão dos desvios e das normas (06 a 08/11/2026)
-- **Proposta:** a primeira passada, no plano, com os pontos Q1 a Q15; decididos pelo responsável em 08/11/2026, salvo o Q3, o Q6 e o Q13, que pediram explicação.
-- **Segunda passada:** `docs/conformidade/revisao-das-normas.md`, a tabela de conformidade com os 1.391 parágrafos com *shall* ou *should* de 19 normas, nas versões mais recentes; os achados 11 a 15, a decidir (Q16 a Q20).
+- **Proposta:** a primeira passada, no plano, com os pontos Q1 a Q15, decididos pelo responsável em 08/11/2026; o Q3, o Q6 e o Q13 depois da explicação, com as recomendações aceitas. MVP-14 concluído na mesma data.
+- **Segunda passada:** `docs/conformidade/revisao-das-normas.md`, a tabela de conformidade com os 1.391 parágrafos com *shall* ou *should* de 19 normas, nas versões mais recentes; os achados 11 a 15, decididos como propostos (Q16 a Q20).
+- **free5GC v4.3.0:** F21 a F31 conferidos pela leitura do código no GitHub; os onze continuam presentes (Q13).
+- **MVP-15:** o escopo na seção 5 do plano, a propor: as correções curtas do Q8, os achados 11 a 14 e a correção do DV-3, do DV-4 e do DV-17.
 - **Normas:** `docs/defects/propostas-para-a-norma.md`, as opções de texto para cada defeito (Q4); D-AL a D-AO e o D-AE ampliado no registro de defeitos.
-- **Registros:** a decisão de cada desvio em `desvios.md`, com o DV-15 e o DV-16 ampliados e o DV-18 com TS 33.310 §7.1; F28 a F30 em `correcoes-free5gc.md`; a matriz na revisão 12; as versões em `especificacoes.md`.
+- **Registros:** a decisão de cada desvio em `desvios.md`, com o DV-15 e o DV-16 ampliados, o DV-18 com TS 33.310 §7.1, a correção do DV-3, do DV-4 e do DV-17 aprovada para o MVP-15, a `D0 02` do DV-10 mantida e o DV-9 sem servidor de autorização; F28 a F31 em `correcoes-free5gc.md`; a matriz na revisão 12; as versões em `especificacoes.md`.
 - Nenhum código, *patch* ou VM alterados.
 
 ### MVP-11 — O NEF com o AF de fora e com o CCF, fase (c) (06/11/2026)

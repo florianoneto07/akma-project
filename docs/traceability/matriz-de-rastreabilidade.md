@@ -163,7 +163,7 @@ Evidências: os grupos R1s e S da execução `20261106-170311` de `af/scripts/e2
 | Etapa | Cláusula | Implementação | Evidência | Estado |
 |---|---|---|---|---|
 | TLS mútuo em toda a SBI, com os certificados no perfil | 33.501 13.1.0; 33.310 6.1.3c.3, 6.1.4a; 33.210 6.2 | `make-sba-certs.sh`; `openapi/0005`; os *patches* `*-sbi-tls`; `free5gc/aanf` | [S01] a [S05]; `TestOwnCertificate`, `TestIdentity` | **Verificado** — DV-1 encerrado |
-| Nomes da SBI: FQDN no perfil, SNI, conferência do nome | 33.310 6.1.3c.3; RFC 6066 3 | `openapi/0005`; os *patches* `*-sbi-tls` | [S04], [S08.name], [S08.ca], [S09]; `TestServerName`, `TestServerOfAnotherCA` | **Verificado** — DV-17 |
+| Nomes da SBI: FQDN no perfil, SNI, conferência do nome | 33.310 6.1.3c.3; RFC 6066 3 | `openapi/0005`; os *patches* `*-sbi-tls` | [S04], [S08.name], [S08.ca], [S09]; `TestServerName`, `TestServerOfAnotherCA` | **Verificado** — DV-17, a encerrar no MVP-15 |
 | CRL em cada ponta, com falha fechada | 33.310 6.1a, 6.3.1, 7.1 | `openapi/0005` (`sbitls/crl.go`); `free5gc/crl` | [R1.crl], [S06], [S07]; `TestRevocation`, `TestCrlFetchedOncePerUri` | **Verificado** — DV-18 |
 | Nenhum segredo do TLS em arquivo | plano, T6 | `util/0001` | [S19.free5gc], [S19.key-log], [S19.af] | **Verificado** — F22 |
 | NRF confere o pedido de *token*, o registro e a descoberta pelo certificado | 33.501 13.3.1.3, 13.4.1.1.2 passo 2; 29.510 5.4.2.2.1 | `nrf/0005` | [S10] | **Verificado** |
@@ -187,7 +187,7 @@ Evidências: os grupos R1s e S da execução `20261106-170311` de `af/scripts/e2
 | Derivação de K_AKMA — FC `0x80` | TS 33.535 V19.0.0 | A.2 | `shared/akma/derive/derive.go` | `vectors_test.go`, `shared/crosscheck` | **Implementado** (MVP-0) |
 | Derivação de A-TID — FC `0x81` | TS 33.535 V19.0.0 | A.3 | `shared/akma/derive/derive.go` | `vectors_test.go`, `shared/crosscheck` | **Implementado** (MVP-0) |
 | Derivação de K_AF — FC `0x82` | TS 33.535 V19.0.0 | A.4 | `shared/akma/derive/derive.go` | `vectors_test.go`, `shared/crosscheck` | **Implementado** (MVP-0) |
-| SUPI como P0/P1, sem prefixo `imsi-` | TS 33.501 V19.7.0 | A.7.0 | `shared/akma/supi/supi.go` | `supi_test.go`, `derive_test.go`; contraexemplo nos vetores | **Implementado** (MVP-0); só IMSI (DV-3) |
+| SUPI como P0/P1, sem prefixo `imsi-` | TS 33.501 V19.7.0 | A.7.0 | `shared/akma/supi/supi.go` | `supi_test.go`, `derive_test.go`; contraexemplo nos vetores | **Implementado** (MVP-0); só IMSI (DV-3; os quatro tipos no MVP-15) |
 
 ## Identificadores
 
@@ -270,7 +270,7 @@ Evidências: os grupos R1s e S da execução `20261106-170311` de `af/scripts/e2
 | Opção `akma` na configuração do UE | — | — | idem; `0002-free5gc-ue-akma.patch` | VM: sem a opção, nenhuma derivação | **Implementado** (MVP-3a) — decisão do plano |
 | K_AF no ME, sob demanda, para um AF_ID | TS 33.535 V19.0.0; TS 33.220 V19.1.0 | 6.2.1 passo 1; A.4; Anexo H | `0003-akma-kaf-nr-cli-selftest.patch` (`keys::CalculateKAf`) | `nr-akma-selftest`; Ua\* com a K_AF do UE (`docs/af-side/teste-ue.md`) | **Implementado** (MVP-4) |
 | Aplicações do UE sem acesso à K_AKMA; cada uma só com a K_AF dos seus AF_IDs | TS 33.535 V19.0.0 | 4.4.3 | serviço de chaves do ME (`0005-akma-key-service.patch`); `akma-kaf` do `nr-cli` só com `akmaCliKaf` | [R2k], [R2t.me] (revisão 6) | **Verificado** (MVP-8) — antes, no MVP-4, o `nr-cli` entregava a K_AF a qualquer processo local |
-| FQDN do AF em UTF-8 com NFKC na K_AF | TS 33.220 V19.1.0 | B.2.1.2 | ME recusa FQDN não ASCII | `nr-akma-selftest` (vetores de NFKC) | **Implementado** (MVP-4) — DV-4 |
+| FQDN do AF em UTF-8 com NFKC na K_AF | TS 33.220 V19.1.0 | B.2.1.2 | ME recusa FQDN não ASCII | `nr-akma-selftest` (vetores de NFKC) | **Implementado** (MVP-4) — DV-4; o NFKC no MVP-15 |
 | Cliente Ua\* do UE pelo plano de usuário | TS 33.535 V19.0.0 | 6.2.1 passo 1 | `af/ue/uaclient/` (`-me-socket`, `-profile`, `-bind`), `af/scripts/ue-netns.sh` | `teste-ue.md` §2 e §3; [R2t] | **Verificado** (MVP-4; perfis TLS no MVP-8) — D5 |
 
 ## Logs
@@ -310,7 +310,7 @@ Evidências: os grupos R1s e S da execução `20261106-170311` de `af/scripts/e2
 
 ## Revisão do MVP-14 e o que fica de lado (revisão 12)
 
-Fonte: a revisão dos desvios e a primeira passada no plano (MVP-14), e a segunda passada em `docs/conformidade/revisao-das-normas.md`, a tabela de conformidade com os 1.391 parágrafos com *shall* ou *should* das cláusulas que tocam o projeto, lidos nas versões mais recentes em 06/11/2026. As decisões do responsável de 08/11/2026 estão em `desvios.md` ("Revisão do MVP-14"). Os achados 11 a 15 esperam decisão (plano, Q16 a Q20).
+Fonte: a revisão dos desvios e a primeira passada no plano (MVP-14), e a segunda passada em `docs/conformidade/revisao-das-normas.md`, a tabela de conformidade com os 1.391 parágrafos com *shall* ou *should* das cláusulas que tocam o projeto, lidos nas versões mais recentes em 06/11/2026. As decisões do responsável de 08/11/2026 estão em `desvios.md` ("Revisão do MVP-14"). Na mesma data, os achados 11 a 14 entraram no MVP-15, com o F31, e o achado 15 ficou com o Q10 (plano, Q16 a Q20).
 
 TS 33.535 V19.0.0, cláusula por cláusula:
 
@@ -320,7 +320,7 @@ TS 33.535 V19.0.0, cláusula por cláusula:
 | §4.1, §4.6 | cenários com *roaming* | Pendente | os três cenários com *roaming* | DV-2; MVP-16, só com uma VPLMN |
 | §4.2.2 a §4.2.5, §4.3, §4.5 | papéis das NFs; interfaces | **Verificado** | — | — |
 | §4.4.0, §4.4.1, §4.4.3 | requisitos de segurança, do Ua\* e do UE | **Verificado** | — | — |
-| §4.4.2 | A-KID | **Parcial** | o AF achar o AAnF pelo A-KID | achado 11 (Q16) |
+| §4.4.2 | A-KID | **Parcial** | o AF achar o AAnF pelo A-KID | MVP-15 (achado 11) |
 | §4.7 | *Authentication Proxy* | Pendente | opcional | sob demanda |
 | §5 | chaves e vida das chaves | **Verificado** | — | — |
 | §6.1 | K_AKMA depois da autenticação primária | **Verificado** | o EAP-AKA' só no banco de testes; o EAP-TLS, que o free5GC não tem | — |
@@ -328,13 +328,13 @@ TS 33.535 V19.0.0, cláusula por cláusula:
 | §6.2.1 passos 3 e 4 | GPSI pelo UDM | Pendente | — | MVP-10 |
 | §6.2.1 passos 5 e 6 | subscrição do estado de *roaming* | **Desvio DV-2** | — | MVP-16, só com uma VPLMN |
 | §6.2.2 | acesso anônimo | **Verificado** | — | — |
-| §6.3 | K_AF via NEF | **Parcial** | o GPSI; o *roaming*; o `anonInd` repassado; a HPLMN pelo A-KID | MVP-10; DV-2; MVP-15 (achado 2); achado 11 (Q16) |
+| §6.3 | K_AF via NEF | **Parcial** | o GPSI; o *roaming*; o `anonInd` repassado; a HPLMN pelo A-KID | MVP-10; DV-2; MVP-15 (achados 2 e 11) |
 | §6.4, §6.5, §6.6 | troca de chaves; iniciação; remoção | **Verificado** | o OAM é o `seed remove` | — |
 | §6.7 | descoberta do AAnF | **Parcial** | o Routing Indicator padrão; o SCP; vários conjuntos de AAnF | MVP-15 (achado 1); sob demanda |
 | §6.8, §7.1.6, §7.3.3 | aviso de serviço desligado | Pendente | — | depende do DV-2 |
 | §7.1, §7.3, §7.4 | serviços do AAnF, do NEF e do UDM | **Parcial** | `Nudm_SDM_Get`; `Nudm_EventExposure_Subscribe`; `ServiceDisableNotification` | MVP-10; DV-2 |
-| Anexo A | derivações | **Verificado** | SUPI de outros tipos; NFKC no ME | DV-3, DV-4 (Q6) |
-| Anexo B | perfis TLS | **Verificado** | — | DV-5, DV-6; DV-10: `D0 02` (Q6), OCSP (MVP-18) |
+| Anexo A | derivações | **Verificado** | SUPI de outros tipos; NFKC no ME | DV-3 e DV-4, MVP-15 |
+| Anexo B | perfis TLS | **Verificado** | — | DV-5, DV-6; DV-10: `D0 02` mantida, OCSP no MVP-18 |
 | Anexo C | DTLS | **Verificado** | — | DV-11 |
 | Anexo D | OSCORE | **Verificado** | — | — |
 
@@ -343,15 +343,15 @@ As normas que TS 33.535 chama e as que o projeto também implementa:
 | Norma | O que fica de lado | Onde se trata |
 |---|---|---|
 | TS 33.501 | EAP-TLS; acesso não 3GPP; troca das chaves AS; SEPP, N32, SCP e CCA; *tokens* em *roaming*; vários NRF; o OCSP *stapling* do perfil TLS | fora do escopo; MVP-18 |
-| TS 29.535 | `Naanf_AKMA_Notify`; `RoamingRestriction`; `AKMA_GPSI_Support`; os cabeçalhos de TS 29.500 | DV-2; MVP-10; achado 14 (Q19) |
+| TS 29.535 | `Naanf_AKMA_Notify`; `RoamingRestriction`; `AKMA_GPSI_Support`; os cabeçalhos de TS 29.500 | DV-2; MVP-10; MVP-15 e F31 (achado 14) |
 | TS 29.522 | a notificação ao AF; o GPSI; CAPIF-5 | DV-2; MVP-10; DV-14 |
 | TS 29.503 | `id-translation-result` de SUPI para GPSI; `ROAMING_STATUS` por SUPI | F10, MVP-10; F30, DV-2 |
 | TS 24.109 e TS 33.220 | o `realm`, a RFC 3310 e o NFKC no ME | DV-6, DV-5 e DV-4 |
-| TS 33.222 | o certificado do AF do K.2 fora de TS 33.310 §6.1.1 | achado 12 (Q17) |
+| TS 33.222 | o certificado do AF do K.2 fora de TS 33.310 §6.1.1 | MVP-15 (achado 12) |
 | TS 33.122, TS 23.222 e TS 29.222 | eventos, revogação, *logs* e auditoria; atualização da publicação e da entrada; entrada com aprovação; troca do método; métodos 1 e 2; CAPIF-5; ocultação; interconexão; RNAA | MVP-17; DV-14 |
-| TS 33.210 | OCSP *stapling*; `D0 02`; `x5t#S256` do CCF | MVP-18; Q6; MVP-15 |
-| TS 33.310 | OCSP; LDAPv3; inscrição automática; o certificado do AF do K.2 | MVP-18; sob demanda; achado 12 |
-| TS 29.510 | *heart-beat*; `retrieve-key`; reuso da descoberta; OPTIONS antes do registro | F29 e F28, MVP-15; achado 13 (Q18) |
-| TS 29.500 | `User-Agent`, `Server` e `3gpp-Sbi-*` | achado 14 (Q19) |
+| TS 33.210 | OCSP *stapling*; `D0 02`; `x5t#S256` do CCF | MVP-18; DV-10, mantida; MVP-15 |
+| TS 33.310 | OCSP; LDAPv3; inscrição automática; o certificado do AF do K.2 | MVP-18; sob demanda; MVP-15 (achado 12) |
+| TS 29.510 | *heart-beat*; `retrieve-key`; reuso da descoberta; OPTIONS antes do registro | F29 e F28, MVP-15; MVP-15 (achado 13) |
+| TS 29.500 | `User-Agent`, `Server` e `3gpp-Sbi-*` | MVP-15, nos pedidos ao AAnF e nas respostas do AAnF e do CCF; F31, com o *upstream* |
 | TS 29.122 | as notificações; o *upgrade* do HTTP | DV-2; DV-15 |
-| TS 23.003 | o Routing Indicator padrão; SUPI de outros tipos | achado 1; DV-3 |
+| TS 23.003 | o Routing Indicator padrão; SUPI de outros tipos | MVP-15 (achado 1; DV-3) |

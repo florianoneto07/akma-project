@@ -1,6 +1,6 @@
 # Correções do free5GC para o AKMA
 
-**Criado em:** 19 de outubro de 2026 · **Atualizado em:** 8 de novembro de 2026 (F28 a F30: revisão do MVP-14); 6 de novembro de 2026 (F13 e F27: fase (c) do MVP-11); 5 de novembro de 2026 (F4, F5, F12, F14, F23, F25 e F26: fase (b) do MVP-11); 4 de novembro de 2026 (F21, F22, F24 e parte de F25: fase (a) do MVP-11; F26 e os estados de F4, F5, F12 e F24: especificação do MVP-11 aprovada); 2 de novembro de 2026 (F21 a F25, MVP-11; F13: o CAPIF verificado no laboratório); 30 de outubro de 2026 (F13: o CCF e o NEF feitos); 29 de outubro de 2026 (F13: MVP-9 aprovado); 28 de outubro de 2026 (F16 a F20, MVP-12; conferência no free5GC v4.3.0, MVP-13) · **Base:** free5GC v4.2.3 (NRF v1.4.5, UDM, AUSF e AMF v1.4.5, NEF v1.2.5, `openapi` v1.2.4)
+**Criado em:** 19 de outubro de 2026 · **Atualizado em:** 8 de novembro de 2026 (F28 a F31 e a conferência de F21 a F31 no free5GC v4.3.0: revisão do MVP-14); 6 de novembro de 2026 (F13 e F27: fase (c) do MVP-11); 5 de novembro de 2026 (F4, F5, F12, F14, F23, F25 e F26: fase (b) do MVP-11); 4 de novembro de 2026 (F21, F22, F24 e parte de F25: fase (a) do MVP-11; F26 e os estados de F4, F5, F12 e F24: especificação do MVP-11 aprovada); 2 de novembro de 2026 (F21 a F25, MVP-11; F13: o CAPIF verificado no laboratório); 30 de outubro de 2026 (F13: o CCF e o NEF feitos); 29 de outubro de 2026 (F13: MVP-9 aprovado); 28 de outubro de 2026 (F16 a F20, MVP-12; conferência no free5GC v4.3.0, MVP-13) · **Base:** free5GC v4.2.3 (NRF v1.4.5, UDM, AUSF e AMF v1.4.5, NEF v1.2.5, `openapi` v1.2.4)
 
 Registro de tudo o que o projeto encontrou no free5GC e que precisa mudar para o AKMA funcionar conforme a norma. Pedido do responsável em 19/10/2026: este registro vai para o repositório público (MVP-7, plano seção 5). A regra de cada entrada:
 
@@ -44,12 +44,13 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
 | F28 | NRF | sem `Nnrf_AccessToken_RetrieveKey` | não corrigido; proposto para o MVP-15 |
 | F29 | todas as NFs, NRF | sem *heart-beat* | não corrigido; o AAnF, código do projeto, proposto para o MVP-15 |
 | F30 | UDM | sem o evento `ROAMING_STATUS` por SUPI | não corrigido; fica com o DV-2, até haver uma VPLMN |
+| F31 | todas as NFs, `openapi` | sem o `User-Agent` com o tipo de NF, sem o `Server` nas respostas de erro e sem os cabeçalhos `3gpp-Sbi-*` | não corrigido; o MVP-15 corrige os pedidos ao AAnF e as respostas do AAnF e do CCF; o resto, com o *upstream* |
 
-### Conferência no free5GC v4.3.0 (28/10/2026)
+### Conferência no free5GC v4.3.0 (28/10/2026; F21 a F31 em 08/11/2026)
 
 Ponto L6 do MVP-13: antes de publicar, cada item conferido na versão mais recente do free5GC. A v4.3.0 saiu em 30/09/2026. Ela fixa o NRF em `4522e4a9`, o UDM em `ba18ef3b`, o AUSF em `b693e38a`, o AMF em `9fc0ac3f`, o NEF em `6cd30f51`, a *webconsole* em `c40b94b6` e o `openapi` v1.3.0 em todas, e traz uma NF nova, o SCP. Fonte: os arquivos dessas versões no GitHub, lidos em 28/10/2026.
 
-**Os vinte itens continuam presentes na v4.3.0.** Os *patches* do projeto seguem para a v4.2.3; portá-los à v4.3.0 é do item *Upstream* do plano. F21 a F27, do MVP-11, e F28 a F30, do MVP-14, foram conferidos só na v4.2.3. O que se conferiu em cada item:
+**Os vinte itens continuam presentes na v4.3.0.** Os *patches* do projeto seguem para a v4.2.3; portá-los à v4.3.0 é do item *Upstream* do plano. O que se conferiu em cada item:
 
 | Item | Na v4.3.0 |
 |---|---|
@@ -65,20 +66,36 @@ Ponto L6 do MVP-13: antes de publicar, cada item conferido na versão mais recen
 | F14 | `DeregisterNFInstance` ainda pede o *token* de `nnrf-nfm` com `Nrf_NFMgmt_NFType_NEF` |
 | F18, F19, F20 | o AMF não registra `reauthNotifyCallbackUri`, não tem a rota e exige o *token* `namf-callback` em todos os *callbacks*; o UDM ainda pede o *token* de `nudm-uecm` para notificar o desregistro |
 
+**F21 a F31 (08/11/2026; MVP-14, ponto Q13).** Conferidos na mesma v4.3.0: as NFs acima nos mesmos *commits*; o SMF em `1c9d7662`, o PCF em `eb57557f`, o UDR em `db69aa0e`, o NSSF em `c1092f6f`, o CHF em `4e06244b`, o BSF em `504e4001` e o SCP em `04d79c73`. Todas usam o `openapi` v1.3.0 e o `util` v1.4.0. Fonte: os arquivos dessas versões no GitHub, lidos em 08/11/2026. **Os onze itens continuam presentes na v4.3.0.**
+
+| Item | Na v4.3.0 |
+|---|---|
+| F21 | `NewHttp2Client` (`client.go`) ainda usa `InsecureSkipVerify: true` e não apresenta certificado de cliente; o cliente IMS do UDR (`udr/imsDR`) passa pelo mesmo `CallAPI`. Com `oauth: true` e `https`, o NRF ainda exige o certificado do cliente (`configureOAuthMutualTLS`) |
+| F22 | `httpwrapper.NewHttp2Server` ainda põe `KeyLogWriter` quando recebe o caminho, e as NFs e o servidor de métricas o recebem do `-l` |
+| F23 | o NRF ainda assina com `RS512` (`processor/access_token.go`, `context.go`), sem `kid`; `VerifyOAuth` ainda só aceita `RS512` |
+| F24 | nenhuma NF põe o `fqdn` no próprio perfil; o `Url` do AUSF ainda sai do IP; `SearchNFServiceUri` (AMF, UDM) ainda devolve o `fqdn` sem esquema nem porta; o NEF põe o esquema, sem a porta; `GetNFServiceUri` ainda prefere o `apiPrefix` |
+| F25 | `oauth.GenerateCertificate` ainda gera RSA 2048, 10 anos, `C=TW … O=free5gc`; o pedido de *token* ainda confere o arquivo gerado (`GetNFCertPath`), e não o certificado da sessão, e só avisa em *"unknown authority"* |
+| F26 | `Nrf_NfInstanceID` ainda não é preenchido em lugar nenhum: o `iss` e o URI do certificado do NRF saem vazios |
+| F27 | `AccessTokenScopeCheck` ainda confere um perfil só, de `RestfulAPIGetOne` com `{"nfType": …}` |
+| F28 | `api_accesstoken.go` ainda só tem `/oauth2/token` |
+| F29 | nenhuma NF chama `UpdateNFInstance` no próprio perfil; o NRF só confere a faixa do `heartBeatTimer` (`nf_profile_validation.go`, de 1 a 3600 s, como na v4.2.3) e não suspende NF alguma |
+| F30 | `CreateEeSubscriptionProcedure` ainda aceita só `msisdn-`, `extid-`, `extgroupid-` e `anyUE`, com 400 `MANDATORY_IE_INCORRECT` para o resto; o UDM não gera relatório de evento: `notifier.go` só tem a mudança de dados e o desregistro |
+| F31 | nenhuma NF chama `SetUserAgent`, e os clientes gerados mandam `OpenAPI-Generator/1.0.0/go`; nenhuma NF põe o `Server`; nenhuma NF trata `3gpp-Sbi-*`, e só os clientes gerados leem `3gpp-Sbi-Target-Nf-Id` nas respostas 307 e 308. O SCP, novo na v4.3.0, também não trata esses cabeçalhos |
+
 ### Por repositório do free5GC
 
 Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<repositório>`):
 
 | Repositório | Itens | *Patches* do projeto |
 |---|---|---|
-| `nrf` | F1, F2, F3, F4, F15, F23, F24, F25, F26, F27, F28, F29 | `nrf/0001` a `0003` (F1 a F3); `nrf/0004` (F24); `nrf/0005` (F4, F23, F25, F26) |
-| `openapi` | F5, F6, F16, F21, F23, F24, F25 | `openapi/0001` a `0003` (F6, F16); `openapi/0004`, os modelos e clientes do CAPIF (F13); `openapi/0005` (F21, F24); `openapi/0006` (F5, F12, F23) |
+| `nrf` | F1, F2, F3, F4, F15, F23, F24, F25, F26, F27, F28, F29, F31 | `nrf/0001` a `0003` (F1 a F3); `nrf/0004` (F24); `nrf/0005` (F4, F23, F25, F26) |
+| `openapi` | F5, F6, F16, F21, F23, F24, F25, F31 | `openapi/0001` a `0003` (F6, F16); `openapi/0004`, os modelos e clientes do CAPIF (F13); `openapi/0005` (F21, F24); `openapi/0006` (F5, F12, F23) |
 | `util` | F22 | `util/0001` (F22) |
-| `udm` | F7, F10, F17, F20 (a notificação de desregistro), F24, F29, F30 | `udm/0001`, `udm/0002` (F7, F17); `udm/0003` (F24) |
-| `ausf` | F8, F24, F29 | `ausf/0001`; `ausf/0002` (F24) |
-| `amf` | F18, F19, F20 (a verificação de *token* nos *callbacks*), F24, F29 | `amf/0001` (F18, F19); `amf/0002` (F24) |
-| `nef` | F11, F12, F13, F14, F24, F29 | `nef/0001` (F11), `nef/0002` (F13, o CAPIF); `nef/0003` (F24); `nef/0004` (F14) |
-| `smf`, `pcf`, `udr`, `nssf`, `chf`, `bsf` | F24, F29 | `smf/0001`, `pcf/0001`, `udr/0001`, `nssf/0001`, `chf/0001`, `bsf/0001` (F24) |
+| `udm` | F7, F10, F17, F20 (a notificação de desregistro), F24, F29, F30, F31 | `udm/0001`, `udm/0002` (F7, F17); `udm/0003` (F24) |
+| `ausf` | F8, F24, F29, F31 | `ausf/0001`; `ausf/0002` (F24) |
+| `amf` | F18, F19, F20 (a verificação de *token* nos *callbacks*), F24, F29, F31 | `amf/0001` (F18, F19); `amf/0002` (F24) |
+| `nef` | F11, F12, F13, F14, F24, F29, F31 | `nef/0001` (F11), `nef/0002` (F13, o CAPIF); `nef/0003` (F24); `nef/0004` (F14) |
+| `smf`, `pcf`, `udr`, `nssf`, `chf`, `bsf` | F24, F29, F31 | `smf/0001`, `pcf/0001`, `udr/0001`, `nssf/0001`, `chf/0001`, `bsf/0001` (F24) |
 | `webconsole` | F9 | — (*script* `provision-akma-subscriber.sh`) |
 | `free5gc` (configuração, `run.sh`, banco de testes) | integração sem cláusula (abaixo) | `config/`, `run/`, `test/` |
 
@@ -400,6 +417,20 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
   TS 33.535 §6.2.1 passos 5 e 6 são o uso pelo AAnF.
 - **Como deve ser.** O UDM aceita a subscrição por SUPI, responde com o estado corrente, tirado do registro do AMF (a PLMN do GUAMI contra a HPLMN do SUPI), e notifica quando o registro muda de PLMN.
 - **No projeto.** Não corrigido: o DV-2 fica até haver uma VPLMN (MVP-14, Q5, opção c).
+
+## F31 — Sem os cabeçalhos de TS 29.500
+
+- **O que o free5GC faz.** `[FREE5GC]` Na v4.2.3 e na v4.3.0:
+  - nenhuma NF chama `SetUserAgent`, e os pedidos saem com o `User-Agent` padrão dos clientes gerados do `openapi`, `OpenAPI-Generator/1.0.0/go`, sem o tipo de NF;
+  - nenhuma NF põe o `Server` nas respostas de erro;
+  - nenhuma NF manda nem lê os cabeçalhos `3gpp-Sbi-*`; só os clientes gerados leem `3gpp-Sbi-Target-Nf-Id` nas respostas 307 e 308.
+- **Onde a norma diz.** `[3GPP]` TS 29.500 V20.0.0:
+  - tab. 5.2.2.2-1, `User-Agent`: *"This header shall be mainly used to identify the NF type of the HTTP/2 client. This header should be included in every HTTP/2 request sent over any SBI"*; *"The pattern of the content should start with the value of NF type (e.g. "UDM", see NOTE 1) … and followed by a "-" and any other specific information if needed afterwards."* NOTA 1: *"The value of NF type in the User-Agent header shall comply with the enumeration value (case insensitive) of Table 6.1.6.3.3-1 in TS 29.510"*;
+  - tab. 5.2.2.2-1, `Server`: *"This header should be inserted by the originator of an HTTP error response (see clause 6.10.8)."*, com o formato *"<NFType>-<NF Instance ID>"* para uma NF;
+  - §5.2.3.2.1: *"The 3GPP NF Services shall support the HTTP custom headers specified in Table 5.2.3.2.1-1 below."* Na tabela, o `3gpp-Sbi-Callback` *"should also be included in the HTTP POST message of any event notification request for direct communications"*, e, do `3gpp-Sbi-NF-Peer-Info`: *"The HTTP client and server should include this header in every HTTP request and response messages."* A maioria dos outros só tem papel com SCP, SEPP, redirecionamento ou *binding*;
+  - TS 29.535 §5.1.2.3 repete o *shall* para o AAnF.
+- **Como deve ser.** Cada NF manda o `User-Agent` com o seu tipo e põe o `Server` nas respostas de erro, no formato da tabela. Na comunicação direta, trata os cabeçalhos da tab. 5.2.3.2.1-1 como ela pede: o `3gpp-Sbi-Callback` nas notificações de evento, o `3gpp-Sbi-NF-Peer-Info` nos pedidos e nas respostas, e o `3gpp-Sbi-Message-Priority` quando houver prioridade a passar.
+- **No projeto.** Não corrigido. O MVP-15 (MVP-14, achado 14, ponto Q19) põe o `User-Agent` com o tipo de NF nos pedidos do AUSF, do NEF e do AF ao AAnF, e o `Server` nas respostas de erro do AAnF e do CCF. O AAnF já manda `AANF-<NF Instance ID>` ao UDM. O resto vale para todas as NFs do free5GC e fica com o *upstream*.
 
 ---
 
