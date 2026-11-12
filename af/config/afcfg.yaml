@@ -58,7 +58,8 @@ configuration:
   # (answer 403 KAF_EXPIRED) (TS 33.535 cl. 6.4.2).
   kafExpiry: refetch
   # AAnF apiRoot, locally configured (TS 33.535 cl. 6.7). The AAnF authorizes
-  # this AF_ID from this machine's address (akma.authorizedAfs of aanfcfg.yaml).
+  # each AF_ID for the NF instance of the certificate of sbiTls
+  # (akma.authorizedAfs of aanfcfg.yaml).
   aanfUri: https://aanf.5gc.mnc093.mcc208.3gppnetwork.org:8010
   # NF instance ID of this AF: the one of its certificate (TS 33.310 cl. 6.1.3c.3).
   nfInstanceId: 2170454b-4cfa-406a-a77c-2137042b54b4

@@ -108,7 +108,7 @@ index 0000000..78ee9e1
 +}
 +
 +// distributionPoint is the HTTP URI of the CRL distribution point of a
-+// certificate; only HTTP is supported (TS 33.310 cl. 6.1a; DV-18).
++// certificate; only HTTP is supported (TS 33.310 cl. 6.1a).
 +func distributionPoint(cert *x509.Certificate) string {
 +	for _, uri := range cert.CRLDistributionPoints {
 +		if strings.HasPrefix(uri, "http://") {
@@ -508,7 +508,7 @@ index 0000000..bed3691
 +
 +// profile is the TLS profile of both ends (TS 33.210 cl. 6.2): TLS 1.3 and
 +// 1.2, and in TLS 1.2 only ECDHE with AEAD. The list has the suites that
-+// RFC 9113 cl. 9.2.2 requires. Not with OCSP stapling: DV-10.
++// RFC 9113 cl. 9.2.2 requires. No OCSP stapling: revocation is by CRL.
 +func profile() *tls.Config {
 +	return &tls.Config{
 +		MinVersion: tls.VersionTLS12,

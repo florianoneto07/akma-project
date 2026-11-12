@@ -50,7 +50,7 @@ index be18aba..40018e4 100644
      apfId: nef-apf
 @@ -74,4 +50,5 @@ configuration:
      invokerCa: cert/ccf-ca.pem # client certificates on CAPIF-2e (TS 33.122 cl. 6.5.2.3 step 5)
--    invokerCrl: false # they have no CRL distribution point yet (DV-16)
+-    invokerCrl: false # they have no CRL distribution point yet
 -    allowNrfTokens: true # 3gpp-akma also without CAPIF, with access tokens of the NRF (TS 29.522 cl. 6)
 +    invokerCrl: true # the CCF signs the CRL of their CA (TS 33.310 cl. 6.3.1)
 +    invokerCrlMaxAge: 5s # how soon the NEF sees that an API invoker offboarded (TS 33.122 cl. 6.8)

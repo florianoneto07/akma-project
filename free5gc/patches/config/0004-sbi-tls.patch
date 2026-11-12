@@ -13,7 +13,7 @@ index dccb1ae..b0b9830 100644
    sbi:
 -    scheme: http # the protocol for sbi (http or https)
 +    scheme: https # the protocol for sbi (http or https)
-+    fqdn: amf1.amf.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address (DV-17)
++    fqdn: amf1.amf.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address
      registerIPv4: 127.0.0.18 # IP used to register to NRF
 @@ -17,4 +19,5 @@ configuration:
      tls: # the local path of TLS key
@@ -38,7 +38,7 @@ index 1ec16b5..fc97683 100644
    sbi: # Service-based interface information
 -    scheme: http # the protocol for sbi (http or https)
 +    scheme: https # the protocol for sbi (http or https)
-+    fqdn: ausf.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address (DV-17)
++    fqdn: ausf.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address
      registerIPv4: 127.0.0.9 # IP used to register to NRF
 @@ -11,7 +13,8 @@ configuration:
      tls: # the local path of TLS key
@@ -67,7 +67,7 @@ index 5f3d5fb..b8683c6 100644
    sbi: # Service-based interface information
 -    scheme: http # the protocol for sbi (http or https)
 +    scheme: https # the protocol for sbi (http or https)
-+    fqdn: bsf.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address (DV-17)
++    fqdn: bsf.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address
      registerIPv4: 127.0.0.15 # IP used to register to NRF
 @@ -12,5 +14,6 @@ configuration:
      tls: # the local path of TLS key
@@ -89,7 +89,7 @@ index 72dbd5d..72c699f 100644
    sbi: # Service-based interface information
 -    scheme: http # the protocol for sbi (http or https)
 +    scheme: https # the protocol for sbi (http or https)
-+    fqdn: chf.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address (DV-17)
++    fqdn: chf.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address
      registerIPv4: 127.0.0.113 # IP used to register to NRF
 @@ -12,5 +14,6 @@ configuration:
      tls: # the local path of TLS key
@@ -111,7 +111,7 @@ index 293368b..47e3397 100644
    sbi:
 -    scheme: http # The protocol for sbi (http or https)
 +    scheme: https # The protocol for sbi (http or https)
-+    fqdn: nef.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address (DV-17)
++    fqdn: nef.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address
      registerIPv4: 192.168.16.130 # IP used to register to NRF; reachable from the external AF (AKMA, TS 33.535 cl. 6.3)
 @@ -11,5 +13,6 @@ configuration:
      tls: # the local path of TLS key
@@ -138,7 +138,7 @@ index 293368b..47e3397 100644
        port: 8000
      invokerInfoLifetime: 10m # how long the NEF keeps the data of an API invoker
 +    invokerCa: cert/ccf-ca.pem # client certificates on CAPIF-2e (TS 33.122 cl. 6.5.2.3 step 5)
-+    invokerCrl: false # they have no CRL distribution point yet (DV-16)
++    invokerCrl: false # they have no CRL distribution point yet
      allowNrfTokens: true # 3gpp-akma also without CAPIF, with access tokens of the NRF (TS 29.522 cl. 6)
 diff --git a/nrfcfg.yaml b/nrfcfg.yaml
 index b4b0264..21e35ba 100644
@@ -150,7 +150,7 @@ index b4b0264..21e35ba 100644
    sbi: # Service-based interface information
 -    scheme: http # the protocol for sbi (http or https)
 +    scheme: https # the protocol for sbi (http or https)
-+    fqdn: nrf.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address (DV-17)
++    fqdn: nrf.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address
      registerIPv4: 127.0.0.10 # IP used to serve NFs or register to another NRF
 @@ -12,2 +14,6 @@ configuration:
      port: 8000 # port used to bind the service
@@ -169,7 +169,7 @@ index dbf5cec..1144578 100644
    sbi: # Service-based interface information
 -    scheme: http # the protocol for sbi (http or https)
 +    scheme: https # the protocol for sbi (http or https)
-+    fqdn: nssf.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address (DV-17)
++    fqdn: nssf.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address
      registerIPv4: 127.0.0.31 # IP used to register to NRF
 @@ -12,4 +14,5 @@ configuration:
      tls: # the local path of TLS key
@@ -237,7 +237,7 @@ index e8de44e..c490ad2 100644
    sbi: # Service-based interface information
 -    scheme: http # the protocol for sbi (http or https)
 +    scheme: https # the protocol for sbi (http or https)
-+    fqdn: pcf.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address (DV-17)
++    fqdn: pcf.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address
      registerIPv4: 127.0.0.7 # IP used to register to NRF
 @@ -12,7 +14,8 @@ configuration:
      tls: # the local path of TLS key
@@ -261,7 +261,7 @@ index d5ef899..5ecf462 100644
    sbi:
 -    scheme: http # the protocol for sbi (http or https)
 +    scheme: https # the protocol for sbi (http or https)
-+    fqdn: smf.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address (DV-17)
++    fqdn: smf.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address
      registerIPv4: 127.0.0.2 # IP used to register to NRF
 @@ -14,4 +16,5 @@ configuration:
      tls: # the local path of TLS key
@@ -286,7 +286,7 @@ index e74368e..63ff1da 100644
    sbi: # Service-based interface information
 -    scheme: http # the protocol for sbi (http or https)
 +    scheme: https # the protocol for sbi (http or https)
-+    fqdn: udm.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address (DV-17)
++    fqdn: udm.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address
      registerIPv4: 127.0.0.3 # IP used to register to NRF
 @@ -17,5 +19,6 @@ configuration:
      tls: # the local path of TLS key
@@ -308,7 +308,7 @@ index 8713ef7..9bc9cf5 100644
    sbi: # Service-based interface information
 -    scheme: http # the protocol for sbi (http or https)
 +    scheme: https # the protocol for sbi (http or https)
-+    fqdn: udr.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address (DV-17)
++    fqdn: udr.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address
      registerIPv4: 127.0.0.4 # IP used to register to NRF
 @@ -11,4 +13,5 @@ configuration:
      tls: # the local path of TLS key
