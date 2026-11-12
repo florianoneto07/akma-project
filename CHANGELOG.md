@@ -6,6 +6,7 @@
 - **Exportação:** `public/export-public.sh` leva `free5gc/ccf` e `free5gc/crl`.
 - **Comentários:** 71 linhas de 31 arquivos (código, *scripts*, configurações e *patches*) citam a cláusula ou o item F no lugar dos registros do projeto. Os *patches* mantêm o número de linhas; as 14 séries aplicam em ordem nas árvores originais, e os testes do AAnF e do CCF passam. O comentário do `aanfUri` em `af/config/afcfg.yaml` fala do certificado.
 - **Documentos públicos:** `install.md` com o CAPIF, o TLS mútuo, a atualização a partir da V2 e a ordem de uma instalação nova; `capif.md` e `sbi-tls.md` novos; `aanf.md`, `nef-akma-api.md`, `testing.md`, `free5gc-fixes.md` (F21 a F31), `3gpp-recommendations.md` (AA a AP), README e CHANGELOG da V3.
+- **Publicação:** o repositório do projeto no `github.com/florianoneto07/akma-project`; no público, o *commit* `7e4ff46`, a *tag* `v3.0.0` e o *release* V3 (*latest*), conferidos contra a exportação de `783992e`.
 - Nenhuma VM alterada.
 
 ### MVP-15 — Correções da revisão, fase (a) (12/11/2026)

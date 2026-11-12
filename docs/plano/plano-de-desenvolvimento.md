@@ -1569,13 +1569,14 @@ Revistos no MVP-15, aprovado em 12/11/2026: o Q16 pelo W8, com o AF de dentro es
 - `e2e.sh`: 333 verificações, nenhuma falha e nenhuma pulada (execução `20261112-125753`; `docs/af-side/e2e.md` §5.13), com 16 verificações novas, de G01 a G12.
 - Pendente desta fase: o `TestAkma` e o `TestRegistration` do banco de testes do free5GC, que pedem o `sudo` (critério 4). A fase (b) começa com o aval do responsável.
 
-**V3 pública (12/11/2026).** Pedido do responsável em 12/11/2026: liberar a V3 do repositório público no estado da fase (a). Feito na mesma data, à espera dos *commits* do responsável:
+**V3 pública (12/11/2026).** Pedido do responsável em 12/11/2026: liberar a V3 do repositório público no estado da fase (a). Feito e publicado na mesma data:
 
 - `public/export-public.sh` passa a levar `free5gc/ccf` e `free5gc/crl`.
 - A exportação de teste achou 71 linhas com registros do projeto (MVP-15, DV-xx, "finding", "point W", `[INTERPRETAÇÃO]`, `[MVP]`) em comentários de 31 arquivos. Cada uma passou a citar a cláusula ou o item F, sem mudar o código nem o número de linhas dos *patches*. As 14 séries aplicam em ordem nas árvores originais, as duas cópias do `openapi` se preparam, e os testes do AAnF e do CCF passam. O comentário do `aanfUri` em `af/config/afcfg.yaml` deixou de falar em endereço de origem.
 - Documentos públicos da V3: `install.md` (partes 12 a 15 e a ordem de uma instalação nova), `capif.md` e `sbi-tls.md` (novos), `aanf.md`, `nef-akma-api.md`, `testing.md`, F21 a F31 em `free5gc-fixes.md`, AA a AP em `3gpp-recommendations.md` (sem o AC, corrigido na V20.0.0), o README e o CHANGELOG.
 - **A VM .130** tem os *patches* da fase (a) com os comentários de antes da limpeza. Antes de sincronizar o repositório com ela, guardar a cópia que está lá (`cp -a ~/akma-free5gc/free5gc/patches ~/akma-v3-applied-patches`) e reverter cada série com essa cópia, como no MVP-15, fase (a).
 - Não seguida numa instalação limpa: a V3 sai com a execução `20261112-125753` do laboratório.
+- **Publicada em 12/11/2026.** No projeto, os *commits* `aa8b701` a `783992e`, enviados ao `github.com/florianoneto07/akma-project` (público, só o `main`). No repositório público, o *commit* `7e4ff46` e a *tag* `v3.0.0`, conferidos com `git ls-remote`: a árvore é idêntica à exportação de `783992e` (284 arquivos). O *release* V3 é o *latest* (12/11/2026, 20:01 UTC). O texto do *release* saiu sem a formatação Markdown, com o conteúdo e os links completos; o responsável decidiu deixar assim.
 
 **Objetivo.** Fazer, antes do MVP-10, as correções que a revisão do MVP-14 aprovou, para que o código fique igual à norma nesses pontos: os achados 1, 2 e 11 a 14; F27, F28 e o F29 do AAnF; o `x5t#S256` do DV-16; o DV-3, o DV-4 e o DV-17. Cada correção tem testes Go e verificações novas no `e2e.sh`.
 
