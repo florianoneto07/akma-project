@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Checks of the identity of the certificates in the access tokens and in the
 policies, in operation (TS 33.501 cl. 13.4.1.1.2 and 13.3.1.3; TS 29.500
-cl. 6.7.3; TS 33.535 cl. 6.2.1 step 2; TS 33.122 cl. 6.6).
+cl. 6.7.3; TS 33.535 cl. 6.2.1 step 2; TS 33.122 cl. 6.6), and of the Retrieve
+Key Request of the NRF (TS 29.510 cl. 5.4.2.3).
 
 At the NRF, at the AAnF and at the internal server of the CCF, with the test
 certificates of make-sba-certs.sh, on the free5GC host: the NRF and the CCF are
@@ -115,6 +116,49 @@ def part(jws, index):
     return json.loads(base64.urlsafe_b64decode(field + "=" * (-len(field) % 4)))
 
 
+def multipart_parts(content_type, data):
+    """The body parts of a multipart/related answer as (headers, body), and
+    its "type" parameter. Parsed by hand: the certificate is binary."""
+    params = {}
+    for p in content_type.split(";")[1:]:
+        k, _, v = p.strip().partition("=")
+        params[k.lower()] = v.strip('"')
+    if not content_type.startswith("multipart/related") or "boundary" not in params:
+        return [], ""
+    delim = b"\r\n--" + params["boundary"].encode()
+    parts = []
+    for seg in (b"\r\n" + data).split(delim)[1:]:
+        if seg.startswith(b"--"):
+            break
+        head, _, body = seg[2:].partition(b"\r\n\r\n")
+        headers = {}
+        for line in head.split(b"\r\n"):
+            k, _, v = line.decode("latin-1").partition(":")
+            headers[k.strip().lower()] = v.strip()
+        parts.append((headers, body))
+    return parts, params.get("type", "")
+
+
+def key_of(content_type, data):
+    """The certificate of a RetrieveKeyRsp in multipart (TS 29.510 cl. 6.3.3.4
+    and 6.3.5.5.2): the JSON root part first, with x509Cert, and the binary
+    part application/pkix-cert with that Content-ID."""
+    parts, root_type = multipart_parts(content_type, data)
+    if len(parts) != 2 or root_type != "application/json":
+        return None, f"{content_type.split(';')[0]}, {len(parts)} parts, type {root_type!r}"
+    (root_h, root), (bin_h, der) = parts
+    ref = as_json(root).get("x509Cert", {}).get("contentId", "")
+    if root_h.get("content-type") != "application/json" or bin_h.get("content-type") != "application/pkix-cert" \
+            or not ref or bin_h.get("content-id") != ref:
+        return None, f"parts {root_h.get('content-type')} and {bin_h.get('content-type')}, contentId {ref!r}"
+    return der, "multipart/related with application/pkix-cert"
+
+
+def retrieve_key(client, nrf, issuer, header_parameters):
+    body = json.dumps({"issuer": issuer, "headerParameters": header_parameters}).encode()
+    return client.request(nrf.server, "POST", "/oauth2/retrieve-key", body, {"Content-Type": "application/json"})
+
+
 def der_of(path):
     with open(path) as f:
         pem = f.read()
@@ -195,6 +239,29 @@ def run(all_entities, certs, nrf, ausf, af):
           and claims.get("aud") == "AANF" and claims.get("scope") == ANCHOR_KEY_SCOPES)
     report("S13", "token of the NRF: ES256, kid, x5t#S256 of its certificate; iss, the UUID of the NRF", ok,
            f"alg {header.get('alg')}, header {sorted(header)}, claims {sorted(claims)}")
+
+    # G01 to G04: the Retrieve Key Request (TS 29.510 cl. 5.4.2.3 and 6.3.4.3; TS 33.501 cl. 14.3.3; F28).
+    nrf_id = all_entities["nrf"]["id"]
+    signing = der_of(f"{certs}/nrf-token.pem")
+    s, h, d = retrieve_key(af, nrf, nrf_id, {"x5t#S256": x5t, "alg": "ES256"})
+    der, got = key_of(h.get("content-type", ""), d)
+    report("G01", "retrieve-key with the x5t#S256 of a token: 200, the signing certificate in DER, in multipart",
+           s == 200 and der == signing, f"{s} {got}")
+    s, h, d = retrieve_key(af, nrf, nrf_id, {"kid": header.get("kid", "")})
+    der, got = key_of(h.get("content-type", ""), d)
+    report("G01.kid", "retrieve-key with the kid of a token: 200, the same certificate", s == 200 and der == signing,
+           f"{s} {got}")
+    s, _, d = retrieve_key(af, nrf, nrf_id, {"kid": "not-the-key-of-the-nrf"})
+    got = as_json(d).get("cause")
+    report("G02", "a kid that is not the one of the NRF: 400 KEY_IDENTIFICATION_FAIL (table 6.3.4.3.2-2)",
+           s == 400 and got == "KEY_IDENTIFICATION_FAIL", f"{s} {got}")
+    s, _, d = retrieve_key(af, nrf, UNKNOWN_INVOKER, {"x5t#S256": x5t})
+    got = as_json(d).get("cause")
+    report("G03", "an issuer that is not the NRF: 404 UNKNOWN_ISSUER (table 6.3.4.3.2-2)",
+           s == 404 and got == "UNKNOWN_ISSUER", f"{s} {got}")
+    s, _, _ = af.request(nrf.server, "POST", "/oauth2/retrieve-key", b"issuer=" + nrf_id.encode(),
+                         {"Content-Type": "application/x-www-form-urlencoded"})
+    report("G04", "a body that is not JSON: 415 (cl. 6.3.3.2.2)", s == 415, f"{s}")
 
     # S14: the scopes per NF type (TS 29.510 table 6.1.6.2.3-1 NOTE 11; TS 29.535 table 5.1.9-1).
     s, _, d = nrf.token(ausf, "AANF", "naanf-akma naanf-akma:applicationkeyget")

@@ -12,6 +12,7 @@ Usage: nef_api.py <CCF host:port> <CA of the CCF> <onboarding credential file>
                   <NEF host:port> <AAnF host:port> <registered A-KID>
                   <directory of the certificates of the SBI>
                   <file with an access token of the NRF for 3gpp-akma>
+                  [<registered A-KID with the default Routing Indicator, "0">]
 Prints one PASS or FAIL line per test; exits 1 when any fails. No key,
 secret, credential or token is printed.
 """
@@ -46,9 +47,10 @@ def problem(status, ctype, data):
 
 
 def main():
-    if len(sys.argv) != 9:
+    if len(sys.argv) not in (9, 10):
         sys.exit(__doc__)
-    ccf, ca, cred_file, nef, aanf, akid, sba, nrf_file = sys.argv[1:]
+    ccf, ca, cred_file, nef, aanf, akid, sba, nrf_file = sys.argv[1:9]
+    akid0 = sys.argv[9] if len(sys.argv) == 10 else ""
     with open(cred_file) as f:
         credential = f.read().strip()
     with open(nrf_file) as f:
@@ -56,7 +58,7 @@ def main():
     workdir = tempfile.mkdtemp(prefix="nef-api-")
     inv = Invoker(ccf, ca, workdir)
     try:
-        run(inv, credential, nef, aanf, akid, sba, nrf_token)
+        run(inv, credential, nef, aanf, akid, sba, nrf_token, akid0)
     finally:
         if inv.id and inv.secret:
             inv.offboard()
@@ -64,7 +66,7 @@ def main():
     sys.exit(1 if capif_api.failures else 0)
 
 
-def run(inv, credential, nef, aanf, akid, sba, nrf_token):
+def run(inv, credential, nef, aanf, akid, sba, nrf_token, akid0):
     s, _ = inv.enrol(credential)
     if s != 201:
         report("E00.onboarding", "onboarding of the API invoker of the test", False, f"{s}")
@@ -148,6 +150,13 @@ def run(inv, credential, nef, aanf, akid, sba, nrf_token):
     # E11: Content-Type text/plain: 415 (TS 29.122 table 5.2.6-1).
     s, ct, d = retrieve(ctx, nef, token, {"afId": AF_ID, "aKId": akid}, content_type="text/plain")
     report("E11", "Content-Type text/plain: 415", s == 415, problem(s, ct, d))
+
+    # With the default Routing Indicator, "0" (TS 23.003 cl. 2.2B), the NEF selects any
+    # AAnF of the home network (TS 33.535 cl. 6.7).
+    if akid0:
+        s, ct, d = retrieve(ctx, nef, token, {"afId": AF_ID, "aKId": akid0})
+        report("G10", "A-KID with the default Routing Indicator \"0\": K_AF through the NEF (TS 33.535 cl. 6.7)",
+               s == 200 and len(as_json(d).get("kaf", "")) == 64, problem(s, ct, d) if s != 200 else "200")
 
 
 if __name__ == "__main__":

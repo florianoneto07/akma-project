@@ -12,7 +12,9 @@
 #   R1s mutual TLS of the SBI: each port of the SBI and the internal server
 #       of the CCF, the identity of the certificates in the access tokens and
 #       in the policies, the profiles
-#       of the certificates, and the seed tool against a server of OpenSSL
+#       of the certificates, and the seed tool against a server of OpenSSL;
+#       the Retrieve Key Request of the NRF, an old NEF profile that does not
+#       block a token (F27) and the FQDN required with https (F24)
 #   R2  registration; A-KID of the UE = AUSF = AAnF; Ua* from the UE
 #   R2k AKMA key service of the ME: K_AF only to the application of the AF_ID
 #   R2t Ua* from the UE over the TLS profiles: K.2 in TLS 1.3 and 1.2, PSK
@@ -23,14 +25,17 @@
 #       context, renewal (RFC 8613 Appendix B.2), a new POST per request
 #       -> sync A (checks from the AF machine)
 #   R2n Ua* from the UE to the AFs outside the operator network (NEF) and
-#       with anonymous access, started in group A
+#       with anonymous access, started in group A; the User-Agent of the AUSF
+#       and of the NEF at the AAnF, the NEF without anonInd, the reuse of the
+#       discovery of the AAnF
 #   R2c Ua* from the UE to the AF outside the operator network as API
 #       invoker of CAPIF (TS 29.522 cl. 7.2), started in group A
 #   R3  new authentication: new A-KID; Ua* with it; Ua* with the previous
 #       A-KID and K_AF, still valid at the AF until expiry
 #       -> sync B
-#   R4  AAnF down during a primary authentication: the authentication
-#       succeeds and the registration in the AAnF fails (TS 33.535 cl. 6.1)
+#   R4  the heart-beat of the AAnF; AAnF down during a primary
+#       authentication: the authentication succeeds and the registration in
+#       the AAnF fails (TS 33.535 cl. 6.1)
 #   R5  subscriber without AKMA subscription, then restored
 #   R6  remove-context
 #   R6r refresh of K_AKMA by the AAnF (TS 33.535 cl. 6.4.4): the AAnF, with
@@ -199,8 +204,8 @@ check R1.subscriber "AKMA subscription of $supi provisioned (akmaAllowed, routin
 check R1.crl-signed "CRL of the operator signed for this run (TS 33.310 cl. 6.1a)" sba_pki crl
 
 # Only the NFs of this run at the NRF. A test bench that stops without
-# deregistering leaves its profiles in MongoDB, and the NRF looks at one
-# profile of the target type when it grants a token (F27).
+# deregistering leaves its profiles in MongoDB; with nrf/0006 they no longer
+# block a token (F27, checked in G05), but a clean NRF keeps the run alone.
 no_old_profiles() {
     [ "$(mongosh --quiet mongodb://127.0.0.1:27017/free5gc \
         --eval 'db.NfProfile.deleteMany({}); db.NfProfile.countDocuments({})')" = 0 ]
@@ -256,6 +261,42 @@ check S08.ca "the client refuses a server certificate of another CA, with the ri
 seed_against "$sba/aanf.pem" "$sba/aanf.key" aanf
 check S09 "the client sends the name of the server in the SNI (RFC 6066 cl. 3)" \
     grep -aqF "Hostname in TLS extension: \"$aanf_name\"" "$run/s-server-aanf.out"
+
+# F27: an old NEF profile without 3gpp-akma, put first in
+# MongoDB, where the NRF looked at it alone, no longer blocks the token for
+# 3gpp-akma (TS 33.501 cl. 13.4.1.1.2 step 2).
+stale_nef_profile() {
+    local stale=0d6b5a4c-3f2e-4d1c-8b0a-9f8e7d6c5b4a db=mongodb://127.0.0.1:27017/free5gc rc
+    mongosh --quiet "$db" --eval "const nef = db.NfProfile.findOne({nfType: 'NEF'});
+        db.NfProfile.deleteOne({_id: nef._id});
+        db.NfProfile.insertOne({nfInstanceId: '$stale', nfType: 'NEF', nfStatus: 'REGISTERED', nfServices: []});
+        db.NfProfile.insertOne(nef);" >"$run/g05.out" 2>&1 || return 1
+    [ "$(mongosh --quiet "$db" --eval "db.NfProfile.find({nfType: 'NEF'}).limit(1).next().nfInstanceId")" = "$stale" ] ||
+        return 1
+    "$seed" token --nrf "$nrf" --target NEF --scope 3gpp-akma >/dev/null 2>>"$run/g05.out"
+    rc=$?
+    mongosh --quiet "$db" --eval "db.NfProfile.deleteOne({nfInstanceId: '$stale'})" >/dev/null 2>&1
+    return $rc
+}
+check G05 "an old NEF profile without 3gpp-akma, first in MongoDB, does not block the token (F27)" stale_nef_profile
+
+# F24: with https, no NF starts without its FQDN (TS 29.510
+# table 6.1.6.2.2-1 NOTE 1). The configuration without the fqdn lines.
+# The NF has to end by itself, before the timeout (exit status 124), with the
+# message: the NFs of free5GC log a start error and exit with status 0.
+without_fqdn() { # binary configuration message
+    local cfg="$run/no-fqdn-$(basename "$2")" rc
+    sed '/^ *fqdn: /d' "$2" >"$cfg"
+    timeout 15 "$1" -c "$cfg" >"$cfg.out" 2>&1
+    rc=$?
+    [ "$rc" -ne 124 ] && grep -aqF "$3" "$cfg.out"
+}
+check G06.aanf "the AAnF does not start with https and without sbi.fqdn" \
+    without_fqdn "$f5/bin/aanf" "$f5/config/aanfcfg.yaml" "sbi.fqdn is required with https"
+check G06.nrf "the NRF does not start with https and without sbi.fqdn" \
+    without_fqdn "$f5/bin/nrf" "$f5/config/nrfcfg.yaml" "sbi.fqdn is required with https"
+check G06.ccf "the CCF does not start with TLS on CAPIF-3/4 and without internal.fqdn" \
+    without_fqdn "$f5/bin/ccf" "$f5/config/ccfcfg.yaml" "fqdn is required with TLS"
 
 # ---------------------------------------------------------------- R2
 step "R2 registration and Ua* from the UE"
@@ -394,6 +435,22 @@ check R2n.nef-psk-relayed "the NEF relays the K_AF of the AF_ID of the PSK profi
     grep -aqF "K_AF for A-KID $akid1 relayed to AF_ID $fqdn.0100000007" "$f5log"
 check R2n.nef-no-supi "no SUPI in the AKMA lines of the NEF (cl. 6.3 step 5)" \
     bash -c '! grep -a "CAT=\"AKMA\" NF=\"NEF\"" "$1" | grep -q "imsi-"' _ "$f5log"
+# The NEF asks with Naanf_AKMA_ApplicationKey_Get, without
+# anonInd, even for the anonymous AF (TS 33.535 cl. 6.3 step 3): the AAnF
+# gives it the SUPI, which the NEF keeps (R2n.nef-no-supi).
+check G09 "the NEF never asks the AAnF with anonInd: every K_AF through the NEF with the SUPI" \
+    bash -c 'grep -aF "through the NEF at" "$1" | grep -q . && ! grep -aF "through the NEF at" "$1" |
+        grep -qF "without the SUPI"' _ "$f5log"
+# The NF type of the consumers, in the User-Agent, and
+# 3gpp-Sbi-NF-Peer-Info (TS 29.500 table 5.2.2.2-1 and cl. 5.2.3.2.21).
+check G08.ausf "the AUSF tells its NF type to the AAnF: User-Agent AUSF-<NF instance>" \
+    grep -aqE "register-anchorkey, User-Agent AUSF-[0-9a-f-]{36}, 3gpp-Sbi-NF-Peer-Info srcinst=" "$f5log"
+check G08.nef "the NEF tells its NF type to the AAnF: User-Agent NEF-<NF instance>" \
+    grep -aqE "retrieve-applicationkey, User-Agent NEF-[0-9a-f-]{36}, 3gpp-Sbi-NF-Peer-Info srcinst=" "$f5log"
+# The NEF reuses the AAnF found at the NRF during the
+# validity period of the result (TS 29.510 cl. 5.3.2.2.1).
+check G11 "the NEF reuses the result of the discovery of the AAnF" \
+    bash -c 'grep -a "NF=\"NEF\"" "$1" | grep -qF "(search result reused)"' _ "$f5log"
 
 # ---------------------------------------------------------------- R2c
 # The AF machine has started, in group A, an AF outside the operator network
@@ -435,6 +492,9 @@ sync_point B
 
 # ---------------------------------------------------------------- R4
 step "R4 AAnF down during a primary authentication"
+# F29: the heart-beat of the AAnF (TS 29.510 cl. 5.2.2.3.2), sent
+# at the interval of its registration, 60 s, before it is stopped.
+check G07 "the AAnF sends its heart-beat to the NRF" wait_for "$f5log" "Heart-beat sent to the NRF" 70
 failed_before="$(count "$f5log" "Naanf_AKMA_AnchorKey_Register for $supi failed")"
 pkill -INT -x aanf
 for ((i = 0; i < 15; i++)); do pgrep -x aanf >/dev/null || break; sleep 1; done

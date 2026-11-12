@@ -13,6 +13,7 @@ Prints one PASS or FAIL line per test; exits 1 when any fails.
 import http.client
 import json
 import os
+import re
 import socket
 import ssl
 import sys
@@ -61,6 +62,26 @@ def check(tid, desc, status, data, want_status, want_cause=None):
     else:
         failures += 1
         print(f"FAIL {tid} {desc}: got {got}, want {want}")
+
+
+def headers_of(hostport, body, headers):
+    """The headers of the answer to a retrieve-applicationkey."""
+    host, port = hostport.rsplit(":", 1)
+    conn = http.client.HTTPSConnection(host, int(port), context=tls, timeout=30)
+    conn.request("POST", API + "/retrieve-applicationkey", body=body,
+                 headers=dict({"Content-Type": "application/json"}, **headers))
+    rsp = conn.getresponse()
+    rsp.read()
+    conn.close()
+    return rsp.status, {k.lower(): v for k, v in rsp.getheaders()}
+
+
+def instance_of(pem_path):
+    """The NF instance ID in the URI of a certificate (TS 33.310 cl. 6.1.3c.3)."""
+    with open(pem_path) as f:
+        der = ssl.PEM_cert_to_DER_cert(f.read())
+    found = re.search(rb"urn:uuid:([0-9a-fA-F-]{36})", der)
+    return found.group(1).decode().lower() if found else ""
 
 
 def retrieve(hostport, af_id, akid, **kw):
@@ -157,6 +178,18 @@ def main():
     rem = json.dumps({"supi": "imsi-208930000000001"}).encode()
     s, d = request(aanf, "POST", API + "/remove-context", rem)
     check("N16", "remove-context without access token", s, d, 401)
+
+    # Server and 3gpp-Sbi-NF-Peer-Info in the answers of the AAnF, also in an error
+    # (TS 29.500 table 5.2.2.2-1 and cl. 5.2.3.2.21); the consumer is the NF instance of the certificate af1.
+    s, h = headers_of(aanf, json.dumps({"afId": AF_ID, "aKId": unknown}).encode(),
+                      {"User-Agent": "AF-" + instance_of(f"{sys.argv[3]}/af1.pem")})
+    server, peer = h.get("server", ""), h.get("3gpp-sbi-nf-peer-info", "")
+    aanf_id = server[len("AANF-"):] if server.startswith("AANF-") else ""
+    ok = (s == 403 and re.fullmatch(r"[0-9a-f-]{36}", aanf_id) is not None
+          and peer == f"srcinst={aanf_id}; dstinst={instance_of(f'{sys.argv[3]}/af1.pem')}")
+    print(("PASS" if ok else "FAIL") + f" G12 Server AANF-<NF instance> and 3gpp-Sbi-NF-Peer-Info with the AF in an error"
+          f" answer: {s}, Server {server!r}, 3gpp-Sbi-NF-Peer-Info {peer!r}")
+    globals()["failures"] += 0 if ok else 1
 
     sys.exit(1 if failures else 0)
 

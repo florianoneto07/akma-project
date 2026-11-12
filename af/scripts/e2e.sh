@@ -371,9 +371,15 @@ group_nef() {
     expect E00 "AFs outside the operator network onboarded at the CCF, with the NEF discovered there" \
         "$(cat "$L/af-nef.log" "$L/af-nef-anon.log" "$L/af-nef-psk.log" | grep -ac 'The NEF has the authentication data')" "^3$"
     (umask 077 && ssh_b "~/akma-tools/seed token --nrf $nrf --target NEF --scope 3gpp-akma" >"$L/.nrf-token" 2>/dev/null)
+    # A context with the default Routing Indicator, "0" (TS 23.003 cl. 2.2B),
+    # for G10.
+    local supi0="imsi-208930000000096" akid0
+    akid0="$(ssh_b "~/akma-tools/seed register --nrf $nrf --aanf https://$aanf --supi $supi0 --k-ausf $(vec rid-012 k_ausf) --rid 0 --mcc 208 --mnc 93" 2>&1 |
+        sed -n 's/^a-kid: //p')"
     python3 -I "$here/scripts/negative/nef_api.py" "$ccf" "$capif/ccf-ca.pem" "$capif/af1-external.jwt" \
-        "$nef" "$aanf" "$akid1" "$sba" "$L/.nrf-token" >>"$results" 2>&1
+        "$nef" "$aanf" "$akid1" "$sba" "$L/.nrf-token" "$akid0" >>"$results" 2>&1
     rm -f "$L/.nrf-token"
+    ssh_b "~/akma-tools/seed remove --nrf $nrf --aanf https://$aanf --supi $supi0" >/dev/null 2>&1
 }
 
 # The AF outside the operator network as API invoker of CAPIF (TS 29.522
