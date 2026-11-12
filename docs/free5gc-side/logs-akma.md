@@ -51,6 +51,8 @@ O nível segue o costume do free5GC: `info` para o evento normal, `warn` para al
 | `info` | `AKMA indication for <SUPI> ignored: akma.enable is false` | autenticação concluída, AKMA desligado no `ausfcfg.yaml` | — |
 | `info` | `K_AKMA and A-KID derived for <SUPI>: A-KID <A-KID>` | autenticação primária concluída com sucesso | TS 33.535 §6.1 passo 3 |
 | `info` | `AAnF for Routing Indicator <RID>: <URI> (discovered at the NRF)` ou `(configured)` | seleção do AAnF | TS 33.535 §6.7 |
+| `info` | `AAnF for the default Routing Indicator: <URI> (discovered at the NRF, any AAnF)` | RID `"0"`, descoberta sem `routing-indicator` (MVP-15) | TS 33.535 §6.7; TS 23.003 §2.2B |
+| `info` | `AAnF for Routing Indicator <RID>: <URI> (search result reused)` | resultado guardado ainda válido (MVP-15) | TS 29.510 §5.3.2.2.1 |
 | `info` | `AKMA key material of <SUPI> registered at the AAnF` | resposta 200 do AAnF | TS 33.535 §6.1 passos 4 e 5 |
 | `error` | `AKMA key material for <SUPI> not generated: <motivo>` | SUPI, RID ou domínio de origem inválidos | — |
 | `error` | `Naanf_AKMA_AnchorKey_Register for <SUPI> failed: <motivo>` | descoberta ou registro falhou; a autenticação não muda | D9 |
@@ -63,7 +65,7 @@ As três últimas mensagens `info` saem da *goroutine* do AKMA (D9). Por isso ap
 |---|---|---|---|
 | `info` | `Routing Indicators [<RID> …]; K_AF lifetime <duração>; AF_IDs authorized by local policy: [<AF_ID> …]` | partida | — |
 | `info` | `AKMA context of <SUPI> registered, A-KID <A-KID>`, com ` (previous context replaced)` quando substitui | `register-anchorkey` | TS 33.535 §6.1 passo 5 |
-| `info` | `K_AF of <SUPI> provided to AF_ID <AF_ID> for A-KID <A-KID>, expires <instante>` | `retrieve-applicationkey` atendido | TS 33.535 §6.2.1 passos 7 e 8 |
+| `info` | `K_AF of <SUPI> provided to AF_ID <AF_ID> for A-KID <A-KID>, expires <instante>`, com `, through the NEF at <endereço>` pelo NEF e, desde o MVP-15, `, without the SUPI` quando o SUPI não vai na resposta | `retrieve-applicationkey` atendido | TS 33.535 §6.2.1 passos 7 e 8; §6.3 passo 4 |
 | `info` | `K_AKMA not present for A-KID <A-KID>, requested by AF_ID <AF_ID>` | A-KID desconhecido (403) | TS 33.535 §6.2.1 passo 2; TS 29.535 Tab. 5.1.7.3-1 |
 | `warn` | `NF <NF Instance ID> at <endereço> not authorized for AF_ID <AF_ID>` | consumidor fora da política local (403); desde o MVP-11, a política é pelo certificado, e o endereço só fica no log | TS 33.535 §6.2.1 passo 2 |
 | `warn` | `NEF <NF Instance ID> at <endereço> not authorized for AF_ID <AF_ID>` | AF_ID não aceito daquele NEF (403) | TS 33.535 §6.3 passo 3 |
@@ -74,6 +76,9 @@ As três últimas mensagens `info` saem da *goroutine* do AKMA (D9). Por isso ap
 | `info` | `UDM for Nudm_UECM_AuthTrigger: <URI> (discovered at the NRF)` | primeira renovação | TS 29.510 |
 | `info` | `Refresh of K_AKMA of <SUPI> accepted by the UDM: new primary authentication requested` | `trigger-auth` com 204 | TS 33.501 §6.1.5.2 passo 1 |
 | `warn` | `Refresh of K_AKMA of <SUPI> not accepted by the UDM: <status> <causa> (<detalhe>)` | `trigger-auth` recusado ou sem resposta | TS 29.503 tabela 6.2.3.13.4.2.2-2 |
+| `info` | `<método> <caminho>, User-Agent <valor>, 3gpp-Sbi-NF-Peer-Info <valor>` (categoria `SBI`; `none` sem o cabeçalho) | cada pedido recebido (MVP-15) | TS 29.500 tab. 5.2.2.2-1 e §5.2.3.2.21 |
+| `info` | `Heart-beat sent to the NRF, next in <intervalo>` (categoria `Consumer`) | cada *heart-beat* aceito (MVP-15) | TS 29.510 §5.2.2.3.2 |
+| `warn` | `Heart-beat: the NRF does not have the profile (404); registering again` ou `Heart-beat failed: <motivo>` (categoria `Consumer`) | *heart-beat* recusado (MVP-15) | TS 29.510 §5.2.2.3.2 |
 
 ### 3.4 AMF
 

@@ -23,7 +23,7 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 | DV-14 | CAPIF parcial: só o caminho do AKMA | **implementado** (MVP-9, 02/11/2026) | MVP-9 |
 | DV-15 | HTTP/2 por ALPN no CCF e no NEF, contra o *upgrade* do HTTP de TS 29.222 §7.3 e TS 29.122 §5.2.2 | **implementado** (MVP-9, 02/11/2026); ampliado ao NEF na revisão do MVP-14 (08/11/2026) | MVP-9, MVP-14 |
 | DV-16 | Sem OCSP *stapling* em CAPIF-1e e, desde a revisão do MVP-14, na SBI, em CAPIF-2e e em CAPIF-3/4; *token* do CCF sem `x5t#S256`; até o MVP-11, também sem ponto de distribuição de CRL e sem CRL | **implementado** (MVP-9, 02/11/2026); **reduzido** na fase (c) do MVP-11 (06/11/2026): a revogação por CRL saiu do desvio, e ficam o OCSP e o `x5t#S256`; **ampliado** na revisão do MVP-14 (08/11/2026); correção aprovada: `x5t#S256` no MVP-15, OCSP no MVP-18 | MVP-9, MVP-11, MVP-14 |
-| DV-17 | SBI por IP, sem o FQDN no perfil nem o SNI, como modo opcional; o padrão segue a norma | **decidido** (MVP-11, 02/11/2026); **implementado** (fase a, 04/11/2026); correção aprovada na revisão do MVP-14 (08/11/2026): tirar o modo por IP, no MVP-15 | MVP-11, MVP-14 |
+| DV-17 | SBI por IP, sem o FQDN no perfil nem o SNI, como modo opcional; o padrão segue a norma | **decidido** (MVP-11, 02/11/2026); **implementado** (fase a, 04/11/2026); correção aprovada na revisão do MVP-14 (08/11/2026): tirar o modo por IP, no MVP-15; **reduzido** na fase (a) do MVP-15 (12/11/2026): as NFs, o AAnF e o CCF sem o modo por IP; fica o AF, na fase (c) | MVP-11, MVP-14, MVP-15 |
 | DV-18 | CRL só por HTTP, sem o LDAPv3 que TS 33.310 §6.1a pede como método principal | **decidido** (MVP-11, 04/11/2026); **implementado** (fase a, 04/11/2026) | MVP-11 |
 
 **Consolidação (MVP-5, 18/10/2026).** Nenhum desvio novo surgiu no MVP-5. Estado e evidência de cada um no roteiro ponta a ponta (`docs/af-side/e2e.md`, execução `20261018-171510`):
@@ -502,6 +502,8 @@ Os certificados são os mesmos nos dois modos, com o FQDN e o IP no `subjectAltN
 - Fora da SBI, o CAPIF-1e e a CRL continuam por IP (T34, T26), sem desvio.
 
 `tls-sbi.md` §3.2 muda com o MVP-15.
+
+**Reduzido (12/11/2026, MVP-15, fase a).** As onze NFs, o AAnF e o servidor interno do CCF não partem com `https` sem o FQDN (`*/000N-fqdn-required.patch`, `free5gc/aanf`, `free5gc/ccf`; `config/0007` acerta os comentários). O erro sai como `govalidator.Errors`, porque o `ReadConfig` das NFs do free5GC lê o erro assim. Evidência: G06.aanf, G06.nrf e G06.ccf na execução `20261112-125753` (`docs/af-side/e2e.md` §5.13); `TestSbiFqdnRequiredWithHttps` em cada NF. Fica o AF, cliente, que muda na fase (c) e encerra o desvio.
 
 ---
 

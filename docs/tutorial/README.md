@@ -1141,7 +1141,7 @@ Aplique os *patches*. Cada NF é recompilada, e o binário original fica em `bin
 for t in nrf amf ausf udm nef smf udr pcf nssf chf bsf config run test; do ~/akma-free5gc/free5gc/scripts/patch-nf.sh $t apply; done
 ```
 
-As configurações passam a `https`, com `sbi.fqdn`, `sbi.tls.ca` e o `nrfUri` pelo nome. Cada NF tem um `nfInstanceId` fixo, o do certificado, e o `amfName` passa a ser o FQDN do AMF.
+As configurações passam a `https`, com `sbi.fqdn`, `sbi.tls.ca` e o `nrfUri` pelo nome. Desde o MVP-15, uma NF com `https` e sem `sbi.fqdn` não parte, e o `aanfcfg.yaml` tem o `heartBeatTimer`, em segundos. Cada NF tem um `nfInstanceId` fixo, o do certificado, e o `amfName` passa a ser o FQDN do AMF.
 
 ### 12.4 O serviço da CRL
 

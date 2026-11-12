@@ -105,6 +105,8 @@ Os nomes resolvem pelo `/etc/hosts`, como decidiu o T4:
 
 Os certificados são os mesmos nos dois modos: o `subjectAltName` leva o nome e o IP (seção 4.2).
 
+**MVP-15, fase (a) (12/11/2026).** Decisão do responsável no MVP-14 (Q6, opção b): o modo por IP sai com `https`. As onze NFs, o AAnF e o servidor interno do CCF não partem sem `sbi.fqdn` (`internal.fqdn` no CCF), com a mensagem `sbi.fqdn is required with https (TS 29.510 table 6.1.6.2.2-1 NOTE 1)`. Com `http`, nada muda: a NOTA 1 só vale com `https`, e o banco de testes do free5GC continua por IP. O aviso no log descrito acima não chegou a existir no código, e a chave ausente agora é um erro. O AF, cliente, muda na fase (c). Os *patches* são `*/000N-fqdn-required.patch` e `config/0007`, que acerta os comentários das configurações (DV-17 em `desvios.md`).
+
 ### 3.3 Como os URIs se montam (T22, T23)
 
 - **Produtor.** No modo por nome, o perfil leva `fqdn`, e cada serviço leva `ipEndPoints` (o IP e a porta) e `apiPrefix`. O `apiPrefix` continua com o URI inteiro, como o free5GC faz, agora com o nome: `https://<FQDN>:<porta>`. `[FREE5GC]` É o que o SMF e o PCF usam direto; corrigir o `apiPrefix` (TS 29.501 §4.4.1) fica de fora (F24, T22).

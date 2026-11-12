@@ -22,6 +22,8 @@ Cada correção é um *patch* separado, com seu teste, para poder ir ao free5GC 
 | | `internal/sbi/processor/access_token_aud_test.go` (novo) | teste dos dois casos |
 | `free5gc/patches/nrf/0004-sbi-tls.patch` | `pkg/factory/`, `pkg/service/`, `internal/sbi/` | MVP-11, fase (a): `sbi.tls` com o certificado da SBI, separado do `sbi.cert` que assina os *tokens*; o `sbitls` no servidor e no cliente (`tls-sbi.md` §6.5) |
 | `free5gc/patches/nrf/0005-token-identity.patch` | `internal/context/`, `internal/sbi/`, `internal/util/peer.go` (novo), `pkg/factory/` | MVP-11, fase (b): o certificado da sessão TLS confere o pedido de *token*, o registro, a atualização, o descadastro e a descoberta; *tokens* em `ES256`, com `kid`, `x5t#S256` e `iss`; `allowedOperationsPerNfType`; saem `SignNFCert` e o `rootcert` (`tls-sbi.md` §7.1 a §7.3) |
+| `free5gc/patches/nrf/0006-token-scope-and-retrieve-key.patch` | `internal/sbi/api_accesstoken.go`, `internal/sbi/processor/` | MVP-15, fase (a): o escopo do *token* conferido nos perfis do tipo pedido (F27) e a operação `retrieve-key` (F28); seção 8 |
+| `free5gc/patches/nrf/0007-fqdn-required.patch` | `pkg/factory/` | MVP-15, fase (a): `sbi.fqdn` obrigatória com `https` (DV-17); seção 8 |
 
 ## 3. O que cada correção faz e por quê
 
@@ -115,3 +117,33 @@ Deve listar o AAnF. Com `--routing-indicator 0001` ou `000`, a lista vem vazia (
 - **`complexQuery`.** A descoberta por `complexQuery` (segundo trecho `[Query-27]` de `nf_discovery.go`) continua sem tratar `routing-indicator` para `AANF`, como já acontece para os tipos que não são AUSF nem UDM.
 - **NEF.** `[FREE5GC]` O NEF v4.2.3 pede o token de `nnrf-nfm` com `targetNfType=NEF` em vez de `NRF`. O NRF recusa (`invalid_scope`), e o NEF não se descadastra ao encerrar. A falha aparece igual no log de 15/10/2026, com o NRF original, e não tem relação com estes *patches*.
 - **Versão do binário.** O `make nrf` grava no binário a versão `v4.2.3` e o *commit* do submódulo, sem indicar os *patches*. O estado da árvore (`git -C ~/free5gc/NFs/nrf status`) e a presença de `bin/nrf.orig` mostram que o NRF está corrigido.
+
+## 8. MVP-15, fase (a)
+
+Correções da revisão do MVP-14 (plano, MVP-15, pontos W2 e W3; `correcoes-free5gc.md`, F27 e F28).
+
+**O escopo nos perfis do tipo (F27).** `[3GPP]` TS 33.501 §13.4.1.1.2 passo 2: *"The NRF checks whether the NF Service Consumer is authorized to access the requested service(s)."* O NRF olhava um só perfil do tipo pedido, o primeiro que o MongoDB devolvesse. Agora (`AccessTokenScopeCheck` e `scopesGranted`):
+
+- com `targetNfInstanceId`, conta só o perfil dessa instância;
+- sem ele, basta um perfil `REGISTERED` do tipo que dê ao consumidor todos os escopos pedidos;
+- `[INTERPRETAÇÃO]` a norma não diz quais perfis olhar (W2). Um perfil antigo sem o serviço, como o que o banco de testes do free5GC deixa, não bloqueia mais o *token*.
+
+**`retrieve-key` (F28).** `[3GPP]` TS 29.510 §6.3.4.1: *"The "Retrieve Key Request" custom operation shall be supported."* `POST {nrfApiRoot}/oauth2/retrieve-key`, com um `RetrieveKeyReq` em JSON (§5.4.2.3; tab. 6.3.5.2.7-1):
+
+- `issuer` tem de ser o NF Instance ID do NRF; senão, `404` `UNKNOWN_ISSUER`;
+- `headerParameters` identifica a chave pelo `kid` ou pelo `x5t#S256` do *token* (TS 33.210 §6.3.3); o `alg`, se vier, tem de ser `ES256`. Outro parâmetro, ou um valor que não é o do certificado de assinatura, dá `400` `KEY_IDENTIFICATION_FAIL` (tab. 6.3.4.3.2-2);
+- sem um dos dois atributos, `400` `MANDATORY_IE_MISSING`; corpo que não é JSON, `415`;
+- `200`: um `multipart/related; type="application/json"`, com o `RetrieveKeyRsp` como parte raiz, `{"x509Cert": {"contentId": "x509Cert"}}`, e o certificado em DER na parte `application/pkix-cert` com esse `Content-ID` (§6.3.3.4 e §6.3.5.5.2; W3).
+
+Nenhuma NF do laboratório consome a operação: os produtores seguem com o certificado de `nrfCertPem` (TS 33.501 §13.4.1.0 NOTA 1b).
+
+**O FQDN obrigatório (DV-17).** Com `https`, o NRF não parte sem `sbi.fqdn` (TS 29.510 tab. 6.1.6.2.2-1 NOTA 1). O erro sai como `govalidator.Errors`: o `ReadConfig` do free5GC trata o erro da validação assim, sem conferir o tipo, e um erro de outro tipo acabaria em *panic*.
+
+**Logs** (categoria `AccToken`): `Retrieve Key Request: signing certificate of <NF Instance ID> returned`, em *info*; `Retrieve Key Request for unknown issuer …` e `Retrieve Key Request: header parameters … identify no key`, em *warning*.
+
+**Verificação.**
+
+- Testes de unidade: `TestScopesGranted`, `TestRetrieveKey`, `TestSbiFqdnRequiredWithHttps`, e no `openapi`, `TestSignerIdentifies`.
+- No `e2e.sh`: G01 a G04, pelo `sbi_token.py`; G05, um perfil antigo de NEF posto antes do verdadeiro no MongoDB; G06.nrf (`docs/af-side/e2e.md` §4.4).
+
+**Observado, sem cláusula normativa.** `[FREE5GC]` As NFs do free5GC saem com código 0 quando a configuração é recusada: o `main` só registra o erro. O `ReadConfig` converte o erro da validação para `govalidator.Errors` sem conferir o tipo, e um erro de outro tipo derruba a NF. Não entram em `correcoes-free5gc.md`, que só registra o que a norma pede.

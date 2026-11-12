@@ -1,6 +1,6 @@
 # Correções do free5GC para o AKMA
 
-**Criado em:** 19 de outubro de 2026 · **Atualizado em:** 8 de novembro de 2026 (F28 a F31 e a conferência de F21 a F31 no free5GC v4.3.0: revisão do MVP-14); 6 de novembro de 2026 (F13 e F27: fase (c) do MVP-11); 5 de novembro de 2026 (F4, F5, F12, F14, F23, F25 e F26: fase (b) do MVP-11); 4 de novembro de 2026 (F21, F22, F24 e parte de F25: fase (a) do MVP-11; F26 e os estados de F4, F5, F12 e F24: especificação do MVP-11 aprovada); 2 de novembro de 2026 (F21 a F25, MVP-11; F13: o CAPIF verificado no laboratório); 30 de outubro de 2026 (F13: o CCF e o NEF feitos); 29 de outubro de 2026 (F13: MVP-9 aprovado); 28 de outubro de 2026 (F16 a F20, MVP-12; conferência no free5GC v4.3.0, MVP-13) · **Base:** free5GC v4.2.3 (NRF v1.4.5, UDM, AUSF e AMF v1.4.5, NEF v1.2.5, `openapi` v1.2.4)
+**Criado em:** 19 de outubro de 2026 · **Atualizado em:** 12 de novembro de 2026 (F27, F28, F29 e F31: fase (a) do MVP-15); 8 de novembro de 2026 (F28 a F31 e a conferência de F21 a F31 no free5GC v4.3.0: revisão do MVP-14); 6 de novembro de 2026 (F13 e F27: fase (c) do MVP-11); 5 de novembro de 2026 (F4, F5, F12, F14, F23, F25 e F26: fase (b) do MVP-11); 4 de novembro de 2026 (F21, F22, F24 e parte de F25: fase (a) do MVP-11; F26 e os estados de F4, F5, F12 e F24: especificação do MVP-11 aprovada); 2 de novembro de 2026 (F21 a F25, MVP-11; F13: o CAPIF verificado no laboratório); 30 de outubro de 2026 (F13: o CCF e o NEF feitos); 29 de outubro de 2026 (F13: MVP-9 aprovado); 28 de outubro de 2026 (F16 a F20, MVP-12; conferência no free5GC v4.3.0, MVP-13) · **Base:** free5GC v4.2.3 (NRF v1.4.5, UDM, AUSF e AMF v1.4.5, NEF v1.2.5, `openapi` v1.2.4)
 
 Registro de tudo o que o projeto encontrou no free5GC e que precisa mudar para o AKMA funcionar conforme a norma. Pedido do responsável em 19/10/2026: este registro vai para o repositório público (MVP-7, plano seção 5). A regra de cada entrada:
 
@@ -40,11 +40,11 @@ O AAnF não entra aqui: é uma NF nova, escrita pelo projeto (`aanf.md`). As NFs
 | F24 | todas as NFs, `openapi` | perfis sem `fqdn` e URIs montados por IP | corrigido no projeto: MVP-11, fase (a), *patches* `*-sbi-tls` e `openapi/0005`; fica o `apiPrefix` com o URI inteiro (T22) |
 | F25 | NRF, `openapi` | certificados das NFs fora do perfil de TS 33.310 | corrigido no projeto: MVP-11, `make-sba-certs.sh` na fase (a) e *patch* `nrf/0005` na fase (b) |
 | F26 | NRF | *tokens* com `iss` vazio e certificado do NRF sem o NF Instance ID | corrigido no projeto: MVP-11, fase (b), *patch* `nrf/0005` |
-| F27 | NRF | o escopo do *token* é conferido em um só perfil do tipo pedido | não corrigido; o laboratório tem um NEF, e o `e2e.sh` limpa os perfis antigos; proposto para o MVP-15 |
-| F28 | NRF | sem `Nnrf_AccessToken_RetrieveKey` | não corrigido; proposto para o MVP-15 |
-| F29 | todas as NFs, NRF | sem *heart-beat* | não corrigido; o AAnF, código do projeto, proposto para o MVP-15 |
+| F27 | NRF | o escopo do *token* é conferido em um só perfil do tipo pedido | corrigido no projeto: MVP-15, fase (a), *patch* `nrf/0006` |
+| F28 | NRF | sem `Nnrf_AccessToken_RetrieveKey` | corrigido no projeto: MVP-15, fase (a), *patches* `nrf/0006` e `openapi/0008` |
+| F29 | todas as NFs, NRF | sem *heart-beat* | o AAnF, código do projeto, corrigido no MVP-15, fase (a); as NFs do free5GC e a suspensão no NRF, com o *upstream* |
 | F30 | UDM | sem o evento `ROAMING_STATUS` por SUPI | não corrigido; fica com o DV-2, até haver uma VPLMN |
-| F31 | todas as NFs, `openapi` | sem o `User-Agent` com o tipo de NF, sem o `Server` nas respostas de erro e sem os cabeçalhos `3gpp-Sbi-*` | não corrigido; o MVP-15 corrige os pedidos ao AAnF e as respostas do AAnF e do CCF; o resto, com o *upstream* |
+| F31 | todas as NFs, `openapi` | sem o `User-Agent` com o tipo de NF, sem o `Server` nas respostas de erro e sem os cabeçalhos `3gpp-Sbi-*` | em parte no projeto: MVP-15, fase (a), os pedidos do AUSF e do NEF ao AAnF, as respostas do AAnF e o pedido de *token* de toda NF (`ausf/0004`, `nef/0006`, `openapi/0008`); o resto, com o *upstream* |
 
 ### Conferência no free5GC v4.3.0 (28/10/2026; F21 a F31 em 08/11/2026)
 
@@ -88,13 +88,13 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
 
 | Repositório | Itens | *Patches* do projeto |
 |---|---|---|
-| `nrf` | F1, F2, F3, F4, F15, F23, F24, F25, F26, F27, F28, F29, F31 | `nrf/0001` a `0003` (F1 a F3); `nrf/0004` (F24); `nrf/0005` (F4, F23, F25, F26) |
-| `openapi` | F5, F6, F16, F21, F23, F24, F25, F31 | `openapi/0001` a `0003` (F6, F16); `openapi/0004`, os modelos e clientes do CAPIF (F13); `openapi/0005` (F21, F24); `openapi/0006` (F5, F12, F23) |
+| `nrf` | F1, F2, F3, F4, F15, F23, F24, F25, F26, F27, F28, F29, F31 | `nrf/0001` a `0003` (F1 a F3); `nrf/0004` (F24); `nrf/0005` (F4, F23, F25, F26); `nrf/0006` (F27, F28); `nrf/0007` (o FQDN obrigatório) |
+| `openapi` | F5, F6, F16, F21, F23, F24, F25, F31 | `openapi/0001` a `0003` (F6, F16); `openapi/0004`, os modelos e clientes do CAPIF (F13); `openapi/0005` (F21, F24); `openapi/0006` (F5, F12, F23); `openapi/0008` (F28, F31) |
 | `util` | F22 | `util/0001` (F22) |
 | `udm` | F7, F10, F17, F20 (a notificação de desregistro), F24, F29, F30, F31 | `udm/0001`, `udm/0002` (F7, F17); `udm/0003` (F24) |
-| `ausf` | F8, F24, F29, F31 | `ausf/0001`; `ausf/0002` (F24) |
+| `ausf` | F8, F24, F29, F31 | `ausf/0001`; `ausf/0002` (F24); `ausf/0004` (F31, no pedido ao AAnF); `ausf/0005` (o FQDN obrigatório) |
 | `amf` | F18, F19, F20 (a verificação de *token* nos *callbacks*), F24, F29, F31 | `amf/0001` (F18, F19); `amf/0002` (F24) |
-| `nef` | F11, F12, F13, F14, F24, F29, F31 | `nef/0001` (F11), `nef/0002` (F13, o CAPIF); `nef/0003` (F24); `nef/0004` (F14) |
+| `nef` | F11, F12, F13, F14, F24, F29, F31 | `nef/0001` (F11), `nef/0002` (F13, o CAPIF); `nef/0003` (F24); `nef/0004` (F14); `nef/0006` (F31, no pedido ao AAnF); `nef/0007` (o FQDN obrigatório) |
 | `smf`, `pcf`, `udr`, `nssf`, `chf`, `bsf` | F24, F29, F31 | `smf/0001`, `pcf/0001`, `udr/0001`, `nssf/0001`, `chf/0001`, `bsf/0001` (F24) |
 | `webconsole` | F9 | — (*script* `provision-akma-subscriber.sh`) |
 | `free5gc` (configuração, `run.sh`, banco de testes) | integração sem cláusula (abaixo) | `config/`, `run/`, `test/` |
@@ -381,7 +381,7 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
 - **Onde.** NRF, `internal/sbi/processor/access_token.go`, `AccessTokenScopeCheck`: para um `targetNfType`, `RestfulAPIGetOne` devolve um perfil só, o primeiro do tipo no MongoDB, e o escopo é conferido nele.
 - **O que a norma diz.** TS 33.501 §13.4.1.1.2 passo 2: *"The NRF checks whether the NF Service Consumer is authorized to access the requested service(s)."* NOTA 1 do mesmo passo: sem lista de fatias, o *token* *"can be used to access expected NF services of all expected NF Service Producers of the NF type based on local configuration and operator policy."*
 - **Como deve ser.** `[INTERPRETAÇÃO]` A norma não diz qual perfil olhar. O pedido é por tipo de NF, e a resposta não deve depender da ordem dos perfis no banco: o NRF deve conferir os perfis do tipo pedido.
-- **No projeto.** Não corrigido. Apareceu na fase (c) do MVP-11: o banco de testes do free5GC, parado sem se descadastrar, deixou um perfil de NEF sem `3gpp-akma`, e o NRF recusou esse escopo com `400` `invalid_scope`, com o NEF do laboratório registrado. O laboratório tem um NEF, e o passo R1 do `e2e-remote.sh` apaga os perfis de execuções anteriores (`R1.profiles`).
+- **No projeto.** Corrigido no MVP-15, fase (a), *patch* `nrf/0006` (`nrf.md` §8; ponto W2): com `targetNfInstanceId`, o perfil dessa instância; sem ele, basta um perfil `REGISTERED` do tipo que dê os escopos. Verificação G05 do `e2e.sh`. Apareceu na fase (c) do MVP-11: o banco de testes do free5GC, parado sem se descadastrar, deixou um perfil de NEF sem `3gpp-akma`, e o NRF recusou esse escopo com `400` `invalid_scope`, com o NEF do laboratório registrado. O laboratório tem um NEF, e o passo R1 do `e2e-remote.sh` apaga os perfis de execuções anteriores (`R1.profiles`).
 
 ---
 
@@ -393,7 +393,7 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
   - TS 29.510 §5.4.2.3.1: o consumidor manda um POST a `{nrfApiRoot}/oauth2/retrieve-key`, com o NF Instance ID do emissor e os parâmetros de cabeçalho que identificam a chave; *"On success, "200 OK" shall be returned, the content of the POST response shall contain the raw public key, the X.509 certificate or a certificate chain required to validate the signature of the access token."*
   - TS 33.501 §14.3.3 define `Nnrf_AccessToken_RetrieveKey`; §13.4.1.0 NOTA 1b admite também a provisão da chave pela operação ou *"in any other implementation specific way"*.
 - **Como deve ser.** O NRF serve `retrieve-key` e devolve o certificado de assinatura dos *tokens* para o `kid` ou o `x5t#S256` pedidos. O produtor pode pedir a chave quando não a tem.
-- **No projeto.** Não corrigido. As NFs e o AAnF leem o certificado de `nrfCertPem` (MVP-11), o que §13.4.1.0 permite; falta a operação no NRF. Proposto para o MVP-15 (MVP-14, achado 5).
+- **No projeto.** Corrigido no MVP-15, fase (a), *patches* `nrf/0006` e `openapi/0008` (`nrf.md` §8; ponto W3): o certificado em DER, numa resposta *multipart*, pelo `kid` ou pelo `x5t#S256`. Verificações G01 a G04 do `e2e.sh`. As NFs e o AAnF seguem lendo o certificado de `nrfCertPem` (MVP-11), o que §13.4.1.0 permite.
 
 ## F29 — Sem *heart-beat* das NFs no NRF
 
@@ -403,7 +403,7 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
   - *"The time interval at which the NRF shall be contacted is deployment-specific, and it is returned by the NRF to the NF Service Consumer as a result of a successful registration."*
   - o pedido é um `PATCH` que troca `nfStatus`, sem `If-Match`; o NRF marca `SUSPENDED` a NF que não renova e deixa de devolvê-la na descoberta.
 - **Como deve ser.** Cada NF repete o `PATCH` no intervalo devolvido no registro; o NRF suspende quem não renova.
-- **No projeto.** Não corrigido. Proposto: o AAnF no MVP-15; as NFs do free5GC e a suspensão no NRF, com o *upstream* (MVP-14, achado 6). A suspensão também tira da descoberta os perfis antigos que causam o F27.
+- **No projeto.** O AAnF, corrigido no MVP-15, fase (a) (`aanf.md` §12; verificação G07): propõe o `heartBeatTimer`, segue o da resposta e repete o `PATCH`. As NFs do free5GC e a suspensão no NRF ficam com o *upstream* (MVP-14, achado 6). A suspensão também tiraria da descoberta os perfis antigos que causavam o F27.
 
 ## F30 — UDM sem o evento `ROAMING_STATUS` por SUPI
 
@@ -430,7 +430,7 @@ Para abrir um *issue* ou *pull request* por repositório (`github.com/free5gc/<r
   - §5.2.3.2.1: *"The 3GPP NF Services shall support the HTTP custom headers specified in Table 5.2.3.2.1-1 below."* Na tabela, o `3gpp-Sbi-Callback` *"should also be included in the HTTP POST message of any event notification request for direct communications"*, e, do `3gpp-Sbi-NF-Peer-Info`: *"The HTTP client and server should include this header in every HTTP request and response messages."* A maioria dos outros só tem papel com SCP, SEPP, redirecionamento ou *binding*;
   - TS 29.535 §5.1.2.3 repete o *shall* para o AAnF.
 - **Como deve ser.** Cada NF manda o `User-Agent` com o seu tipo e põe o `Server` nas respostas de erro, no formato da tabela. Na comunicação direta, trata os cabeçalhos da tab. 5.2.3.2.1-1 como ela pede: o `3gpp-Sbi-Callback` nas notificações de evento, o `3gpp-Sbi-NF-Peer-Info` nos pedidos e nas respostas, e o `3gpp-Sbi-Message-Priority` quando houver prioridade a passar.
-- **No projeto.** Não corrigido. O MVP-15 (MVP-14, achado 14, ponto Q19) põe o `User-Agent` com o tipo de NF nos pedidos do AUSF, do NEF e do AF ao AAnF, e o `Server` nas respostas de erro do AAnF e do CCF. O AAnF já manda `AANF-<NF Instance ID>` ao UDM. O resto vale para todas as NFs do free5GC e fica com o *upstream*.
+- **No projeto.** Em parte, no MVP-15, fase (a) (ponto W4, que revê o Q19): o `User-Agent` e o `3gpp-Sbi-NF-Peer-Info` nos pedidos do AUSF e do NEF ao AAnF (`ausf/0004`, `nef/0006`) e nos do AAnF; o `Server` e o `3gpp-Sbi-NF-Peer-Info` nas respostas do AAnF; o `User-Agent` no pedido de *token* de toda NF (`openapi/0008`). O CCF fica de fora: não é tipo de NF, e as APIs do CAPIF seguem TS 29.122 §5.2.8. O AF entra na fase (c). Verificações G08 e G12 do `e2e.sh`. O resto vale para todas as NFs do free5GC e fica com o *upstream*.
 
 ---
 

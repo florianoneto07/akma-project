@@ -2,6 +2,21 @@
 
 ## [Não lançado]
 
+### V3 pública (12/11/2026)
+- **Exportação:** `public/export-public.sh` leva `free5gc/ccf` e `free5gc/crl`.
+- **Comentários:** 71 linhas de 31 arquivos (código, *scripts*, configurações e *patches*) citam a cláusula ou o item F no lugar dos registros do projeto. Os *patches* mantêm o número de linhas; as 14 séries aplicam em ordem nas árvores originais, e os testes do AAnF e do CCF passam. O comentário do `aanfUri` em `af/config/afcfg.yaml` fala do certificado.
+- **Documentos públicos:** `install.md` com o CAPIF, o TLS mútuo, a atualização a partir da V2 e a ordem de uma instalação nova; `capif.md` e `sbi-tls.md` novos; `aanf.md`, `nef-akma-api.md`, `testing.md`, `free5gc-fixes.md` (F21 a F31), `3gpp-recommendations.md` (AA a AP), README e CHANGELOG da V3.
+- Nenhuma VM alterada.
+
+### MVP-15 — Correções da revisão, fase (a) (12/11/2026)
+- **NRF:** *patch* `nrf/0006`: o escopo do *token* nos perfis `REGISTERED` do tipo, ou no da instância pedida (F27); `POST /oauth2/retrieve-key`, com o certificado em *multipart* (F28).
+- **AUSF e NEF:** *patches* `ausf/0004` e `nef/0006`: com o RID `"0"`, a descoberta sem `routing-indicator`; o reuso da descoberta durante a `validityPeriod`; `User-Agent` e `3gpp-Sbi-NF-Peer-Info` nos pedidos ao AAnF; o NEF sem repassar o `anonInd`.
+- **`openapi`:** *patch* `0008`: os modelos de `retrieve-key`, `Signer.Identifies`, os cabeçalhos de TS 29.500 e o `User-Agent` no pedido de *token*.
+- **AAnF:** o *heart-beat* (`heartBeatTimer`); `Server` e `3gpp-Sbi-NF-Peer-Info` nas respostas; a linha `SBI` com o `User-Agent` de cada pedido.
+- **FQDN obrigatório com `https`:** um *patch* `*-fqdn-required` em cada NF, o AAnF, o CCF e `config/0007` (DV-17, menos o AF).
+- **Roteiro:** G01 a G12. Execução de 12/11/2026: 333 verificações, nenhuma falha, nenhuma pulada.
+- **Documentos:** `nrf.md` §8, `nef.md` §13, `aanf.md` §12, `openapi.md`, `tls-sbi.md` §3.2, `logs-akma.md`, `e2e.md`, F27, F28, F29, F31, DV-17, o plano.
+
 ### MVP-15 — Correções da revisão (08 a 12/11/2026)
 - **Proposta:** no plano, com os pontos W1 a W11; proposta em 08/11/2026 e aprovada em 12/11/2026, como proposta. Três fases: a SBI do núcleo; identidades e chaves; o AF e o UE. Cada fase começa com o aval do responsável.
 - **Registros da aprovação (W11):** o texto do DV-3 corrigido em `desvios.md`; as notas no Q16 e no Q19; o D-AP no registro de defeitos, na cópia em `~/akma` e em `propostas-para-a-norma.md`.

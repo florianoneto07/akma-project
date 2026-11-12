@@ -289,3 +289,21 @@ Na fase (c):
 - No modo CAPIF, o passo 3 da seção 3.2 confere só a lista de `akma.authorizedAfs`: `sourceAddresses` fica opcional e vale apenas sem CAPIF. Quem diz quem é o AF são o certificado e o *token*.
 - O NEF confere o CN do certificado de cliente: no `check-authentication`, contra o `apiInvokerId`; no `retrieve`, contra o `client_id` do *token*.
 - O NEF fala com o CCF em `https`, por nome, com o certificado de NF, e confere a CRL da CA do CCF nos certificados dos *invokers*, com `invokerCrlMaxAge` de 5 s (`tls-sbi.md` §17.3).
+
+## 13. MVP-15, fase (a)
+
+Correções da revisão do MVP-14 (plano, MVP-15): *patches* `nef/0006-aanf-search-and-headers.patch` e `nef/0007-fqdn-required.patch`.
+
+**O Routing Indicator padrão (achado 1).** `[3GPP]` TS 33.535 §6.7: *"When the UE's Routing Indicator is set to its default value as defined in TS 23.003 [9], the AAnF NF consumer can select any AAnF instance within the home network of the UE."* Com o RID `"0"` no A-KID (TS 23.003 §2.2B), o NEF descobre o AAnF sem o parâmetro `routing-indicator`. Com outro RID, a descoberta continua com ele.
+
+**O pedido ao AAnF sem `anonInd` (achado 2).** `[3GPP]` TS 33.535 §6.3 passo 3: *"The NEF sends a Naanf_AKMA_ApplicationKey_Get request to the selected AAnF with the A-KID"*. TS 29.535 tab. 4.2.2.1-1 só põe o AF como quem inicia `ApplicationKey_AnonUser_Get`. O NEF não repassa mais o `anonInd` do AF. O AAnF responde com o SUPI, pelo escopo `supi-access` que o NEF já pedia. O NEF não o manda ao AF nem o registra (passo 5). A indicação *UE Id not needed* do AF fica para o GPSI do MVP-10: com ela, o NEF não dá o GPSI.
+
+**O reuso da descoberta (achado 13).** `[3GPP]` TS 29.510 §5.3.2.2.1: *"The service consumer should reuse the previous result if input query parameters in the new service discovery request are the same as used for the previous search and the validity period of the result is not expired."* O NEF guarda o AAnF achado, por Routing Indicator (e o RID padrão à parte), durante a `validityPeriod` da resposta do NRF: 100 s no NRF do free5GC. `[INTERPRETAÇÃO]` Uma falha de conexão com o AAnF guardado apaga a entrada, e o pedido seguinte busca de novo. `SearchNFInstancesValidity` (`internal/sbi/consumer/nrf_service.go`) devolve a validade; `SearchNFInstances` continua igual para o resto do NEF.
+
+**Os cabeçalhos de TS 29.500 (achado 14).** Os pedidos ao AAnF levam o `User-Agent` `NEF-<NF Instance ID>` e o `3gpp-Sbi-NF-Peer-Info` com `srcinst`, o NEF, e `dstinst`, o AAnF achado (tab. 5.2.2.2-1 e §5.2.3.2.21).
+
+**O FQDN obrigatório (DV-17).** Com `https`, o NEF não parte sem `sbi.fqdn` (TS 29.510 tab. 6.1.6.2.2-1 NOTA 1).
+
+**Logs** (categoria `AKMA`, *info*): `AAnF for Routing Indicator <RID>: <apiRoot> (discovered at the NRF)`; `AAnF for the default Routing Indicator: <apiRoot> (discovered at the NRF, any AAnF)`; `AAnF for Routing Indicator <RID>: <apiRoot> (search result reused)`.
+
+**Verificação.** Testes de unidade em `internal/sbi/processor/akma_test.go`: `TestAkmaDefaultRoutingIndicator`, `TestAkmaReusesSearch`, `TestAkmaAanfHeaders`, e o caso anônimo de `TestRetrieveAkmaApplicationKey`, agora com `ApplicationKey_Get`. No `e2e.sh`: G08.nef, G09, G10 e G11 (`docs/af-side/e2e.md` §4.4).

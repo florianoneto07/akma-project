@@ -245,6 +245,25 @@ Os testes da API do AAnF (N01 a N16) estão em `af/scripts/negative/aanf_api.py`
 | S09 | o mesmo, com o certificado do AAnF | o `s_server` registra o SNI com o nome |
 | S19 | arquivos `*sslkey*` escritos na execução; logs das duas máquinas | nenhum arquivo com conteúdo; nenhuma chave privada ou segredo do TLS |
 
+### 4.4 Correções da revisão (MVP-15, fase a)
+
+As verificações G conferem as correções da fase (a) do MVP-15 (plano, MVP-15; `docs/free5gc-side/nrf.md` §8, `nef.md` §13 e `aanf.md` §12).
+
+| Verificação | Onde | Caso | Esperado |
+|---|---|---|---|
+| G01, G01.kid | `sbi_token.py`, R1s | `retrieve-key` com o `x5t#S256` e com o `kid` de um *token* do NRF (F28) | `200`, `multipart/related; type="application/json"`, o `nrf-token.pem` em DER na parte `application/pkix-cert` |
+| G02 | idem | um `kid` que não é o do NRF | `400` `KEY_IDENTIFICATION_FAIL` |
+| G03 | idem | um emissor que não é o NRF | `404` `UNKNOWN_ISSUER` |
+| G04 | idem | corpo que não é JSON | `415` |
+| G05 | `e2e-remote.sh`, R1s | um perfil antigo de NEF sem `3gpp-akma`, posto antes do verdadeiro no MongoDB (F27) | o *token* de `3gpp-akma` emitido |
+| G06.aanf, G06.nrf, G06.ccf | idem | o AAnF, o NRF e o CCF com a configuração sem as linhas `fqdn` (DV-17) | a NF sai antes de 15 s com `sbi.fqdn is required with https` (no CCF, `fqdn is required with TLS`). As NFs do free5GC saem com código 0 mesmo assim: conta a saída e a mensagem |
+| G07 | idem, R4 | o *heart-beat* do AAnF (F29) | `Heart-beat sent to the NRF` no log, em até 70 s |
+| G08.ausf, G08.nef | idem, R2n | o `User-Agent` dos pedidos ao AAnF, na linha `SBI` do AAnF (achado 14) | `AUSF-<NF Instance ID>` e `NEF-<NF Instance ID>`, com `3gpp-Sbi-NF-Peer-Info srcinst=` |
+| G09 | idem, R2n | as K_AF pelo NEF, inclusive do AF anônimo (achado 2) | nenhuma linha `through the NEF at` com `without the SUPI` |
+| G10 | `nef_api.py`, ponto A | um contexto com o RID `"0"`, criado pelo `seed`, pedido pelo NEF (achado 1) | `200`, com a K_AF |
+| G11 | `e2e-remote.sh`, R2n | os pedidos repetidos ao NEF (achado 13) | `(search result reused)` numa linha do NEF |
+| G12 | `aanf_api.py`, ponto A | uma resposta de erro do AAnF ao certificado `af1` (achado 14) | `Server: AANF-<NF Instance ID>` e `3gpp-Sbi-NF-Peer-Info: srcinst=<AAnF>; dstinst=<af1>` |
+
 ## 5. Resultado em 18/10/2026
 
 `63 passed, 0 failed`: 30 verificações na máquina do free5GC e 33 na do AF. Os cinco A-KID da execução, um por autenticação primária:
@@ -394,6 +413,15 @@ O teste com o UERANSIM em outra máquina (critério 6) está em `docs/af-side/te
 - **Verificações mudadas.** O E05 voltou a `401` `invalid_token`, com o *token* do NRF para `3gpp-akma`. O CP18 confere a recusa no TLS (`docs/free5gc-side/tls-sbi.md` §17.5).
 - **Antes da execução, na máquina do free5GC.** Os *patches* em uso foram guardados em `~/akma-mvp11c-old-patches`, e o `ccfcfg.yaml` e o `ccf.pem`, em `~/akma-mvp11-backup`. NEF e configuração foram revertidos, o repositório sincronizado, as duas cópias do `openapi` refeitas e as onze NFs recompiladas, porque o `openapi` mudou. O `ccf.pem` foi feito de novo, com o ponto de distribuição de CRL, e o `bin/ccf`, o `bin/aanf`, o `bin/crl`, o `seed` e o `ccfcfg.yaml`, reimplantados. Nada mudou no `/etc/hosts` nem na PKI do operador.
 - **Perfis antigos no NRF.** O banco de testes do free5GC, quando para, não se descadastra e deixa os perfis no MongoDB. Com um perfil de NEF sem `3gpp-akma`, o NRF recusava o *token* do E05 (F27). O passo R1 apaga os perfis antes de subir o free5GC.
+
+### 5.13 MVP-15, fase (a), em 12/11/2026
+
+`333 passed, 0 failed, 0 skipped` na execução `20261112-125753`: 209 verificações na máquina do free5GC e 124 na do AF.
+
+- **Verificações novas.** São 16, as da seção 4.4: 14 na máquina do free5GC e 2, G10 e G12, na do AF.
+- **A primeira execução.** A `20261112-122507` deu `332 passed, 1 failed`. O NRF recusou a configuração sem FQDN com a mensagem certa, mas saiu com código 0, e o G06 exigia outro código. A verificação passou a contar a saída antes do `timeout` e a mensagem, e foi conferida sozinha na máquina do free5GC antes da segunda execução.
+- **Antes da execução, na máquina do free5GC.** Os *patches* em uso foram guardados em `~/akma-mvp15a-old-patches`, e os binários e as configurações, em `~/akma-mvp15a-backup`. Cada NF foi revertida com a série antiga e recebeu a série nova, com as duas cópias do `openapi` refeitas e as onze NFs recompiladas. O AAnF, o `seed` e o CCF são os novos, e o `aanfcfg.yaml` ganhou o `heartBeatTimer`.
+- **N2 e N3.** O `amfcfg.yaml` e o `smfcfg.yaml` da máquina têm os endereços do N2 e do N3 em 192.168.16.130, fora dos *patches*. O `patch-nf.sh` recusa aplicar o `config` com mudanças locais. As duas linhas foram guardadas em `~/akma-mvp15a-backup/n2n3-local.diff`, desfeitas, e postas de novo depois da série.
 
 ## 6. Limitações
 

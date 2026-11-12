@@ -39,10 +39,11 @@ Além dos campos comuns às NFs do free5GC (`sbi`, `serviceNameList`, `nrfUri`, 
 | Campo | Exemplo | Regra | Marcação |
 |---|---|---|---|
 | `nfInstanceId` | UUID v4 fixo | opcional; sem ele, gerado a cada partida. No TLS mútuo, é o do certificado | `[3GPP]` TS 33.310 §6.1.3c.3 |
-| `sbi.fqdn` | `aanf.5gc.mnc093.mcc208.3gppnetwork.org` | MVP-11: modo por nome; sem ela, por IP | `[3GPP]` TS 29.510 §6.1.6.2.2 NOTA 1; DV-17 |
+| `sbi.fqdn` | `aanf.5gc.mnc093.mcc208.3gppnetwork.org` | MVP-11: modo por nome. Desde o MVP-15, obrigatória com `https`; só com `http` os URIs vão por IP | `[3GPP]` TS 29.510 §6.1.6.2.2 NOTA 1; DV-17 |
 | `sbi.tls.pem`, `key`, `ca` | `cert/sba/aanf.pem`, `aanf.key`, `sba-ca.pem` | MVP-11: obrigatórios com `scheme: https`; `tls-sbi.md` §4 | `[3GPP]` TS 33.501 §13.1.0 |
 | `serviceNameList` | `[naanf-akma]` | só esse valor é aceito | `[3GPP]` TS 29.535 §5.1.1 |
 | `routingIndicators` | `["0000"]` | cadeias de 1 a 4 dígitos; vazio = atende qualquer RID. Mesmo sem aspas, `0000` é lido como `"0000"` (teste `TestRoutingIndicatorLeadingZerosKept`) | `[3GPP]` TS 29.510 `AanfInfo`; TS 23.003 §2.2B |
+| `heartBeatTimer` | `60` | segundos, de 1 a 3600; padrão 60. O intervalo proposto ao NRF no registro; vale o da resposta (seção 12) | `[3GPP]` TS 29.510 tab. 6.1.6.2.2-1 e §5.2.2.3.2; `[MVP]` o valor e a faixa, a do NRF do free5GC |
 | `akma.kafLifetime` | `1h` | duração Go positiva; padrão `1h` | `[3GPP]` política do operador (TS 33.535 §5.2); `[MVP]` o valor |
 | `akma.kakmaRefresh` | `0` | duração Go; `0` ou ausente desliga, e é o padrão. Com valor, o AAnF pede a renovação da K_AKMA mais velha que isso (seção 11) | `[3GPP]` política local do operador (TS 33.535 §6.4.4); `[MVP]` o critério e o valor (K3 de `renovacao-kakma.md`) |
 | `akma.authorizedAfs[].afId` | `af1.akma.example.FF00000001` | forma de transporte `<FQDN>.<10 hex>` | `[3GPP]` TS 29.522 `AfId` |
@@ -238,3 +239,32 @@ A saída é `accepted (204)` ou `UDM answered <status> (<causa>; <detalhe>)`.
 
 **Verificação.** Testes de unidade: `TestRefreshDue` (armazenamento), `TestKakmaRefresh` (configuração), `TestTriggerAuth` (consumidor, com NRF e UDM simulados) e `TestRefreshKAkma` (processador). Ponta a ponta: o passo R6r do `e2e.sh`, com o AAnF reiniciado com `kakmaRefresh: 20s` (`docs/af-side/e2e.md`). Resultado em 28/10/2026: o R6r passou inteiro na execução `20261028-162316`; o AAnF pediu a renovação de uma K_AKMA de 23 s e recebeu o novo contexto 140 ms depois (`renovacao-kakma.md` §11).
 
+## 12. MVP-15, fase (a)
+
+Correções da revisão do MVP-14 (plano, MVP-15).
+
+**Heart-beat (F29).** `[3GPP]` TS 29.510 §5.2.2.3.2: *"Each NF that has previously registered in NRF shall contact the NRF periodically (heart-beat), by invoking the NFUpdate service operation, in order to show that the NF is still operative."*
+
+- O registro propõe o `heartBeatTimer` da configuração (seção 2), e o AAnF segue o valor da resposta do NRF (tab. 6.1.6.2.2-1). O NRF do free5GC devolve o valor proposto.
+- A cada intervalo, o AAnF manda `PATCH {nrfUri}/nnrf-nfm/v1/nf-instances/{nfInstanceId}`, `application/json-patch+json`, com `[{"op": "replace", "path": "/nfStatus", "value": "REGISTERED"}]`, sem `If-Match`, com o *token* de `nnrf-nfm` quando o OAuth2 está ligado.
+- Um `200` com o perfil traz o intervalo novo, se o NRF o mudou.
+- `[INTERPRETAÇÃO]` Com `404`, o NRF não tem mais o perfil, e o AAnF se registra de novo. A norma só diz que o NRF responde `404`.
+- O NRF do free5GC não suspende quem deixa de mandar o *heart-beat*: essa parte do F29 fica com o *upstream*.
+
+**Cabeçalhos de TS 29.500 (achado 14, W4).**
+
+- Toda resposta do AAnF leva `Server: AANF-<NF Instance ID>` (tab. 5.2.2.2-1: *"should be inserted by the originator of an HTTP error response"*, e *"It may be inserted otherwise"*). Leva também `3gpp-Sbi-NF-Peer-Info`, com `srcinst`, o AAnF, e `dstinst`, o consumidor: o NF Instance ID do certificado de cliente ou, sem TLS, o `srcinst` do pedido (§5.2.3.2.21).
+- Os pedidos do AAnF ao NRF e ao UDM levam o `User-Agent` `AANF-<NF Instance ID>` e o `3gpp-Sbi-NF-Peer-Info`, com o `dstinst` do UDM descoberto. Os pedidos de *token* também levam o `User-Agent`, pelo `openapi/0008`.
+
+**O FQDN obrigatório (DV-17).** Com `https`, o AAnF não parte sem `sbi.fqdn`.
+
+**Logs.**
+
+- Categoria `SBI`, *info*, um por pedido: `<método> <caminho>, User-Agent <valor>, 3gpp-Sbi-NF-Peer-Info <valor>`, com `none` quando o cabeçalho falta. Mostra o tipo de NF de quem pede.
+- Categoria `Consumer`: `Heart-beat sent to the NRF, next in <intervalo>`, em *info*. Em *warning*: `Heart-beat: the NRF does not have the profile (404); registering again` ou `Heart-beat failed: …`.
+- Categoria `AKMA`: a linha da K_AF ganha `, without the SUPI` quando o SUPI não vai na resposta: o acesso anônimo, ou um consumidor sem o escopo `supi-access`.
+
+**Verificação.**
+
+- Testes de unidade: `TestRegisterHeartBeatTimer`, `TestSendHeartBeat` e `TestRunHeartBeatRegistersAgain`, com um NRF simulado; `TestSbiHeaders`; os casos novos de `TestInvalidConfigs`.
+- No `e2e.sh`: G06.aanf, G07, G08 e G12 (`docs/af-side/e2e.md` §4.4).
