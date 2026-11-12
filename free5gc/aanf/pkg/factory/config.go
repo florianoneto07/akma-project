@@ -32,6 +32,10 @@ const (
 	// AanfDefaultKafLifetime is used when akma.kafLifetime is not configured.
 	// The lifetime of K_AF is operator policy (TS 33.535 cl. 4.4.0, 5.2).
 	AanfDefaultKafLifetime = time.Hour
+	// AanfDefaultHeartBeatTimer is the heart-beat interval, in seconds, that
+	// the AAnF proposes when heartBeatTimer is not configured; the interval is
+	// deployment-specific (TS 29.510 cl. 5.2.2.3.2).
+	AanfDefaultHeartBeatTimer = 60
 )
 
 type Config struct {
@@ -72,7 +76,12 @@ type Configuration struct {
 	// AAnF serves any Routing Indicator. Quote them in YAML: each digit is
 	// significant ("0000" is not "0", TS 23.003 cl. 2.2B).
 	RoutingIndicators []string `yaml:"routingIndicators,omitempty" valid:"optional"`
-	Akma              *Akma    `yaml:"akma,omitempty" valid:"required"`
+	// HeartBeatTimer is the heart-beat interval, in seconds, that the AAnF
+	// proposes in its registration (TS 29.510 table 6.1.6.2.2-1); the value
+	// in the answer of the NRF prevails (cl. 5.2.2.3.2).
+	// AanfDefaultHeartBeatTimer when absent.
+	HeartBeatTimer int   `yaml:"heartBeatTimer,omitempty" valid:"optional"`
+	Akma           *Akma `yaml:"akma,omitempty" valid:"required"`
 }
 
 // Akma holds the AKMA-specific settings of the AAnF.
@@ -137,6 +146,11 @@ func (c *Configuration) validate() (bool, error) {
 		if result, err := sbi.validate(); err != nil {
 			return result, err
 		}
+	}
+
+	// The range that the NRF of free5GC accepts.
+	if c.HeartBeatTimer < 0 || c.HeartBeatTimer > 3600 {
+		return false, errors.New("invalid heartBeatTimer: 1 to 3600 seconds")
 	}
 
 	if len(c.ServiceNameList) != 1 || c.ServiceNameList[0] != string(models.ServiceName_NAANF_AKMA) {
@@ -259,11 +273,17 @@ type Sbi struct {
 	Port         int    `yaml:"port,omitempty" valid:"port,required"`
 	Tls          *Tls   `yaml:"tls,omitempty" valid:"optional"`
 	// Fqdn is the FQDN of the AAnF in its NF profile (TS 29.510 cl. 6.1.6.2.2
-	// NOTE 1). Without it, the URIs go by IP address (DV-17).
+	// NOTE 1), required with https. Only with http may the URIs go by IP
+	// address.
 	Fqdn string `yaml:"fqdn,omitempty" valid:"dns,optional"`
 }
 
 func (s *Sbi) validate() (bool, error) {
+	// With https, the FQDN is in the NF profile and builds the target URIs
+	// (TS 29.510 table 6.1.6.2.2-1 NOTE 1): no URIs by IP address.
+	if s.Scheme == "https" && s.Fqdn == "" {
+		return false, errors.New("sbi.fqdn is required with https (TS 29.510 table 6.1.6.2.2-1 NOTE 1)")
+	}
 	if tls := s.Tls; tls != nil {
 		if result, err := govalidator.ValidateStruct(tls); err != nil {
 			return result, err

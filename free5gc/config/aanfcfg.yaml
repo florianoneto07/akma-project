@@ -8,7 +8,7 @@ configuration:
   nfInstanceId: b6f417f0-06fa-4c38-b291-33066f5a5fe7
   sbi: # Service-based interface information
     scheme: https # the protocol for sbi (http or https); http is h2c, without TLS
-    fqdn: aanf.5gc.mnc093.mcc208.3gppnetwork.org # by name (TS 29.510 cl. 6.1.6.2.2 NOTE 1); without it, by IP address (DV-17)
+    fqdn: aanf.5gc.mnc093.mcc208.3gppnetwork.org # required with https (TS 29.510 cl. 6.1.6.2.2 NOTE 1)
     registerIPv4: 192.168.16.130 # IP used to register to NRF; reachable from the AF host
     bindingIPv4: 192.168.16.130 # IP used to bind the service
     port: 8010 # port used to bind the service; not used by any free5GC NF (8000 is their SBI port)
@@ -25,6 +25,7 @@ configuration:
       mnc: "93" # Mobile Network Code (2 or 3 digits string, digit: 0~9)
   routingIndicators: # published in AanfInfo; quote them, every digit is significant
     - "0000"
+  heartBeatTimer: 60 # seconds between heart-beats, proposed to the NRF; the value of the NRF prevails (TS 29.510 cl. 5.2.2.3.2)
   akma:
     kafLifetime: 1h # K_AF lifetime (operator policy, TS 33.535 cl. 5.2)
     # Refresh of K_AKMA (operator policy, TS 33.535 cl. 6.4.4): when an AF asks for a K_AF of a K_AKMA

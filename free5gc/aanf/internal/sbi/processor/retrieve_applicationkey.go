@@ -107,6 +107,9 @@ func (p *Processor) RetrieveApplicationKey(c *gin.Context, req *models.AkmaAfKey
 	if viaNef {
 		via = ", through the NEF at " + remote
 	}
+	if rsp.Supi == "" {
+		via += ", without the SUPI"
+	}
 	logger.AkmaLog.Infof("K_AF of %s provided to AF_ID %s for A-KID %s, expires %s%s",
 		supi, af.Transport(), req.AKId, exp.Format(time.RFC3339), via)
 	util.WriteJSON(c, http.StatusOK, rsp)

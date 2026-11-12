@@ -25,7 +25,7 @@ import (
 type AANFContext struct {
 	NfId              string
 	RegisterIPv4      string
-	Fqdn              string // FQDN in the NF profile; empty with URIs by IP address
+	Fqdn              string // FQDN in the NF profile, required with https
 	BindingIPv4       string
 	SBIPort           int
 	UriScheme         models.UriScheme
@@ -35,6 +35,9 @@ type AANFContext struct {
 	NfService         map[models.ServiceName]models.NrfNfManagementNfService
 	PlmnList          []models.PlmnId
 	RoutingIndicators []string
+	// HeartBeatTimer is the heart-beat interval, in seconds, proposed in the
+	// registration (TS 29.510 table 6.1.6.2.2-1).
+	HeartBeatTimer int32
 
 	// OAuth2Required is learned from the NRF at registration (free5GC NRF
 	// "oauth2" custom info). The access to Naanf_AKMA may be authorized with
@@ -51,6 +54,9 @@ type AANFContext struct {
 	Store        *Store
 
 	mu sync.RWMutex
+	// heartBeat is the heart-beat interval that the NRF gave
+	// (TS 29.510 cl. 5.2.2.3.2).
+	heartBeat time.Duration
 }
 
 var self *AANFContext
@@ -93,7 +99,11 @@ func New(cfg *factory.Config) (*AANFContext, error) {
 		UriScheme:         models.UriScheme_HTTP,
 		PlmnList:          append([]models.PlmnId(nil), configuration.PlmnSupportList...),
 		RoutingIndicators: append([]string(nil), configuration.RoutingIndicators...),
+		HeartBeatTimer:    factory.AanfDefaultHeartBeatTimer,
 		Store:             NewStore(),
+	}
+	if configuration.HeartBeatTimer > 0 {
+		c.HeartBeatTimer = int32(configuration.HeartBeatTimer)
 	}
 	if sbi != nil {
 		if sbi.RegisterIPv4 != "" {
@@ -207,6 +217,30 @@ func akidOptions(f *factory.AKidFormat) (akid.Options, error) {
 		o.AcceptLabels = append([]string(nil), f.AcceptLabels...)
 	}
 	return o, nil
+}
+
+// SetHeartBeat records the heart-beat interval that the NRF gave, in
+// seconds; a value not above 0 keeps the one proposed (TS 29.510
+// cl. 5.2.2.3.2: the NRF returns it in the answer to the registration and,
+// when it changes, in the answer to the next heart-beat).
+func (c *AANFContext) SetHeartBeat(seconds int32) {
+	if seconds <= 0 {
+		seconds = c.HeartBeatTimer
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.heartBeat = time.Duration(seconds) * time.Second
+}
+
+// HeartBeat returns the heart-beat interval: the one of the NRF, or the one
+// proposed before any answer.
+func (c *AANFContext) HeartBeat() time.Duration {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.heartBeat > 0 {
+		return c.heartBeat
+	}
+	return time.Duration(c.HeartBeatTimer) * time.Second
 }
 
 // SetOAuth2Required records whether OAuth2 is required, as learned from the NRF.
