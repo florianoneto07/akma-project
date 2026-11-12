@@ -112,6 +112,10 @@ func TestConfig(t *testing.T) {
 	if _, err := readSample(t, strings.Replace(withInstance, "    ca: cert/sba/sba-ca.pem\n", "", 1)); err == nil {
 		t.Fatal("internal.certificate without internal.ca: accepted")
 	}
+	// With TLS, no apiRoot by IP address.
+	if _, err := readSample(t, strings.Replace(withInstance, "    fqdn: ccf.example\n", "", 1)); err == nil {
+		t.Fatal("TLS on the internal interface without fqdn: accepted")
+	}
 	twoProviders := strings.Replace(sample, "  invokerProfiles:",
 		"    - name: other\n      apfId: other-apf\n      aefIds:\n        - nef-aef\n  invokerProfiles:", 1)
 	if _, err := readSample(t, twoProviders); err == nil {

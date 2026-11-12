@@ -93,10 +93,11 @@ type Capif1e struct {
 }
 
 // Internal is the listener of CAPIF-3/4. With Certificate, its server has
-// mutual TLS with the CA of the operator in Ca; without it, it is http.
+// mutual TLS with the CA of the operator in Ca, by the name in Fqdn; without
+// it, it is http.
 type Internal struct {
 	Listener    `yaml:",inline"`
-	Fqdn        string `yaml:"fqdn,omitempty" valid:"optional"`
+	Fqdn        string `yaml:"fqdn,omitempty" valid:"optional"` // required with TLS
 	Certificate string `yaml:"certificate,omitempty" valid:"optional"`
 	Key         string `yaml:"key,omitempty" valid:"optional"`
 	Ca          string `yaml:"ca,omitempty" valid:"optional"`
@@ -112,11 +113,7 @@ func (i *Internal) ApiRoot() string {
 	if !i.Tls() {
 		return "http://" + i.Addr()
 	}
-	host := i.Fqdn
-	if host == "" {
-		host = i.BindingIPv4
-	}
-	return "https://" + net.JoinHostPort(host, strconv.Itoa(i.Port))
+	return "https://" + net.JoinHostPort(i.Fqdn, strconv.Itoa(i.Port))
 }
 
 type Ca struct {
@@ -249,6 +246,11 @@ func (i *Internal) validate() error {
 	}
 	if (i.Certificate == "") != (i.Key == "") || (i.Certificate == "") != (i.Ca == "") {
 		return errors.New("invalid internal: certificate, key and ca go together")
+	}
+	// With TLS, the URIs go by name (TS 29.510 table 6.1.6.2.2-1 NOTE 1, as
+	// in the SBI): no URIs by IP address.
+	if i.Tls() && i.Fqdn == "" {
+		return errors.New("invalid internal: fqdn is required with TLS")
 	}
 	return nil
 }
