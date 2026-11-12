@@ -31,7 +31,7 @@ repo="$(cd "$(dirname "$0")/.." && pwd)"
 paths=(
     shared
     reference/kdf
-    free5gc/aanf free5gc/config free5gc/patches free5gc/scripts
+    free5gc/aanf free5gc/ccf free5gc/crl free5gc/config free5gc/patches free5gc/scripts
     af/go.mod af/go.sum af/af af/akmaoscore af/akmatls af/cbor af/coap af/config af/oscore af/scripts af/uastar af/ue af/wolftls
 )
 
