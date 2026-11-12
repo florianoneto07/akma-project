@@ -9,7 +9,7 @@ Estados: **decidido** (escolha explícita do responsável), **aprovado com o pla
 |---|---|---|---|
 | DV-1 | SBI sem TLS (h2c); CAPIF-3/4 sem TLS até o MVP-11 | **implementado** (MVP-1, 17/10/2026); estendido a CAPIF-3/4, **implementado** (MVP-9, 02/11/2026); SBI com TLS mútuo desde a fase (a) do MVP-11 (04/11/2026); **encerrado** na fase (c) do MVP-11 (06/11/2026) | MVP-1, MVP-9, MVP-11 |
 | DV-2 | Subscrição de `ROAMING_STATUS` desabilitada | **implementado** (MVP-1, 17/10/2026) — parcial: a etapa não existe; o campo só aceita `false` | MVP-1 |
-| DV-3 | Só SUPI do tipo IMSI | **implementado** (MVP-0, 16/10/2026); correção aprovada na revisão do MVP-14 (08/11/2026): a biblioteca e o AAnF com os quatro tipos, no MVP-15 | MVP-0, MVP-14 |
+| DV-3 | Só SUPI do tipo IMSI | **implementado** (MVP-0, 16/10/2026); correção aprovada na revisão do MVP-14 (08/11/2026): os quatro tipos no MVP-15, na biblioteca, no *patch* do AUSF e no `seed` (texto corrigido pelo W5 do MVP-15, 12/11/2026) | MVP-0, MVP-14, MVP-15 |
 | DV-4 | Sem NFKC no lado UE | **implementado** (MVP-4, 18/10/2026); correção aprovada na revisão do MVP-14 (08/11/2026): o NFKC no ME, no MVP-15 | MVP-4, MVP-14 |
 | DV-5 | Digest do Ua\* conforme RFC 7616 | **implementado** (MVP-3, 18/10/2026) | MVP-3 |
 | DV-6 | `realm` do Digest conforme TS 33.535 | **implementado** (MVP-3, 18/10/2026) | MVP-3 |
@@ -47,7 +47,7 @@ Cada desvio revisto com a pergunta do MVP-14: o que falta para ficar de acordo c
 |---|---|---|---|
 | DV-1 | segue encerrado | — | — |
 | DV-2 | mantido até haver uma VPLMN | Q5, opção (c) | MVP-16, reservado; D-AL à 3GPP |
-| DV-3 | corrigir no código do projeto: a biblioteca `shared/akma` e o AAnF aceitam IMSI, NAI, GLI e GCI, com vetores novos; de ponta a ponta, o limite fica com o free5GC e o UERANSIM | Q6, opção (b) | MVP-15 |
+| DV-3 | corrigir no código do projeto: a biblioteca `shared/akma`, com vetores novos, o *patch* do AUSF e o `seed` aceitam IMSI, NAI, GLI e GCI; o AAnF já os aceita, porque só confere a presença do SUPI; de ponta a ponta, o limite fica com o free5GC e o UERANSIM | Q6, opção (b); W5 do MVP-15 | MVP-15, fase (b) |
 | DV-4 | corrigir: o NFKC no ME, com uma biblioteca pequena de normalização no `nr-ue`, a utf8proc (licença MIT), sem pacote novo na máquina do UE | Q6, opção (b) | MVP-15 |
 | DV-5 | mantido; vai à 3GPP | Q4 | D-F |
 | DV-6 | mantido; vai à 3GPP | Q4 | D-C |
@@ -121,6 +121,14 @@ Os sete desvios que vêm de defeitos da norma ficam no código como estão. As o
 **Implementação (16/10/2026).** `shared/akma/supi/supi.go`: `FromSBI` devolve `ErrUnsupportedType` para `nai-`, `gci-` e `gli-`; `Param.Validate` recusa qualquer valor fora de `^[0-9]{5,15}$`, inclusive com o prefixo `imsi-`. Testes: `supi_test.go` (`TestUnsupportedTypes`, `TestPrefixRejectedAtKDFLayer`) e `derive_test.go` (`TestSBIPrefixRejected`).
 
 **Revisão do MVP-14 (08/11/2026).** Decisão do responsável no ponto Q6, opção (b): no MVP-15, a biblioteca `shared/akma` e o AAnF passam a aceitar os quatro tipos de SUPI de TS 33.501 A.7.0, com vetores novos no oráculo. O código do projeto fica igual à norma. `[FREE5GC]` O limite passa a ser do free5GC e do UERANSIM, que só têm IMSI: nas fontes do AUSF, do UDM e do AMF não há tratamento dos outros tipos, e o `Supi::Parse` do UERANSIM só aceita `imsi-`. A proposta do MVP-15 leva esse limite a `correcoes-free5gc.md` e a `recomendacoes-ueransim.md`. O laboratório não muda, porque só tem IMSI.
+
+**MVP-15 (12/11/2026), ponto W5.** Correção do parágrafo acima e do texto do Q6: o AAnF não confere o tipo do SUPI, só a presença (`register_anchorkey.go`, `validateAkmaKeyInfo`), e já aceita os quatro tipos. Na consolidação do MVP-5, *"só SUPI IMSI no AUSF, no AAnF e no ME"* descreve o que passou no laboratório, onde só há IMSI; no AAnF não há recusa. Quem recusa os outros tipos é a biblioteca `shared/akma`, que o *patch* do AUSF e o `seed` usam. Na fase (b) do MVP-15 mudam:
+
+- a biblioteca: em `supi`, o P0 dos quatro tipos, com o NFKC; em `akid`, o realm do domínio da NAI, que é o Home Network Identifier (TS 23.003 §2.2B);
+- os vetores do oráculo, que passam pelas três conferências de hoje, inclusive o `ueauth.GetKDFValue` do free5GC;
+- o *patch* do AUSF e o `seed`.
+
+Os registros do limite do free5GC (F32) e do UERANSIM (UE-5) entram na mesma fase, depois de lido o código deles.
 
 ---
 

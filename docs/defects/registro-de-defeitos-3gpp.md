@@ -5,7 +5,7 @@
 
 Cada item registra a inconsistência, as fontes que a evidenciam, a decisão adotada pelo projeto e o grupo de trabalho responsável.
 
-**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio. 28 de outubro de 2026 — D-B: especificação do MVP-12 aprovada. Estes defeitos são a base das recomendações à 3GPP da V2 do repositório público (plano, MVP-13). Na implementação do MVP-12, D-B implementado (DV-12) e D-O e D-P acrescentados, de TS 29.503. No MVP-13: todos os itens conferidos nas versões mais recentes das normas (seção seguinte), e as lacunas que o projeto teve de decidir acrescentadas como sugestões, D-Q a D-Z. 29 de outubro de 2026 — D-AA a D-AC, do CAPIF, achados na proposta do MVP-9, aprovada nessa data. Na mesma data, D-AD a D-AG, da especificação do CAPIF (`docs/free5gc-side/capif.md`), aprovada. 2 de novembro de 2026 — D-AH e D-AI, achados na implementação do MVP-9. 4 de novembro de 2026 — D-AJ e D-AK, da especificação do MVP-11 (`docs/free5gc-side/tls-sbi.md`), aprovada nessa data. 8 de novembro de 2026 — D-AL a D-AO, da revisão do MVP-14 (`docs/conformidade/revisao-das-normas.md`), e o D-AE ampliado a TS 29.122; as opções de texto de cada defeito estão em `docs/defects/propostas-para-a-norma.md` (ponto Q4 do MVP-14).
+**Revisão:** 16 de outubro de 2026 — conferência contra o texto das normas (`docs/baseline/conferencia-normativa.md`); D-C revisto; D-D complementado; D-F a D-I acrescentados. 22 de outubro de 2026 — D-J a D-N, do OSCORE do AKMA (TS 33.535 Anexo D; `docs/af-side/ua-star-norma.md` §7.2); D-A a D-I conferidos de novo contra os textos de `specs/` (abaixo); D-B passa a MVP próprio. 28 de outubro de 2026 — D-B: especificação do MVP-12 aprovada. Estes defeitos são a base das recomendações à 3GPP da V2 do repositório público (plano, MVP-13). Na implementação do MVP-12, D-B implementado (DV-12) e D-O e D-P acrescentados, de TS 29.503. No MVP-13: todos os itens conferidos nas versões mais recentes das normas (seção seguinte), e as lacunas que o projeto teve de decidir acrescentadas como sugestões, D-Q a D-Z. 29 de outubro de 2026 — D-AA a D-AC, do CAPIF, achados na proposta do MVP-9, aprovada nessa data. Na mesma data, D-AD a D-AG, da especificação do CAPIF (`docs/free5gc-side/capif.md`), aprovada. 2 de novembro de 2026 — D-AH e D-AI, achados na implementação do MVP-9. 4 de novembro de 2026 — D-AJ e D-AK, da especificação do MVP-11 (`docs/free5gc-side/tls-sbi.md`), aprovada nessa data. 8 de novembro de 2026 — D-AL a D-AO, da revisão do MVP-14 (`docs/conformidade/revisao-das-normas.md`), e o D-AE ampliado a TS 29.122; as opções de texto de cada defeito estão em `docs/defects/propostas-para-a-norma.md` (ponto Q4 do MVP-14). 12 de novembro de 2026 — D-AP, da proposta do MVP-15 (ponto W10), aprovada nessa data.
 
 ### Situação no projeto (22/10/2026)
 
@@ -48,6 +48,7 @@ Todos os itens estão no texto das normas; nenhum é defeito do projeto. A decis
 | D-AM | nada: sem o aviso de serviço desligado (§6.8), que depende do DV-2 |
 | D-AN | nada: sem `AKMA_GPSI_Support`; o MVP-10 decide com este item |
 | D-AO | editorial, nada a implementar |
+| D-AP | MVP-15, fase (c) (W10): o ME aplica o NFKC à cadeia que a aplicação lhe dá, a mesma do AF_ID do AF; no laboratório, os nomes são ASCII, e as duas formas coincidem |
 
 ### Conferência nas versões mais recentes (28/10/2026)
 
@@ -786,6 +787,27 @@ Achados na revisão das normas do MVP-14 (`docs/conformidade/revisao-das-normas.
 **Proposta.** Os nomes de TS 29.535 em TS 33.535; *"Notification/Response"* nas duas tabelas; o NEF na tab. 7.1.1-1; "RoamingRestriction".
 
 **Decisão do projeto.** Editorial, nada a implementar.
+
+---
+
+## Defeitos do MVP-15
+
+Achado na proposta do MVP-15, aprovada em 12/11/2026 com o ponto W10. As opções de texto estão em `propostas-para-a-norma.md`.
+
+## D-AP — A forma do FQDN no AF_ID
+
+| | |
+|---|---|
+| **Especificações** | TS 33.535 V19.0.0, A.4; TS 33.220 V19.1.0, §4.5.2 e B.2.1.2 |
+| **Grupo responsável** | 3GPP SA3 |
+
+**Descrição.** `[LACUNA]` TS 33.535 A.4: *"AF_ID = FQDN of the AF || Ua\* security protocol identifier"*. TS 33.220 B.2.1.2: *"A character string shall be encoded to an octet string according to UTF-8 encoding rules as specified in IETF RFC 3629 [24] and apply Normalization Form KC (NFKC) as specified in [37]."* Um nome internacionalizado tem duas formas, o A-label, em ASCII, e o U-label, em Unicode (RFC 5890). O DNS, os certificados (RFC 5280 §7.2) e o `server_name` do TLS usam o A-label; RFC 6066 §3: *"This allows the support of internationalized domain names through the use of A-labels defined in [RFC5890]."* A norma não diz qual forma entra no AF_ID, e o NFKC muda o U-label, não o A-label. O NAF_Id do GBA (TS 33.220 §4.5.2) tem a mesma lacuna.
+
+**Impacto.** Um UE e um AAnF que escolham formas diferentes derivam K_AF diferentes, e o Ua\* falha sem um erro que diga por quê.
+
+**Proposta.** O FQDN na forma do DNS, com A-labels, como em `propostas-para-a-norma.md`.
+
+**Decisão do projeto.** MVP-15, fase (c) (W10): o ME aplica o NFKC à cadeia que a aplicação lhe dá, que tem de ser a mesma do AF_ID do AF. No laboratório, os nomes são ASCII, e as duas formas coincidem.
 
 ---
 

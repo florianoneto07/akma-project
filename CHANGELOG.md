@@ -2,6 +2,11 @@
 
 ## [Não lançado]
 
+### MVP-15 — Correções da revisão (08 a 12/11/2026)
+- **Proposta:** no plano, com os pontos W1 a W11; proposta em 08/11/2026 e aprovada em 12/11/2026, como proposta. Três fases: a SBI do núcleo; identidades e chaves; o AF e o UE. Cada fase começa com o aval do responsável.
+- **Registros da aprovação (W11):** o texto do DV-3 corrigido em `desvios.md`; as notas no Q16 e no Q19; o D-AP no registro de defeitos, na cópia em `~/akma` e em `propostas-para-a-norma.md`.
+- Nenhum código, *patch* ou VM alterados.
+
 ### MVP-14 — Revisão dos desvios e das normas (06 a 08/11/2026)
 - **Proposta:** a primeira passada, no plano, com os pontos Q1 a Q15, decididos pelo responsável em 08/11/2026; o Q3, o Q6 e o Q13 depois da explicação, com as recomendações aceitas. MVP-14 concluído na mesma data.
 - **Segunda passada:** `docs/conformidade/revisao-das-normas.md`, a tabela de conformidade com os 1.391 parágrafos com *shall* ou *should* de 19 normas, nas versões mais recentes; os achados 11 a 15, decididos como propostos (Q16 a Q20).

@@ -1,10 +1,10 @@
 # Propostas para a norma: opções de texto para os defeitos
 
-**Criado em:** 8 de novembro de 2026 (MVP-14, ponto Q4) · **Base:** `docs/defects/registro-de-defeitos-3gpp.md`, que continua sendo a lista dos problemas da norma que o responsável vai enviar à 3GPP.
+**Criado em:** 8 de novembro de 2026 (MVP-14, ponto Q4) · **Atualizado em:** 12 de novembro de 2026 (D-AP; MVP-15, ponto W10) · **Base:** `docs/defects/registro-de-defeitos-3gpp.md`, que continua sendo a lista dos problemas da norma que o responsável vai enviar à 3GPP.
 
 Pedido do responsável no Q4: para cada desvio que vem de um defeito da norma, as opções de texto que resolveriam o defeito, com a ideal indicada. Cada item traz o texto atual, o problema, as opções, a recomendação e o que o projeto faz hoje. Os textos propostos estão em inglês, como entrariam num *Change Request* (CR); a categoria é F (correção) em todos. A escolha entre as opções e o envio ficam com o responsável.
 
-Os itens D-AL a D-AO entraram no registro nesta data (Q11) e também têm opções aqui.
+Os itens D-AL a D-AO entraram no registro nesta data (Q11) e também têm opções aqui. O D-AP entrou em 12/11/2026, com o ponto W10 do MVP-15.
 
 | Item | Desvio | Norma | Grupo | Opção recomendada |
 |---|---|---|---|---|
@@ -21,6 +21,7 @@ Os itens D-AL a D-AO entraram no registro nesta data (Q11) e também têm opçõ
 | D-AM | — | TS 33.535 §6.8.2, §7.1.6; TS 29.522 tab. 5.14.5.3.4-1 | SA3, CT3 | B: `afId` opcional na notificação ao NEF |
 | D-AN | — | TS 29.535 §4.2.2.2.2, tab. 5.1.4.3.2-2 | CT3 | A: GPSI só pela *feature*, e o registro só com SUPI |
 | D-AO | — | TS 33.535, TS 29.535, TS 29.522 | SA3, CT3 | correções editoriais |
+| D-AP | — | TS 33.535 A.4; TS 33.220 §4.5.2, B.2.1.2 | SA3 | A: o FQDN com A-labels |
 
 ---
 
@@ -153,3 +154,14 @@ Os itens D-AL a D-AO entraram no registro nesta data (Q11) e também têm opçõ
 - **TS 33.535 V19.0.0.** O nome da operação: `Naanf_AKMA_ServiceDisableNotification` (§6.8, §7.1.6) e `Naanf_AKMA_Context_Remove` (§6.6, §7.1.4), contra `Naanf_AKMA_Notify` e `Naanf_AKMA_ContextRemove` em TS 29.535. Tab. 7.3.1-1 dá *"Request/Response"* para `ServiceDisableNotification`, e a tab. 7.1.1-1, *"Notification/Response"*. A tab. 7.1.1-1 não lista o NEF entre os consumidores de `ServiceDisableNotification`, que §6.8.2 usa.
 - **TS 29.522 V20.1.0.** "RoamingRestiction" em §4.4.23.2.
 - **Proposta única.** Os nomes de TS 29.535 em TS 33.535; *"Notification/Response"* nas duas tabelas; *"AF, NEF"* na tab. 7.1.1-1; "RoamingRestriction".
+
+## D-AP — A forma do FQDN no AF_ID
+
+- **Texto atual.** TS 33.535 V19.0.0 A.4: *"AF_ID = FQDN of the AF || Ua\* security protocol identifier, where the Ua\* security protocol identifier is specified as Ua security protocol identifier in Annex H of TS 33.220 [4]."* TS 33.220 V19.1.0 B.2.1.2: *"A character string shall be encoded to an octet string according to UTF-8 encoding rules as specified in IETF RFC 3629 [24] and apply Normalization Form KC (NFKC) as specified in [37]."*
+- **Problema.** Um nome internacionalizado tem um A-label, em ASCII, e um U-label, em Unicode (RFC 5890). O DNS, os certificados (RFC 5280 §7.2) e o `server_name` do TLS (RFC 6066 §3) usam o A-label. A norma não diz qual forma entra no AF_ID, e o NFKC só muda o U-label: um UE e um AAnF que escolham formas diferentes derivam K_AF diferentes. O NAF_Id do GBA (TS 33.220 §4.5.2) tem a mesma lacuna.
+- **Opções.**
+  - **A (ideal).** Em A.4, depois da definição: *"The FQDN of the AF shall be represented as in the DNS, i.e. internationalized labels shall be A-labels as defined in IETF RFC 5890."* A mesma frase em TS 33.220 §4.5.2, para o NAF_Id. Nos perfis com TLS e DTLS, o UE já tem o A-label, que manda no `server_name`; no OSCORE, converte o nome do URI do CoAP. O NFKC deixa o AF_ID como está.
+  - **B.** *"Internationalized labels of the FQDN of the AF shall be represented as U-labels as defined in IETF RFC 5890 and encoded as specified in clause B.2.1.2 of TS 33.220."* Dá papel ao NFKC, mas obriga o UE e o AF a converter o nome que usam no TLS e nos certificados.
+  - **C.** Uma nota: *"The UE and the AF need to use the same representation of the FQDN of the AF."* Não escolhe a forma, e a interoperabilidade fica com cada implementação.
+- **Recomendação.** A: é a forma que o UE e o AF já usam no TLS e nos certificados.
+- **O projeto hoje.** A biblioteca Go e o AAnF aplicam o NFKC ao AF_ID como ele chega. O ME recusa nomes não ASCII (DV-4) até a fase (c) do MVP-15, quando passa a aplicar o NFKC à cadeia que a aplicação lhe dá, a mesma do AF_ID do AF. No laboratório, os nomes são ASCII.
